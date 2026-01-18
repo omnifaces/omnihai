@@ -181,6 +181,119 @@ Implement `AIService` or extend `BaseAIService` and use the fully qualified clas
 var service = AIConfig.of("com.example.MyCustomAIService", "api-key").createService();
 ```
 
+## OmniAI vs LangChain4J vs Spring AI vs Jakarta Agentic
+
+### Philosophy
+
+| Aspect | OmniAI | LangChain4J | Spring AI | Jakarta Agentic |
+|--------|--------|-------------|-----------|-----------------|
+| **Target Runtime** | Jakarta EE | Any Java | Spring | Jakarta EE |
+| **Philosophy** | Minimal, focused utility | Comprehensive toolkit | Spring integration | Standard specification |
+| **Dependencies** | JSON-P only (CDI optional) | Multiple modules | Spring framework | TBD (in development) |
+| **Learning Curve** | Low | Medium-High | Medium (if Spring-familiar) | TBD |
+
+### Feature Comparison
+
+| Feature | OmniAI | LangChain4J | Spring AI | Jakarta Agentic |
+|---------|--------|-------------|-----------|-----------------|
+| **Chat/Completion** | ✅ | ✅ | ✅ | ✅ (planned) |
+| **Streaming** | ❌ | ✅ | ✅ | TBD |
+| **Function Calling** | ❌ | ✅ | ✅ | TBD |
+| **RAG Support** | ❌ | ✅ (extensive) | ✅ | TBD |
+| **Vector Stores** | ❌ | ✅ (many) | ✅ (many) | TBD |
+| **Embeddings** | ❌ | ✅ | ✅ | TBD |
+| **Image Analysis** | ✅ | ✅ | ✅ | TBD |
+| **Image Generation** | ✅ | ✅ | ✅ | TBD |
+| **Content Moderation** | ✅ (native + fallback) | ❌ | ❌ | TBD |
+| **Translation** | ✅ | ❌ (via chat) | ❌ (via chat) | TBD |
+| **Summarization** | ✅ | ❌ (via chat) | ❌ (via chat) | TBD |
+| **Memory/History** | ❌ | ✅ | ✅ | TBD |
+| **Agents** | ❌ | ✅ | ✅ | ✅ (core focus) |
+| **Prompt Templates** | ❌ | ✅ | ✅ | TBD |
+
+### Provider Support
+
+| Provider | OmniAI | LangChain4J | Spring AI |
+|----------|--------|-------------|-----------|
+| OpenAI | ✅ | ✅ | ✅ |
+| Anthropic | ✅ | ✅ | ✅ |
+| Google AI | ✅ | ✅ | ✅ |
+| Azure OpenAI | ✅ | ✅ | ✅ |
+| Ollama | ✅ | ✅ | ✅ |
+| xAI (Grok) | ✅ | ❌ | ❌ |
+| Meta Llama | ✅ | ❌ | ❌ |
+| OpenRouter | ✅ | ❌ | ❌ |
+| AWS Bedrock | ❌ | ✅ | ✅ |
+| Mistral | ❌ | ✅ | ✅ |
+| Hugging Face | ❌ | ✅ | ✅ |
+
+### CDI Integration
+
+| Aspect | OmniAI | LangChain4J-CDI | Spring AI |
+|--------|--------|-----------------|-----------|
+| **Injection Style** | `@Inject @AI(...)` | `@Inject` + config | `@Autowired` + beans |
+| **EL Support** | ✅ `#{...}` expressions | ❌ | ❌ (SpEL different) |
+| **Zero Config** | ❌ | ❌ | ❌ |
+| **Qualifier-based** | ✅ | ❌ | ❌ |
+
+### Where OmniAI Shines
+
+1. Ultra-lightweight - No external HTTP library, just java.net.http.HttpClient. Minimal deps.
+2. Built-in text utilities - Summarization, translation, key point extraction, moderation as first-class features (not "build your own prompt")
+3. Native CDI with EL - `@AI(apiKey = "#{config.key}")` with expression resolution
+4. 8 providers out of the box - Including Ollama for local/offline
+5. Clean exception hierarchy - Specific exceptions per HTTP status
+
+### Where OmniAI is Intentionally Simpler
+
+No streaming, tools, embeddings, RAG, memory, or agents. This isn't a gap - it's a design choice. OmniAI is a utility library, not a framework.
+  
+### Positioning
+
+| Library | Analogy |
+|---------|---------|
+| **LangChain4J** | Full kitchen with every appliance |
+| **Spring AI** | Full kitchen, Spring-branded appliances |
+| **Jakarta Agentic** | Kitchen building code (specification) |
+| **OmniAI** | Sharp chef's knife - does a few things very well |
+
+OmniAI fills a different niche. For apps that need:
+
+- Multi-provider chat with easy switching
+- Text analysis (summarize, translate, moderate)
+- Minimal dependencies
+- Pure Jakarta EE / CDI
+
+...without needing RAG pipelines, agent frameworks, or vector stores, OmniAI is arguably the better choice. Less to learn, less to break, fewer dependencies.
+
+If Jakarta Agentic matures, OmniAI could potentially be a lightweight implementation of parts of that spec, or remain a complementary "just the essentials" alternative.
+
+### When to Choose Each
+
+**Choose OmniAI when:**
+- You need a lightweight, focused solution for Jakarta EE
+- Your use case is straightforward chat, translation, summarization, or moderation
+- You want minimal dependencies and a small footprint
+- You prefer simplicity over feature completeness
+
+**Choose LangChain4J when:**
+- You're building complex AI agents with tools
+- You need conversation memory management
+- You want the most comprehensive feature set
+- You're not tied to a specific framework
+
+**Choose Spring AI when:**
+- You're already in the Spring ecosystem
+- You need tight Spring Boot integration
+- You want auto-configuration and starters
+- Your team is Spring-proficient
+
+**Choose Jakarta Agentic when:**
+- You need a standard specification (once finalized)
+- You want vendor-neutral portability
+- You're building agentic workflows
+- You can wait for the specification to mature
+
 ## License
 
 [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0)
@@ -189,3 +302,4 @@ var service = AIConfig.of("com.example.MyCustomAIService", "api-key").createServ
 
 - [OmniFaces](https://omnifaces.org)
 - [GitHub](https://github.com/omnifaces/omniai)
+
