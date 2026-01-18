@@ -173,7 +173,7 @@ byte[] image = service.generateImage("A modern office",
 
 ## Custom Providers
 
-Implement `AIService` and use the fully qualified class name as the provider:
+Implement `AIService` or extend `BaseAIService` and use the fully qualified class name as the provider:
 
 ```java
 var service = AIConfig.of("com.example.MyCustomAIService", "api-key").createService();
