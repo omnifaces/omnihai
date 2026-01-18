@@ -31,8 +31,8 @@ OmniAI provides a single, consistent API to interact with multiple AI providers.
 | xAI | grok-4-1-fast-reasoning | Yes |
 | Meta Llama | Llama-4-Scout-17B-16E-Instruct-FP8 | Yes |
 | Azure OpenAI | gpt-5-mini | Yes |
-| Ollama | llama3.2 | No |
 | OpenRouter | google/gemma-3-27b-it:free | Yes |
+| Ollama | llama3.2 | No |
 | Custom | - | - |
 
 ## Quick Start

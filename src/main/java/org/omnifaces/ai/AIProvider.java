@@ -103,15 +103,6 @@ public enum AIProvider {
     AZURE("Azure OpenAI", AzureAIService.class, true, "gpt-5-mini", "https://{org.omnifaces.ai.AZURE_RESOURCE}.openai.azure.com/openai/v1"),
 
     /**
-     * Ollama: Local models, e.g. Llama, Mistral, etc via local server.
-     * <p>
-     * Defaults currently to model {@code llama3.2} at endpoint {@code http://localhost:11434}.
-     * @see OllamaAIService
-     * @see <a href="https://ollama.com/library">Available Ollama Models</a>
-     */
-    OLLAMA("Ollama", OllamaAIService.class, false, "llama3.2", "http://localhost:11434"),
-
-    /**
      * OpenRouter: OpenAI, Anthropic, Google, xAI, Meta, Ollama, etc via unified API.
      * <p>
      * Defaults currently to model {@code google/gemma-3-27b-it:free} at endpoint {@code https://openrouter.ai/api/v1}.
@@ -119,6 +110,15 @@ public enum AIProvider {
      * @see <a href="https://openrouter.ai/models">Available OpenRouter Models</a>
      */
     OPENROUTER("OpenRouter", OpenRouterAIService.class, true, "google/gemma-3-27b-it:free", "https://openrouter.ai/api/v1"),
+
+    /**
+     * Ollama: Local models, e.g. Llama, Mistral, etc via local server.
+     * <p>
+     * Defaults currently to model {@code llama3.2} at endpoint {@code http://localhost:11434}.
+     * @see OllamaAIService
+     * @see <a href="https://ollama.com/library">Available Ollama Models</a>
+     */
+    OLLAMA("Ollama", OllamaAIService.class, false, "llama3.2", "http://localhost:11434"),
 
     /**
      * Custom: provide the FQN of your custom {@link AIService} implementation as the provider in {@link AIConfig}.
