@@ -77,7 +77,7 @@ String response = service.chat("Explain microservices",
 
 ```java
 @Inject
-@AI(provider = AIProvider.ANTHROPIC, apiKey = "#{config.anthropicApiKey}")
+@AI(provider = AIProvider.ANTHROPIC, apiKey = "your-api-key")
 private AIService claude;
 
 // Use EL expressions for dynamic configuration
@@ -86,6 +86,13 @@ private AIService claude;
     apiKey = "#{initParam['com.example.OPENAI_KEY']}",
     model = "gpt-5")
 private AIService gpt;
+
+// With custom system prompt
+@Inject
+@AI(provider = AIProvider.GOOGLE,
+    apiKey = "#{configBean.googleApiKey}",
+    prompt = "You are a helpful assistant specialized in Jakarta EE.")
+private AIService jakartaExpert;
 ```
 
 ## Features
