@@ -41,7 +41,7 @@ On non-Jakarta EE containers such as Tomcat, you'll need to add JSON-P and optio
 
 ## Supported Providers
 
-| Provider | Default Model | API Key Required | Available Models |
+| Provider | Default Model in OmniAI 1.0 | API Key Required | Available Models |
 |----------|---------------|------------------|------------------|
 | OpenAI | gpt-5-mini | [Yes](https://platform.openai.com/api-keys) | [List](https://platform.openai.com/docs/models) |
 | Anthropic | claude-sonnet-4-5-20250929 | [Yes](https://platform.claude.com/settings/keys) | [List](https://platform.claude.com/docs/en/about-claude/models/overview) |
@@ -63,14 +63,6 @@ var service = AIConfig.of(AIProvider.ANTHROPIC, "your-api-key").createService();
 
 // Simple chat
 String response = service.chat("What is Jakarta EE?");
-
-// Chat with options
-String response = service.chat("Explain microservices",
-    new ChatOptions.Builder()
-        .systemPrompt("You are a helpful software architect.")
-        .temperature(0.7)
-        .maxTokens(500)
-        .build());
 ```
 
 ### CDI Integration
@@ -105,6 +97,14 @@ String response = service.chat("Hello!");
 
 // Asynchronous
 CompletableFuture<String> future = service.chatAsync("Hello!");
+
+// With options
+String response = service.chat("Explain microservices",
+    new ChatOptions.Builder()
+        .systemPrompt("You are a helpful software architect.")
+        .temperature(0.7)
+        .maxTokens(500)
+        .build());
 ```
 
 ### Text Analysis
@@ -170,6 +170,8 @@ byte[] image = service.generateImage("A modern office",
         .size("1024x1024")
         .build());
 ```
+
+All methods have async variants returning `CompletableFuture` (e.g., `summarizeAsync`, `translateAsync`, `generateImageAsync`, etc.).
 
 ## Custom Providers
 
