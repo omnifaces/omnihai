@@ -133,7 +133,7 @@ public class OpenAIService extends BaseAIService {
             .add("model", model)
             .add("messages", messages)
             .add("temperature", options.getTemperature())
-            .add("max_tokens", options.getMaxTokens()); // NOTE: newer "responses" api uses max_output_tokens
+            .add(model.contains("5") ? "max_completion_tokens" : "max_tokens", options.getMaxTokens()); // NOTE: newer "responses" api uses max_output_tokens
 
         if (options.getTopP() != 1.0) {
             optionsBuilder.add("top_p", options.getTopP());
