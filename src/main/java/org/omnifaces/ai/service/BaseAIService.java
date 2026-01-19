@@ -114,6 +114,7 @@ public abstract class BaseAIService implements AIService {
         var options = ChatOptions.newBuilder()
             .systemPrompt(buildSummarizePrompt(maxWords))
             .temperature(0.5)
+            .maxTokens(estimateSummarizeMaxTokens(maxWords))
             .build();
 
         return chatAsync(text, options);
@@ -138,6 +139,17 @@ public abstract class BaseAIService implements AIService {
         """.formatted(maxWords);
     }
 
+    /**
+     * Estimates the maximum number of tokens for {@link #summarizeAsync(String, int)}.
+     * You can override this method to customize the estimation.
+     *
+     * @param maxWords Maximum words in summary.
+     * @return Estimated maximum number of tokens.
+     */
+    protected int estimateSummarizeMaxTokens(int maxWords) {
+        return 500 + (int) Math.ceil(maxWords * getEstimatedTokensPerWord());
+    }
+
     @Override
     public CompletableFuture<List<String>> extractKeyPointsAsync(String text, int maxPoints) throws AIException {
         if (isEmpty(text)) {
@@ -147,6 +159,7 @@ public abstract class BaseAIService implements AIService {
         var options = ChatOptions.newBuilder()
             .systemPrompt(buildExtractKeyPointsPrompt(maxPoints))
             .temperature(0.5)
+            .maxTokens(estimateExtractKeyPointsMaxTokens(maxPoints))
             .build();
 
         return chatAsync(text, options).thenApply(response -> Arrays.asList(response.split("\n")).stream().map(line -> line.trim()).filter(not(BaseAIService::isEmpty)).toList());
@@ -169,6 +182,17 @@ public abstract class BaseAIService implements AIService {
         """.formatted(maxPoints);
     }
 
+    /**
+     * Estimates the maximum number of tokens for {@link #extractKeyPointsAsync(String, int)}.
+     * You can override this method to customize the estimation.
+     *
+     * @param maxPoints Maximum number of key points.
+     * @return Estimated maximum number of tokens.
+     */
+    protected int estimateExtractKeyPointsMaxTokens(int maxPoints) {
+        return 500 + (int) Math.ceil(maxPoints * 25 * getEstimatedTokensPerWord());
+    }
+
 
     // Text Translation Implementation (delegates to chat) ------------------------------------------------------------
 
@@ -181,6 +205,7 @@ public abstract class BaseAIService implements AIService {
         var options = ChatOptions.newBuilder()
             .systemPrompt(buildTranslatePrompt(sourceLang, targetLang))
             .temperature(0.3)
+            .maxTokens(estimateTranslateMaxTokens(text))
             .build();
 
         return chatAsync(text, options);
@@ -218,6 +243,17 @@ public abstract class BaseAIService implements AIService {
         return prompt.toString();
     }
 
+    /**
+     * Estimates the maximum number of tokens for {@link #translateAsync(String, String, String)}.
+     * You can override this method to customize the estimation.
+     *
+     * @param text The text to translate.
+     * @return Estimated maximum number of tokens.
+     */
+    protected int estimateTranslateMaxTokens(String text) {
+        return 500 + (int) Math.ceil(text.split("\\s+").length * getEstimatedTokensPerWord());
+    }
+
     @Override
     public CompletableFuture<String> detectLanguageAsync(String text) throws AIException {
         if (isEmpty(text)) {
@@ -227,7 +263,7 @@ public abstract class BaseAIService implements AIService {
         var options = ChatOptions.newBuilder()
             .systemPrompt(buildDetectLanguagePrompt())
             .temperature(0.0)
-            .maxTokens(16)
+            .maxTokens(estimateDetectLanguageMaxTokens())
             .build();
 
         return chatAsync(text, options).thenApply(response -> {
@@ -255,6 +291,16 @@ public abstract class BaseAIService implements AIService {
         """;
     }
 
+    /**
+     * Estimates the maximum number of tokens for {@link #detectLanguageAsync(String, int)}.
+     * You can override this method to customize the estimation.
+     *
+     * @return Estimated maximum number of tokens.
+     */
+    protected int estimateDetectLanguageMaxTokens() {
+        return 20 + (int) Math.ceil(2 * getEstimatedTokensPerWord());
+    }
+
 
     // Text Moderation Implementation (delegates to chat) -------------------------------------------------------------
 
@@ -267,7 +313,7 @@ public abstract class BaseAIService implements AIService {
         var chatOptions = ChatOptions.newBuilder()
             .systemPrompt(buildModerateContentPrompt(options))
             .temperature(0.1)
-            .maxTokens(Math.max(1000, content.split("\\s+").length * 100))
+            .maxTokens(estimateModerateContentMaxTokens(options))
             .build();
 
         return chatAsync(content, chatOptions).thenApply(response -> parseModerationResult(response, options));
@@ -292,6 +338,17 @@ public abstract class BaseAIService implements AIService {
             - Only the scores in JSON format.
             - No explanations, no notes, no extra text, no markdown formatting.
         """.formatted(String.join(", " + options.getCategories()));
+    }
+
+    /**
+     * Estimates the maximum number of tokens for {@link #moderateContentAsync(String, ModerationOptions)}.
+     * You can override this method to customize the estimation.
+     *
+     * @param options Moderation options containing categories and threshold.
+     * @return Estimated maximum number of tokens.
+     */
+    protected int estimateModerateContentMaxTokens(ModerationOptions options) {
+        return 500 + (int) Math.ceil(options.getCategories().size() * 20 * getEstimatedTokensPerWord());
     }
 
     /**

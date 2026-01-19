@@ -432,6 +432,15 @@ public interface AIService extends Serializable {
     String getChatPrompt();
 
     /**
+     * Returns the estimated token usage per word.
+     * The default implementation returns 1.5.
+     * @return The estimated token usage per word.
+     */
+    default double getEstimatedTokensPerWord() {
+        return 1.5;
+    }
+
+    /**
      * Returns the AI model version information for this AI service.
      * The version is extracted from {@link #getModelName()} and includes the model name prefix, major version, and minor version.
      *
