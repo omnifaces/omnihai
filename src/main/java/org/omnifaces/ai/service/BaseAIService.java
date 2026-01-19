@@ -58,6 +58,14 @@ public abstract class BaseAIService implements AIService {
     private static final Duration DEFAULT_CONNECT_TIMEOUT = Duration.ofSeconds(10);
     private static final Duration DEFAULT_REQUEST_TIMEOUT = Duration.ofSeconds(60);
 
+    private static final int DEFAULT_REASONING_TOKENS = 500;
+    private static final int DEFAULT_DETECTION_TOKENS = 50;
+    private static final int DEFAULT_WORDS_PER_KEYPOINT = 25;
+    private static final double DEFAULT_TEXT_ANALYSIS_TEMPERATURE = 0.5;
+    private static final double DEFAULT_TRANSLATE_TEMPERATURE = 0.3;
+    private static final double DEFAULT_DETECT_LANGUAGE_TEMPERATURE = 0.0;
+    private static final double DEFAULT_MODERATE_CONTENT_TEMPERATURE = 0.1;
+
     protected static final AIApiClient API_CLIENT = AIApiClient.newInstance(DEFAULT_CONNECT_TIMEOUT, DEFAULT_REQUEST_TIMEOUT);
 
     protected final AIProvider provider;
@@ -112,7 +120,7 @@ public abstract class BaseAIService implements AIService {
 
         var options = ChatOptions.newBuilder()
             .systemPrompt(buildSummarizePrompt(maxWords))
-            .temperature(0.5)
+            .temperature(DEFAULT_TEXT_ANALYSIS_TEMPERATURE)
             .maxTokens(estimateSummarizeMaxTokens(maxWords))
             .build();
 
@@ -146,7 +154,7 @@ public abstract class BaseAIService implements AIService {
      * @return Estimated maximum number of tokens.
      */
     protected int estimateSummarizeMaxTokens(int maxWords) {
-        return 500 + (int) Math.ceil(maxWords * getEstimatedTokensPerWord());
+        return DEFAULT_REASONING_TOKENS + (int) Math.ceil(maxWords * getEstimatedTokensPerWord());
     }
 
     @Override
@@ -157,7 +165,7 @@ public abstract class BaseAIService implements AIService {
 
         var options = ChatOptions.newBuilder()
             .systemPrompt(buildExtractKeyPointsPrompt(maxPoints))
-            .temperature(0.5)
+            .temperature(DEFAULT_TEXT_ANALYSIS_TEMPERATURE)
             .maxTokens(estimateExtractKeyPointsMaxTokens(maxPoints))
             .build();
 
@@ -175,10 +183,11 @@ public abstract class BaseAIService implements AIService {
         return """
             You are an expert at extracting key points.
             Extract the %d most important key points from the provided text.
+            Each key point can have at most %d words.
             Output format:
             - One key point per line.
             - No numbering, no bullets, no dashes, no explanations, no notes, no extra text, no markdown formatting.
-        """.formatted(maxPoints);
+        """.formatted(maxPoints, DEFAULT_WORDS_PER_KEYPOINT);
     }
 
     /**
@@ -189,7 +198,7 @@ public abstract class BaseAIService implements AIService {
      * @return Estimated maximum number of tokens.
      */
     protected int estimateExtractKeyPointsMaxTokens(int maxPoints) {
-        return 500 + (int) Math.ceil(maxPoints * 25 * getEstimatedTokensPerWord());
+        return DEFAULT_REASONING_TOKENS + (int) Math.ceil(maxPoints * DEFAULT_WORDS_PER_KEYPOINT * getEstimatedTokensPerWord());
     }
 
 
@@ -207,7 +216,7 @@ public abstract class BaseAIService implements AIService {
 
         var options = ChatOptions.newBuilder()
             .systemPrompt(buildTranslatePrompt(sourceLang, targetLang))
-            .temperature(0.3)
+            .temperature(DEFAULT_TRANSLATE_TEMPERATURE)
             .maxTokens(estimateTranslateMaxTokens(text))
             .build();
 
@@ -254,7 +263,7 @@ public abstract class BaseAIService implements AIService {
      * @return Estimated maximum number of tokens.
      */
     protected int estimateTranslateMaxTokens(String text) {
-        return 500 + (int) Math.ceil(text.split("\\s+").length * getEstimatedTokensPerWord());
+        return DEFAULT_REASONING_TOKENS + (int) Math.ceil(text.split("\\s+").length * getEstimatedTokensPerWord());
     }
 
     @Override
@@ -265,7 +274,7 @@ public abstract class BaseAIService implements AIService {
 
         var options = ChatOptions.newBuilder()
             .systemPrompt(buildDetectLanguagePrompt())
-            .temperature(0.0)
+            .temperature(DEFAULT_DETECT_LANGUAGE_TEMPERATURE)
             .maxTokens(estimateDetectLanguageMaxTokens())
             .build();
 
@@ -301,7 +310,7 @@ public abstract class BaseAIService implements AIService {
      * @return Estimated maximum number of tokens.
      */
     protected int estimateDetectLanguageMaxTokens() {
-        return 20 + (int) Math.ceil(2 * getEstimatedTokensPerWord());
+        return DEFAULT_DETECTION_TOKENS + (int) Math.ceil(2 * getEstimatedTokensPerWord());
     }
 
 
@@ -319,7 +328,7 @@ public abstract class BaseAIService implements AIService {
 
         var chatOptions = ChatOptions.newBuilder()
             .systemPrompt(buildModerateContentPrompt(options))
-            .temperature(0.1)
+            .temperature(DEFAULT_MODERATE_CONTENT_TEMPERATURE)
             .maxTokens(estimateModerateContentMaxTokens(options))
             .build();
 
@@ -355,7 +364,7 @@ public abstract class BaseAIService implements AIService {
      * @return Estimated maximum number of tokens.
      */
     protected int estimateModerateContentMaxTokens(ModerationOptions options) {
-        return 500 + (int) Math.ceil(options.getCategories().size() * 20 * getEstimatedTokensPerWord());
+        return DEFAULT_REASONING_TOKENS + (int) Math.ceil(options.getCategories().size() * 20 * getEstimatedTokensPerWord());
     }
 
     /**
