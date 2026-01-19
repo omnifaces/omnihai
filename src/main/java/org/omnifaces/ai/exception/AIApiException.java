@@ -41,7 +41,7 @@ public class AIApiException extends AIException {
      * Creates the appropriate exception subclass based on the HTTP status code.
      *
      * @param statusCode The HTTP status code.
-     * @param responseBody The response body containing error details.
+     * @param message The error message containing error details.
      * @return The appropriate exception subclass, or a generic {@code AIApiException} for unmapped status codes.
      */
     public static AIApiException forStatusCode(int statusCode, String message) {
