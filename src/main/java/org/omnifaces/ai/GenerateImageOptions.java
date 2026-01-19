@@ -199,7 +199,7 @@ public class GenerateImageOptions implements Serializable {
          * <p>
          * Setting the aspect ratio will reset the size.
          *
-         * @param size The image aspect ratio string.
+         * @param aspectRatio The image aspect ratio string.
          * @return This builder instance for chaining.
          * @throws NullPointerException when aspect ratio is null.
          * @throws IllegalArgumentException when aspect ratio is invalid.
