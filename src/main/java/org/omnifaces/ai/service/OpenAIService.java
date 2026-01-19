@@ -21,6 +21,7 @@ import java.util.concurrent.CompletableFuture;
 import jakarta.json.Json;
 
 import org.omnifaces.ai.AIConfig;
+import org.omnifaces.ai.AIModelVersion;
 import org.omnifaces.ai.AIProvider;
 import org.omnifaces.ai.AIService;
 import org.omnifaces.ai.ChatOptions;
@@ -63,7 +64,7 @@ public class OpenAIService extends BaseAIService {
 
     private static final long serialVersionUID = 1L;
 
-    private static final int GPT_5_MAJOR_VERSION = 5;
+    private static final AIModelVersion GPT_5 = AIModelVersion.of("gpt", 5);
 
     /**
      * Constructs an OpenAI service with the specified configuration.
@@ -131,11 +132,15 @@ public class OpenAIService extends BaseAIService {
             .add("role", "user")
             .add("content", message));
 
+        var currentModelVersion = getAIModelVersion();
         var optionsBuilder = Json.createObjectBuilder()
             .add("model", model)
             .add("messages", messages)
-            .add("temperature", options.getTemperature())
-            .add(getModelMajorVersion() >= GPT_5_MAJOR_VERSION ? "max_completion_tokens" : "max_tokens", options.getMaxTokens());
+            .add(currentModelVersion.gte(GPT_5) ? "max_completion_tokens" : "max_tokens", options.getMaxTokens());
+
+        if (currentModelVersion.ne(GPT_5)) {
+            optionsBuilder.add("temperature", options.getTemperature());
+        }
 
         if (options.getTopP() != 1.0) {
             optionsBuilder.add("top_p", options.getTopP());

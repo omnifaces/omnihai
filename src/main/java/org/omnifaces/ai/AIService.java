@@ -32,6 +32,8 @@ import org.omnifaces.ai.exception.AIException;
  *
  * @author Bauke Scholtz
  * @since 1.0
+ * @see AIProvider
+ * @see AIConfig
  */
 public interface AIService extends Serializable {
 
@@ -418,8 +420,8 @@ public interface AIService extends Serializable {
     String getProviderName();
 
     /**
-     * Returns the AI model name being used by this AI service.
-     * @return The AI model name being used by this AI service (e.g., "gpt-5-mini", "claude-sonnet-4-5-20250929", "gemini-2.5-flash", etc)
+     * Returns the (full) AI model name being used by this AI service.
+     * @return The (full) AI model name being used by this AI service (e.g., "gpt-5-mini", "claude-sonnet-4-5-20250929", "gemini-2.5-flash", etc)
      */
     String getModelName();
 
@@ -429,23 +431,7 @@ public interface AIService extends Serializable {
      */
     String getChatPrompt();
 
-    /**
-     * Returns the major version of the AI model being used by this AI service, or {@code -1} if none is found.
-     * The default implementation returns the first digit found in {@link #getModelName()}.
-     * @return The major version of the AI model being used by this AI service, or {@code -1} if none is found (e.g., 1, 2, 3, etc).
-     */
-    default int getModelMajorVersion() {
-        var digits = new StringBuilder();
-
-        for (var c : getModelName().toCharArray()) {
-            if (Character.isDigit(c)) {
-                digits.append(c);
-            }
-            else if (digits.length() > 0) {
-                break;
-            }
-        }
-
-        return digits.length() > 0 ? Integer.parseInt(digits.toString()) : -1;
+    default AIModelVersion getAIModelVersion() {
+        return AIModelVersion.of(this);
     }
 }
