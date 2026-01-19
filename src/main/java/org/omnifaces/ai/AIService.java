@@ -98,7 +98,7 @@ public interface AIService extends Serializable {
      * @throws UnsupportedOperationException if chat capability is not supported by the implementation.
      */
     default CompletableFuture<String> chatAsync(String message) {
-        return chatAsync(message, new ChatOptions.Builder().systemPrompt(getChatPrompt()).build());
+        return chatAsync(message, ChatOptions.newBuilder().systemPrompt(getChatPrompt()).build());
     }
 
 

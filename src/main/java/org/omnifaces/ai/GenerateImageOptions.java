@@ -47,7 +47,7 @@ public class GenerateImageOptions implements Serializable {
     public static final String DEFAULT_OUTPUT_FORMAT = "png";
 
     /** Default image generation options. */
-    public static final GenerateImageOptions DEFAULT = new GenerateImageOptions.Builder().build();
+    public static final GenerateImageOptions DEFAULT = GenerateImageOptions.newBuilder().build();
 
     private final String size;
     private final String aspectRatio;
@@ -145,7 +145,23 @@ public class GenerateImageOptions implements Serializable {
     }
 
     /**
-     * Builder for creating GenerateImageOptions.
+     * Creates a new builder for constructing {@link GenerateImageOptions} instances. For example:
+     * <pre>
+     * GenerateImageOptions options = GenerateImageOptions.newBuilder()
+     *     .size("1024x1024")
+     *     .build();
+     * </pre>
+     *
+     * @return A new {@code GenerateImageOptions.Builder} instance.
+     */
+    public static Builder newBuilder() {
+        return new Builder();
+    }
+
+    /**
+     * Builder for creating {@link GenerateImageOptions} instances.
+     * <p>
+     * Use {@link GenerateImageOptions#newBuilder()} to obtain a new builder instance.
      */
     public static class Builder {
         private static final Pattern SIZE_PATTERN = Pattern.compile("\\d+x\\d+");
@@ -156,6 +172,8 @@ public class GenerateImageOptions implements Serializable {
         private String quality = GenerateImageOptions.DEFAULT_QUALITY;
         private String style = GenerateImageOptions.DEFAULT_STYLE;
         private String outputFormat = GenerateImageOptions.DEFAULT_OUTPUT_FORMAT;
+
+        private Builder() {}
 
         /**
          * Sets the size of the generated image. Defaults to {@value GenerateImageOptions#DEFAULT_SIZE}.

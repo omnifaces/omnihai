@@ -45,13 +45,13 @@ public class ChatOptions implements Serializable {
     public static final double DEFAULT_PRESENCE_PENALTY = 0.0;
 
     /** Default chat options with temperature of {@value #DEFAULT_TEMPERATURE}. */
-    public static final ChatOptions DEFAULT = new ChatOptions.Builder().build();
+    public static final ChatOptions DEFAULT = ChatOptions.newBuilder().build();
 
     /** Creative chat with higher temperature of {@value #CREATIVE_TEMPERATURE}. */
-    public static final ChatOptions CREATIVE = new ChatOptions.Builder().temperature(CREATIVE_TEMPERATURE).build();
+    public static final ChatOptions CREATIVE = ChatOptions.newBuilder().temperature(CREATIVE_TEMPERATURE).build();
 
     /** Deterministic chat with zero temperature. */
-    public static final ChatOptions DETERMINISTIC = new ChatOptions.Builder().temperature(0.0).build();
+    public static final ChatOptions DETERMINISTIC = ChatOptions.newBuilder().temperature(0.0).build();
 
     private final String systemPrompt;
     private final double temperature;
@@ -153,7 +153,25 @@ public class ChatOptions implements Serializable {
     }
 
     /**
-     * Builder for creating ChatOptions.
+     * Creates a new builder for constructing {@link ChatOptions} instances. For example:
+     * <pre>
+     * ChatOptions options = ChatOptions.newBuilder()
+     *     .systemPrompt("You are a helpful software architect.")
+     *     .temperature(0.7)
+     *     .maxTokens(500)
+     *     .build();
+     * </pre>
+     *
+     * @return A new {@code ChatOptions.Builder} instance.
+     */
+    public static Builder newBuilder() {
+        return new Builder();
+    }
+
+    /**
+     * Builder for creating {@link ChatOptions} instances.
+     * <p>
+     * Use {@link ChatOptions#newBuilder()} to obtain a new builder instance.
      */
     public static class Builder {
         private String systemPrompt = null;
@@ -162,6 +180,8 @@ public class ChatOptions implements Serializable {
         private double topP = ChatOptions.DEFAULT_TOP_P;
         private double frequencyPenalty = ChatOptions.DEFAULT_FREQUENCY_PENALTY;
         private double presencePenalty = ChatOptions.DEFAULT_PRESENCE_PENALTY;
+
+        private Builder() {}
 
         /**
          * Sets the system prompt used to provide high-level instructions to the model.

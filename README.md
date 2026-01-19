@@ -100,7 +100,7 @@ CompletableFuture<String> future = service.chatAsync("Hello!");
 
 // With options
 String response = service.chat("Explain microservices",
-    new ChatOptions.Builder()
+    ChatOptions.newBuilder()
         .systemPrompt("You are a helpful software architect.")
         .temperature(0.7)
         .maxTokens(500)
@@ -141,7 +141,7 @@ if (result.isFlagged()) {
 
 // Custom moderation options
 ModerationResult result = service.moderateContent(content,
-    new ModerationOptions.Builder()
+    ModerationOptions.newBuilder()
         .categories(Category.HATE, Category.VIOLENCE)
         .threshold(0.8)
         .build());
@@ -166,7 +166,7 @@ byte[] image = service.generateImage("A sunset over mountains");
 
 // With options
 byte[] image = service.generateImage("A modern office",
-    new GenerateImageOptions.Builder()
+    GenerateImageOptions.newBuilder()
         .size("1024x1024")
         .build());
 ```

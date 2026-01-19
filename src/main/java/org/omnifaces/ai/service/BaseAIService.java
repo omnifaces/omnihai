@@ -111,7 +111,7 @@ public abstract class BaseAIService implements AIService {
             return completedFuture("");
         }
 
-        var options = new ChatOptions.Builder()
+        var options = ChatOptions.newBuilder()
             .systemPrompt(buildSummarizePrompt(maxWords))
             .temperature(0.5)
             .build();
@@ -120,7 +120,7 @@ public abstract class BaseAIService implements AIService {
     }
 
     /**
-     * Builds the system prompt for {@link #summarize(String, int)}.
+     * Builds the system prompt for {@link #summarizeAsync(String, int)}.
      * You can override this method to customize the prompt.
      *
      * @param maxWords Maximum words in summary.
@@ -144,7 +144,7 @@ public abstract class BaseAIService implements AIService {
             return completedFuture(emptyList());
         }
 
-        var options = new ChatOptions.Builder()
+        var options = ChatOptions.newBuilder()
             .systemPrompt(buildExtractKeyPointsPrompt(maxPoints))
             .temperature(0.5)
             .build();
@@ -153,7 +153,7 @@ public abstract class BaseAIService implements AIService {
     }
 
     /**
-     * Builds the system prompt for {@link #extractKeyPoints(String, int)}.
+     * Builds the system prompt for {@link #extractKeyPointsAsync(String, int)}.
      * You can override this method to customize the prompt.
      *
      * @param maxPoints Maximum number of key points.
@@ -178,7 +178,7 @@ public abstract class BaseAIService implements AIService {
             return completedFuture("");
         }
 
-        var options = new ChatOptions.Builder()
+        var options = ChatOptions.newBuilder()
             .systemPrompt(buildTranslatePrompt(sourceLang, targetLang))
             .temperature(0.3)
             .build();
@@ -187,7 +187,7 @@ public abstract class BaseAIService implements AIService {
     }
 
     /**
-     * Builds the system prompt for {@link #translate(String, String, String)}.
+     * Builds the system prompt for {@link #translateAsync(String, String, String)}.
      * You can override this method to customize the prompt.
      *
      * @param sourceLang Source language ISO 639-1 code, or {@code null} for auto-detection.
@@ -224,7 +224,7 @@ public abstract class BaseAIService implements AIService {
             return completedFuture(null);
         }
 
-        var options = new ChatOptions.Builder()
+        var options = ChatOptions.newBuilder()
             .systemPrompt(buildDetectLanguagePrompt())
             .temperature(0.0)
             .maxTokens(16)
@@ -240,7 +240,7 @@ public abstract class BaseAIService implements AIService {
     }
 
     /**
-     * Builds the system prompt for {@link #detectLanguage(String)}.
+     * Builds the system prompt for {@link #detectLanguageAsync(String)}.
      * You can override this method to customize the prompt.
      *
      * @return The system prompt.
@@ -264,7 +264,7 @@ public abstract class BaseAIService implements AIService {
             return completedFuture(ModerationResult.SAFE);
         }
 
-        var chatOptions = new ChatOptions.Builder()
+        var chatOptions = ChatOptions.newBuilder()
             .systemPrompt(buildModerateContentPrompt(options))
             .temperature(0.1)
             .maxTokens(Math.max(1000, content.split("\\s+").length * 100))
@@ -274,7 +274,7 @@ public abstract class BaseAIService implements AIService {
     }
 
     /**
-     * Builds the system prompt for {@link #moderateContent(String, ModerationOptions)}.
+     * Builds the system prompt for {@link #moderateContentAsync(String, ModerationOptions)}.
      * You can override this method to customize the prompt.
      *
      * @param options Moderation options containing categories and threshold.
@@ -328,7 +328,7 @@ public abstract class BaseAIService implements AIService {
     // Image Analysis Implementation (delegates to analyzeImage) ------------------------------------------------------
 
     /**
-     * Builds the system prompt for {@link #analyzeImage(byte[], String)}.
+     * Builds the system prompt for {@link #analyzeImageAsync(byte[], String)}.
      * You can override this method to customize the prompt.
      *
      * @param prompt User-provided prompt, or {@code null} for default.
@@ -352,7 +352,7 @@ public abstract class BaseAIService implements AIService {
     }
 
     /**
-     * Builds the system prompt for {@link #generateAltText(byte[])}.
+     * Builds the system prompt for {@link #generateAltTextAsync(byte[])}.
      * You can override this method to customize the prompt.
      *
      * @return The system prompt.

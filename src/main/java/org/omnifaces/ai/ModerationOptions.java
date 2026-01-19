@@ -95,13 +95,13 @@ public class ModerationOptions implements Serializable {
     public static final double LENIENT_THRESHOLD = 0.7;
 
     /** Default moderation options checking all categories with medium threshold of 0.5. */
-    public static final ModerationOptions DEFAULT = new ModerationOptions.Builder().build();
+    public static final ModerationOptions DEFAULT = ModerationOptions.newBuilder().build();
 
     /** Strict moderation with lower threshold of {@value #STRICT_THRESHOLD}. */
-    public static final ModerationOptions STRICT = new ModerationOptions.Builder().threshold(STRICT_THRESHOLD).build();
+    public static final ModerationOptions STRICT = ModerationOptions.newBuilder().threshold(STRICT_THRESHOLD).build();
 
     /** Lenient moderation with higher threshold of {@value #LENIENT_THRESHOLD}. */
-    public static final ModerationOptions LENIENT = new ModerationOptions.Builder().threshold(LENIENT_THRESHOLD).build();
+    public static final ModerationOptions LENIENT = ModerationOptions.newBuilder().threshold(LENIENT_THRESHOLD).build();
 
     private final Set<String> categories;
     private final double threshold;
@@ -133,11 +133,30 @@ public class ModerationOptions implements Serializable {
     }
 
     /**
+     * Creates a new builder for constructing {@link ModerationOptions} instances. For example:
+     * <pre>
+     * ModerationOptions options = ModerationOptions.newBuilder()
+     *     .categories(Category.HATE, Category.VIOLENCE)
+     *     .threshold(0.8)
+     *     .build();
+     * </pre>
+     *
+     * @return A new {@code ModerationOptions.Builder} instance.
+     */
+    public static Builder newBuilder() {
+        return new Builder();
+    }
+
+    /**
      * Builder for creating ModerationOptions.
+     * <p>
+     * Use {@link ModerationOptions#newBuilder()} to obtain a new builder instance.
      */
     public static class Builder {
         private Set<String> categories = new HashSet<>(Category.OPENAI_SUPPORTED_CATEGORY_NAMES);
         private double threshold = DEFAULT_THRESHOLD;
+
+        private Builder() {}
 
         /**
          * Sets the categories to check. Defaults to {@link Category#OPENAI_SUPPORTED_CATEGORY_NAMES}.
