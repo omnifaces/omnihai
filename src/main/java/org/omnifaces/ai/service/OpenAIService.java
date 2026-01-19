@@ -63,6 +63,8 @@ public class OpenAIService extends BaseAIService {
 
     private static final long serialVersionUID = 1L;
 
+    private static final int GPT_5_MAJOR_VERSION = 5;
+
     /**
      * Constructs an OpenAI service with the specified configuration.
      *
@@ -133,7 +135,7 @@ public class OpenAIService extends BaseAIService {
             .add("model", model)
             .add("messages", messages)
             .add("temperature", options.getTemperature())
-            .add(model.contains("5") ? "max_completion_tokens" : "max_tokens", options.getMaxTokens()); // NOTE: newer "responses" api uses max_output_tokens
+            .add(getModelMajorVersion() >= GPT_5_MAJOR_VERSION ? "max_completion_tokens" : "max_tokens", options.getMaxTokens());
 
         if (options.getTopP() != 1.0) {
             optionsBuilder.add("top_p", options.getTopP());
