@@ -61,6 +61,7 @@ public abstract class BaseAIService implements AIService {
     private static final int DEFAULT_REASONING_TOKENS = 500;
     private static final int DEFAULT_DETECTION_TOKENS = 50;
     private static final int DEFAULT_WORDS_PER_KEYPOINT = 25;
+    private static final int DEFAULT_WORDS_PER_MODERATE_CONTENT_CATEGORY = 10;
     private static final double DEFAULT_TEXT_ANALYSIS_TEMPERATURE = 0.5;
     private static final double DEFAULT_TRANSLATE_TEMPERATURE = 0.3;
     private static final double DEFAULT_DETECT_LANGUAGE_TEMPERATURE = 0.0;
@@ -364,7 +365,7 @@ public abstract class BaseAIService implements AIService {
      * @return Estimated maximum number of tokens.
      */
     protected int estimateModerateContentMaxTokens(ModerationOptions options) {
-        return DEFAULT_REASONING_TOKENS + (int) Math.ceil(options.getCategories().size() * 20 * getEstimatedTokensPerWord());
+        return DEFAULT_REASONING_TOKENS + (int) Math.ceil(options.getCategories().size() * DEFAULT_WORDS_PER_MODERATE_CONTENT_CATEGORY * getEstimatedTokensPerWord());
     }
 
     /**
