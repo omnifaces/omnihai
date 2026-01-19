@@ -431,6 +431,13 @@ public interface AIService extends Serializable {
      */
     String getChatPrompt();
 
+    /**
+     * Returns the AI model version information for this AI service.
+     * The version is extracted from {@link #getModelName()} and includes the model name prefix, major version, and minor version.
+     *
+     * @return The AI model version for this AI service.
+     * @see AIModelVersion#of(AIService)
+     */
     default AIModelVersion getAIModelVersion() {
         return AIModelVersion.of(this);
     }

@@ -15,6 +15,11 @@ package org.omnifaces.ai;
  */
 public record AIModelVersion(String modelName, int majorVersion, int minorVersion) implements Comparable<AIModelVersion> {
 
+    /**
+     * Validates and normalizes the record components.
+     *
+     * @throws IllegalArgumentException if modelName is null or blank, or if majorVersion or minorVersion is negative.
+     */
     public AIModelVersion {
         if (modelName == null || modelName.trim().isBlank()) {
             throw new IllegalArgumentException("Model name may not be blank");
@@ -131,6 +136,13 @@ public record AIModelVersion(String modelName, int majorVersion, int minorVersio
         return !eq(other);
     }
 
+    /**
+     * Compares this version with the specified version for order.
+     * Comparison is performed first by model name (case-insensitive), then by major version, then by minor version.
+     *
+     * @param other The other AI model version to compare against.
+     * @return A negative integer, zero, or a positive integer as this version is less than, equal to, or greater than the specified version.
+     */
     @Override
     public int compareTo(AIModelVersion other) {
         int nameCompare = modelName.compareToIgnoreCase(other.modelName);
