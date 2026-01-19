@@ -150,7 +150,7 @@ public class OllamaAIService extends BaseAIService {
                     .add("role", "user")
                     .add("content", prompt)
                     .add("images", Json.createArrayBuilder()
-                        .add(encodeBase64(image)))))
+                        .add(toImageBase64(image)))))
             .add("stream", false)
             .build()
             .toString();

@@ -182,7 +182,7 @@ public class OpenAIService extends BaseAIService {
                         .add(Json.createObjectBuilder()
                             .add("type", "image_url")
                             .add("image_url", Json.createObjectBuilder()
-                                .add("url", toDataUri(image)))))))
+                                .add("url", toImageDataUri(image)))))))
             .build()
             .toString();
     }

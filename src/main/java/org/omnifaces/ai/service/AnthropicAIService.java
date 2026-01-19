@@ -139,7 +139,7 @@ public class AnthropicAIService extends BaseAIService {
             throw new IllegalArgumentException("Prompt cannot be blank");
         }
 
-        var base64 = encodeBase64(image);
+        var base64 = toImageBase64(image);
         return Json.createObjectBuilder()
             .add("model", model)
             .add("max_tokens", 1000)
@@ -151,7 +151,7 @@ public class AnthropicAIService extends BaseAIService {
                             .add("type", "image")
                             .add("source", Json.createObjectBuilder()
                                 .add("type", "base64")
-                                .add("media_type", guessMimeType(base64))
+                                .add("media_type", guessImageMimeType(base64))
                                 .add("data", base64)))
                         .add(Json.createObjectBuilder()
                             .add("type", "text")

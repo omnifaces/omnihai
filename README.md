@@ -75,8 +75,7 @@ private AIService claude;
 // Use EL expressions for dynamic configuration
 @Inject
 @AI(provider = AIProvider.OPENAI,
-    apiKey = "#{initParam['com.example.OPENAI_KEY']}",
-    model = "gpt-5")
+    apiKey = "#{initParam['com.example.OPENAI_KEY']}")
 private AIService gpt;
 
 // With custom system prompt
@@ -85,6 +84,13 @@ private AIService gpt;
     apiKey = "#{configBean.googleApiKey}",
     prompt = "You are a helpful assistant specialized in Jakarta EE.")
 private AIService jakartaExpert;
+
+// With different model
+@Inject
+@AI(provider = AIProvider.XAI,
+    apiKey = "#{configBean.xaiApiKey}",
+    model = "grok-2-image-1212")
+private AIService imageGenerator;
 ```
 
 ## Features

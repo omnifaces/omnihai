@@ -143,14 +143,14 @@ public class GoogleAIService extends BaseAIService {
             throw new IllegalArgumentException("Prompt cannot be blank");
         }
 
-        var base64 = encodeBase64(image);
+        var base64 = toImageBase64(image);
         return Json.createObjectBuilder()
             .add("contents", Json.createArrayBuilder()
                 .add(Json.createObjectBuilder()
                     .add("parts", Json.createArrayBuilder()
                         .add(Json.createObjectBuilder()
                             .add("inline_data", Json.createObjectBuilder()
-                                .add("mime_type", guessMimeType(base64))
+                                .add("mime_type", guessImageMimeType(base64))
                                 .add("data", base64)))
                         .add(Json.createObjectBuilder()
                             .add("text", prompt)))))
