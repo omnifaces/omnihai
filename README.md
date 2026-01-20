@@ -198,7 +198,7 @@ AIService service = AIConfig.of("com.example.MyCustomAIService", "api-key").crea
 |--------|--------|-------------|-----------|-----------------|
 | **Target Runtime** | Jakarta EE | Any Java | Spring | Jakarta EE |
 | **Philosophy** | Minimal, focused utility | Comprehensive toolkit | Spring integration | Standard specification |
-| **Dependencies** | JSON-P only (CDI optional) | Multiple modules | Spring framework | TBD (in development) |
+| **Dependencies** | JSON-P only (CDI/EL optional) | Multiple modules | Spring framework | TBD (in development) |
 | **Learning Curve** | Low | Medium-High | Medium (if Spring-familiar) | TBD |
 
 ### Feature Comparison
@@ -247,7 +247,7 @@ AIService service = AIConfig.of("com.example.MyCustomAIService", "api-key").crea
 
 ### Where OmniAI Shines
 
-- Ultra-lightweight - No external HTTP library, just `java.net.http.HttpClient`. Minimal deps.
+- Ultra-lightweight - No external HTTP library, just [`java.net.http.HttpClient`](https://docs.oracle.com/en/java/javase/21/docs/api/java.net.http/java/net/http/HttpClient.html). Minimal deps.
 - Built-in text utilities - Summarization, translation, key point extraction, moderation as first-class features (not "build your own prompt")
 - Native CDI with EL - `@AI(apiKey = "#{config.key}")` with expression resolution
 - 8 providers out of the box - Including Ollama for local/offline
@@ -282,7 +282,7 @@ If Jakarta Agentic matures, OmniAI could potentially be a lightweight implementa
 Yes, significantly:
 - OmniAI 1.0-M1 JAR: 71 KB vs LangChain4J: 2+ MB (with dependencies) — roughly 28x smaller
 - 33 source files, ~5,200 lines of code total
-- Zero runtime dependencies — uses JDK's native java.net.http.HttpClient directly
+- Zero runtime dependencies — uses JDK's native `java.net.http.HttpClient` directly
 - Only optional provided dependencies: Jakarta JSON-P, CDI, and EL APIs (which Jakarta EE servers already have)
 
 ### Is it faster?
@@ -290,7 +290,7 @@ Yes, significantly:
 Likely yes for startup and per-request overhead:
 - No classpath scanning or proxy generation at startup
 - Minimal reflection — only used once during service instantiation, not per-request
-- No abstraction layers around HTTP — direct HttpClient usage
+- No abstraction layers around HTTP — direct [`HttpClient`](https://docs.oracle.com/en/java/javase/21/docs/api/java.net.http/java/net/http/HttpClient.html) usage
 - Simple interface dispatch, no dynamic proxies
 - Services are stateless and cached via ConcurrentHashMap
 
@@ -299,7 +299,7 @@ Likely yes for startup and per-request overhead:
 The design strongly suggests yes:
 - No intermediate JSON object materialization — uses path extraction directly on JsonObject
 - Conservative allocation patterns — no framework overhead creating wrapper objects
-- Native java.net.http.HttpClient — has better GC characteristics than third-party HTTP libraries
+- Native `java.net.http.HttpClient` — has better GC characteristics than third-party HTTP libraries
 - Simple POJOs and builders — no reflection-based bean creation at runtime
 - Stateless services — all state lives in method parameters, no per-request object graphs
 
