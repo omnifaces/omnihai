@@ -22,7 +22,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * Options for content moderation.
+ * Options for AI content moderation.
  *
  * @author Bauke Scholtz
  * @since 1.0
@@ -35,17 +35,17 @@ public class ModerationOptions implements Serializable {
      * Standard categories for content moderation.
      */
     public enum Category {
-        /** Sexual content. */
+        /** Sexual content (OpenAI supported). */
         SEXUAL("sexual", true),
-        /** Harassment content. */
+        /** Harassment content (OpenAI supported). */
         HARASSMENT("harassment", true),
-        /** Hate speech. */
+        /** Hate speech (OpenAI supported). */
         HATE("hate", true),
-        /** Illicit content. */
+        /** Illicit content (OpenAI supported). */
         ILLICIT("illicit", true),
-        /** Self-harm content. */
+        /** Self-harm content (OpenAI supported). */
         SELF_HARM("self-harm", true),
-        /** Violent content. */
+        /** Violent content (OpenAI supported). */
         VIOLENCE("violence", true),
         /** Personally identifiable information. */
         PII("pii", false),
@@ -148,7 +148,7 @@ public class ModerationOptions implements Serializable {
     }
 
     /**
-     * Builder for creating ModerationOptions.
+     * Builder for creating {@link ModerationOptions} instances.
      * <p>
      * Use {@link ModerationOptions#newBuilder()} to obtain a new builder instance.
      */

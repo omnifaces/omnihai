@@ -40,6 +40,40 @@ public interface AIService extends Serializable {
     // Chat Capabilities ----------------------------------------------------------------------------------------------
 
     /**
+     * Sends a message to the AI with default options.
+     *
+     * @param message The user's message to send to the AI.
+     * @return The AI's response, never {@code null}.
+     * @throws IllegalArgumentException if message is blank.
+     * @throws UnsupportedOperationException if chat capability is not supported by the implementation.
+     * @throws AIException if the chat request fails.
+     * @see #chat(String, ChatOptions)
+     * @see ChatOptions#DEFAULT
+     */
+    default String chat(String message) throws AIException {
+        try {
+            return chatAsync(message).join();
+        }
+        catch (CompletionException e) {
+            throw AIException.asyncRequestFailed(e);
+        }
+    }
+
+    /**
+     * Asynchronously sends a message to the AI with default options.
+     *
+     * @param message The user's message to send to the AI.
+     * @return A CompletableFuture that will contain the AI's response, never {@code null}.
+     * @throws IllegalArgumentException if message is blank.
+     * @throws UnsupportedOperationException if chat capability is not supported by the implementation.
+     * @see #chatAsync(String, ChatOptions)
+     * @see ChatOptions#DEFAULT
+     */
+    default CompletableFuture<String> chatAsync(String message) {
+        return chatAsync(message, ChatOptions.newBuilder().systemPrompt(getChatPrompt()).build());
+    }
+
+    /**
      * Sends a message to the AI and returns a response.
      * <p>
      * This is the core method for chat-based AI interactions.
@@ -74,36 +108,6 @@ public interface AIService extends Serializable {
      * @throws UnsupportedOperationException if chat capability is not supported by the implementation.
      */
     CompletableFuture<String> chatAsync(String message, ChatOptions options);
-
-    /**
-     * Sends a message to the AI with default options.
-     *
-     * @param message The user's message to send to the AI.
-     * @return The AI's response, never {@code null}.
-     * @throws IllegalArgumentException if message is blank.
-     * @throws UnsupportedOperationException if chat capability is not supported by the implementation.
-     * @throws AIException if the chat request fails.
-     */
-    default String chat(String message) throws AIException {
-        try {
-            return chatAsync(message).join();
-        }
-        catch (CompletionException e) {
-            throw AIException.asyncRequestFailed(e);
-        }
-    }
-
-    /**
-     * Asynchronously sends a message to the AI with default options.
-     *
-     * @param message The user's message to send to the AI.
-     * @return A CompletableFuture that will contain the AI's response, never {@code null}.
-     * @throws IllegalArgumentException if message is blank.
-     * @throws UnsupportedOperationException if chat capability is not supported by the implementation.
-     */
-    default CompletableFuture<String> chatAsync(String message) {
-        return chatAsync(message, ChatOptions.newBuilder().systemPrompt(getChatPrompt()).build());
-    }
 
 
     // Text Analysis Capabilities -------------------------------------------------------------------------------------
@@ -172,6 +176,34 @@ public interface AIService extends Serializable {
     // Text Translation Capabilities --------------------------------------------------------------------------------------
 
     /**
+     * Detects the language of the given text.
+     *
+     * @param text The text to analyze.
+     * @return The detected language code (ISO 639-1), never {@code null}.
+     * @throws IllegalArgumentException if text is blank.
+     * @throws UnsupportedOperationException if language detection capability is not supported by the implementation.
+     * @throws AIException if language detection fails.
+     */
+    default String detectLanguage(String text) throws AIException {
+        try {
+            return detectLanguageAsync(text).join();
+        }
+        catch (CompletionException e) {
+            throw AIException.asyncRequestFailed(e);
+        }
+    }
+
+    /**
+     * Asynchronously detects the language of the given text.
+     *
+     * @param text The text to analyze.
+     * @return A CompletableFuture that will contain the detected language code (ISO 639-1), never {@code null}.
+     * @throws IllegalArgumentException if text is blank.
+     * @throws UnsupportedOperationException if language detection capability is not supported by the implementation.
+     */
+    CompletableFuture<String> detectLanguageAsync(String text);
+
+    /**
      * Translates text from source language to target language while preserving any markup and placeholders.
      *
      * @param text The text to translate.
@@ -203,18 +235,25 @@ public interface AIService extends Serializable {
      */
     CompletableFuture<String> translateAsync(String text, String sourceLang, String targetLang);
 
+
+    // Text Moderation Capabilities -----------------------------------------------------------------------------------
+
     /**
-     * Detects the language of the given text.
+     * Moderates content with default options.
+     * <p>
+     * Default implementation checks for all categories defined in {@link Category#OPENAI_SUPPORTED_CATEGORY_NAMES}.
      *
-     * @param text The text to analyze.
-     * @return The detected language code (ISO 639-1), never {@code null}.
-     * @throws IllegalArgumentException if text is blank.
-     * @throws UnsupportedOperationException if language detection capability is not supported by the implementation.
-     * @throws AIException if language detection fails.
+     * @param content The content to moderate.
+     * @return Moderation result with detected violations, never {@code null}.
+     * @throws IllegalArgumentException if content is blank.
+     * @throws UnsupportedOperationException if content moderation capability is not supported by the implementation.
+     * @throws AIException if moderation fails.
+     * @see #moderateContent(String, ModerationOptions)
+     * @see ModerationOptions#DEFAULT
      */
-    default String detectLanguage(String text) throws AIException {
+    default ModerationResult moderateContent(String content) throws AIException {
         try {
-            return detectLanguageAsync(text).join();
+            return moderateContentAsync(content).join();
         }
         catch (CompletionException e) {
             throw AIException.asyncRequestFailed(e);
@@ -222,17 +261,20 @@ public interface AIService extends Serializable {
     }
 
     /**
-     * Asynchronously detects the language of the given text.
+     * Asynchronously moderates content with default options.
+     * <p>
+     * Default implementation checks for all categories defined in {@link Category#OPENAI_SUPPORTED_CATEGORY_NAMES}.
      *
-     * @param text The text to analyze.
-     * @return A CompletableFuture that will contain the detected language code (ISO 639-1), never {@code null}.
-     * @throws IllegalArgumentException if text is blank.
-     * @throws UnsupportedOperationException if language detection capability is not supported by the implementation.
+     * @param content The content to moderate.
+     * @return A CompletableFuture that will contain the moderation result with detected violations, never {@code null}.
+     * @throws IllegalArgumentException if content is blank.
+     * @throws UnsupportedOperationException if content moderation capability is not supported by the implementation.
+     * @see #moderateContent(String, ModerationOptions)
+     * @see ModerationOptions#DEFAULT
      */
-    CompletableFuture<String> detectLanguageAsync(String text);
-
-
-    // Text Moderation Capabilities -----------------------------------------------------------------------------------
+    default CompletableFuture<ModerationResult> moderateContentAsync(String content) {
+        return moderateContentAsync(content, ModerationOptions.DEFAULT);
+    }
 
     /**
      * Moderates content to detect violations per {@link Category}.
@@ -263,40 +305,6 @@ public interface AIService extends Serializable {
      * @throws UnsupportedOperationException if content moderation capability is not supported by the implementation.
      */
     CompletableFuture<ModerationResult> moderateContentAsync(String content, ModerationOptions options);
-
-    /**
-     * Moderates content with default options.
-     * <p>
-     * Default implementation checks for all categories defined in {@link Category#OPENAI_SUPPORTED_CATEGORY_NAMES}.
-     *
-     * @param content The content to moderate.
-     * @return Moderation result with detected violations, never {@code null}.
-     * @throws IllegalArgumentException if content is blank.
-     * @throws UnsupportedOperationException if content moderation capability is not supported by the implementation.
-     * @throws AIException if moderation fails.
-     */
-    default ModerationResult moderateContent(String content) throws AIException {
-        try {
-            return moderateContentAsync(content).join();
-        }
-        catch (CompletionException e) {
-            throw AIException.asyncRequestFailed(e);
-        }
-    }
-
-    /**
-     * Asynchronously moderates content with default options.
-     * <p>
-     * Default implementation checks for all categories defined in {@link Category#OPENAI_SUPPORTED_CATEGORY_NAMES}.
-     *
-     * @param content The content to moderate.
-     * @return A CompletableFuture that will contain the moderation result with detected violations, never {@code null}.
-     * @throws IllegalArgumentException if content is blank.
-     * @throws UnsupportedOperationException if content moderation capability is not supported by the implementation.
-     */
-    default CompletableFuture<ModerationResult> moderateContentAsync(String content) {
-        return moderateContentAsync(content, ModerationOptions.DEFAULT);
-    }
 
 
     // Image Analysis Capabilities ------------------------------------------------------------------------------------
@@ -365,6 +373,40 @@ public interface AIService extends Serializable {
     // Image Generation Capabilities ----------------------------------------------------------------------------------
 
     /**
+     * Generates an image based on a text prompt with default options.
+     *
+     * @param prompt The text prompt describing the image to generate.
+     * @return Generated image bytes, never {@code null}.
+     * @throws IllegalArgumentException if prompt is blank.
+     * @throws UnsupportedOperationException if image generation capability is not supported by the implementation.
+     * @throws AIException if image generation fails.
+     * @see #generateImage(String, GenerateImageOptions)
+     * @see GenerateImageOptions#DEFAULT
+     */
+    default byte[] generateImage(String prompt) throws AIException {
+        try {
+            return generateImageAsync(prompt).join();
+        }
+        catch (CompletionException e) {
+            throw AIException.asyncRequestFailed(e);
+        }
+    }
+
+    /**
+     * Asynchronously generates an image based on a text prompt with default options.
+     *
+     * @param prompt The text prompt describing the image to generate.
+     * @return A CompletableFuture that will contain the generated image bytes, never {@code null}.
+     * @throws IllegalArgumentException if prompt is blank.
+     * @throws UnsupportedOperationException if image generation capability is not supported by the implementation.
+     * @see #generateImage(String, GenerateImageOptions)
+     * @see GenerateImageOptions#DEFAULT
+     */
+    default CompletableFuture<byte[]> generateImageAsync(String prompt) {
+        return generateImageAsync(prompt, GenerateImageOptions.DEFAULT);
+    }
+
+    /**
      * Generates an image based on a text prompt.
      *
      * @param prompt The text prompt describing the image to generate.
@@ -393,36 +435,6 @@ public interface AIService extends Serializable {
      * @throws UnsupportedOperationException if image generation capability is not supported by the implementation.
      */
     CompletableFuture<byte[]> generateImageAsync(String prompt, GenerateImageOptions options);
-
-    /**
-     * Generates an image based on a text prompt with default options.
-     *
-     * @param prompt The text prompt describing the image to generate.
-     * @return Generated image bytes, never {@code null}.
-     * @throws IllegalArgumentException if prompt is blank.
-     * @throws UnsupportedOperationException if image generation capability is not supported by the implementation.
-     * @throws AIException if image generation fails.
-     */
-    default byte[] generateImage(String prompt) throws AIException {
-        try {
-            return generateImageAsync(prompt).join();
-        }
-        catch (CompletionException e) {
-            throw AIException.asyncRequestFailed(e);
-        }
-    }
-
-    /**
-     * Asynchronously generates an image based on a text prompt with default options.
-     *
-     * @param prompt The text prompt describing the image to generate.
-     * @return A CompletableFuture that will contain the generated image bytes, never {@code null}.
-     * @throws IllegalArgumentException if prompt is blank.
-     * @throws UnsupportedOperationException if image generation capability is not supported by the implementation.
-     */
-    default CompletableFuture<byte[]> generateImageAsync(String prompt) {
-        return generateImageAsync(prompt, GenerateImageOptions.DEFAULT);
-    }
 
 
     // Service Metadata -----------------------------------------------------------------------------------------------

@@ -141,9 +141,9 @@ public enum AIProvider {
     }
 
     /**
-     * Returns the AI provider instance matching the given name, or {@code null} when there is no match.
+     * Returns the AI provider instance matching the given name, case insensitive, or {@code null} when there is no match.
      * @param name to match an AI provider for.
-     * @return The AI provider instance matching the given name, or {@code null} when there is no match.
+     * @return The AI provider instance matching the given name, case insensitive, or {@code null} when there is no match.
      */
     public static AIProvider of(String name) {
         return stream(values()).filter(provider -> provider.name().equalsIgnoreCase(name)).findFirst().orElse(null);
@@ -159,7 +159,7 @@ public enum AIProvider {
 
     /**
      * Returns the AI provider's service class.
-     * If this returns null, then the end-user needs to provide a FQN of the custom {@link AIService} implementation as {@code org.omnifaces.ai.PROVIDER} configuration parameter.
+     * If this returns {@code null}, then the end-user needs to provide a FQN of the custom {@link AIService} implementation as {@link AIConfig#provider()}.
      * @return The AI provider's service class.
      */
     public Class<? extends AIService> getServiceClass() {
