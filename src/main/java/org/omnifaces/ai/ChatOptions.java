@@ -53,11 +53,17 @@ public class ChatOptions implements Serializable {
     /** Deterministic chat with zero temperature. */
     public static final ChatOptions DETERMINISTIC = ChatOptions.newBuilder().temperature(0.0).build();
 
+    /** The system prompt. */
     private final String systemPrompt;
+    /** The sampling temperature. */
     private final double temperature;
+    /** The maximum number of tokens. */
     private final int maxTokens;
+    /** The Top-P value. */
     private final double topP;
+    /** The frequency penalty. */
     private final double frequencyPenalty;
+    /** The presence penalty. */
     private final double presencePenalty;
 
     private ChatOptions(Builder builder) {

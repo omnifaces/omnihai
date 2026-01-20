@@ -31,6 +31,12 @@ import java.util.Map;
  * <p>
  * Use the static {@code of(...)} factory methods to create instances, and the {@code withXxx(...)} methods to create modified copies.
  *
+ * @param provider The AI provider name or custom service class name.
+ * @param apiKey The API key for authentication.
+ * @param model The AI model name.
+ * @param endpoint The API endpoint URL.
+ * @param prompt The AI chat prompt.
+ * @param properties Additional provider-specific properties.
  * @see AIProvider
  * @see AIService
  * @author Bauke Scholtz
@@ -56,6 +62,16 @@ public record AIConfig(String provider, String apiKey, String model, String endp
     /** Configuration property key for the AI chat prompt: {@value}. */
     public static final String PROPERTY_PROMPT = PROPERTY_PREFIX + "PROMPT";
 
+    /**
+     * Validates and normalizes the record components by stripping whitespace and filtering blank properties.
+     *
+     * @param provider The AI provider name or custom service class name.
+     * @param apiKey The API key for authentication.
+     * @param model The AI model name.
+     * @param endpoint The API endpoint URL.
+     * @param prompt The AI chat prompt.
+     * @param properties Additional provider-specific properties.
+     */
     public AIConfig {
         provider = stripToNull(provider);
         apiKey = stripToNull(apiKey);

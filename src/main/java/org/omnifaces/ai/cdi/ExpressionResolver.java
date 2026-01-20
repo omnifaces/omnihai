@@ -31,6 +31,13 @@ class ExpressionResolver {
 
     private static final Pattern EL_PATTERN = Pattern.compile("([$#]\\{)([^}]+)(})");
 
+    /**
+     * Resolves EL expressions in the given value using the provided BeanManager.
+     *
+     * @param beanManager The BeanManager to use for EL resolution.
+     * @param value The value containing EL expressions to resolve.
+     * @return The value with EL expressions resolved.
+     */
     static String resolveEL(BeanManager beanManager, String value) {
         var matcher = EL_PATTERN.matcher(value);
         var stringBuilder = new StringBuilder();

@@ -32,6 +32,9 @@ public record AIModelVersion(String modelName, int majorVersion, int minorVersio
     /**
      * Validates and normalizes the record components.
      *
+     * @param modelName The name of the AI model to match against, may not be empty.
+     * @param majorVersion The major version number, may not be negative.
+     * @param minorVersion The minor version number, may not be negative.
      * @throws IllegalArgumentException if modelName is blank, or if majorVersion or minorVersion is negative.
      */
     public AIModelVersion {

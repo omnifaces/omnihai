@@ -68,12 +68,18 @@ public abstract class BaseAIService implements AIService {
     private static final double DEFAULT_DETECT_LANGUAGE_TEMPERATURE = 0.0;
     private static final double DEFAULT_MODERATE_CONTENT_TEMPERATURE = 0.1;
 
+    /** The shared HTTP client for API requests. */
     protected static final AIApiClient API_CLIENT = AIApiClient.newInstance(DEFAULT_CONNECT_TIMEOUT, DEFAULT_REQUEST_TIMEOUT);
 
+    /** The AI provider for this service. */
     protected final AIProvider provider;
+    /** The API key for authentication. */
     protected final String apiKey;
+    /** The AI model name. */
     protected final String model;
+    /** The API endpoint URI. */
     protected final URI endpoint;
+    /** The AI chat prompt. */
     protected final String prompt;
 
     /**

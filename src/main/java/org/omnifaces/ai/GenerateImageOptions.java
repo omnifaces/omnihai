@@ -49,10 +49,15 @@ public class GenerateImageOptions implements Serializable {
     /** Default image generation options. */
     public static final GenerateImageOptions DEFAULT = GenerateImageOptions.newBuilder().build();
 
+    /** The image size. */
     private final String size;
+    /** The image aspect ratio. */
     private final String aspectRatio;
+    /** The image quality. */
     private final String quality;
+    /** The image style. */
     private final String style;
+    /** The output format. */
     private final String outputFormat;
 
     private GenerateImageOptions(Builder builder) {

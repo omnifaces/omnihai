@@ -31,7 +31,9 @@ public class ModerationResult implements Serializable {
     /** A result indicating no violations were found. */
     public static final ModerationResult SAFE = new ModerationResult(false, Collections.emptyMap());
 
+    /** Whether the content was flagged. */
     private final boolean flagged;
+    /** The confidence scores by category. */
     private final Map<String, Double> scores;
 
     /**

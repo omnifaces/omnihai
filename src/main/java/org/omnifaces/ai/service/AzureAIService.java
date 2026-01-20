@@ -61,6 +61,7 @@ public class AzureAIService extends OpenAIService {
 
     private static final long serialVersionUID = 1L;
 
+    /** Configuration property key for the Azure resource name. */
     public static final String OPTION_AZURE_RESOURCE = AIConfig.createPropertyKey("AZURE_RESOURCE");
 
     private static final String RESOURCE_SUBSTITUTION = "{" + OPTION_AZURE_RESOURCE + "}";

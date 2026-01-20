@@ -25,20 +25,26 @@ public final class TextHelper {
     }
 
     /**
-     * Returns whether the given string is null or blank.
+     * Returns whether the given text is null or blank.
      *
-     * @param string String to check.
-     * @return Whether the given string is null or blank.
+     * @param text Text to check.
+     * @return Whether the given text is null or blank.
      */
-    public static boolean isBlank(String string) {
-        return string == null || string.isBlank();
+    public static boolean isBlank(String text) {
+        return text == null || text.isBlank();
     }
 
-    public static String stripToNull(String string) {
-        if (string == null) {
+    /**
+     * Strips whitespace from the given text and returns null if the result is empty.
+     *
+     * @param text Text to strip.
+     * @return The stripped text, or null if null was passed in or if the result is empty.
+     */
+    public static String stripToNull(String text) {
+        if (text == null) {
             return null;
         }
-        var stripped = string.strip();
+        var stripped = text.strip();
         return stripped.isEmpty() ? null : stripped;
     }
 

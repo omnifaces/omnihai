@@ -35,6 +35,7 @@ public class AIApiException extends AIException {
 
     private static final long serialVersionUID = 1L;
 
+    /** The HTTP status code. */
     private final int statusCode;
 
     /**

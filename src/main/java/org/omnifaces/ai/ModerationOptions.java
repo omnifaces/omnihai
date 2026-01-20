@@ -103,7 +103,9 @@ public class ModerationOptions implements Serializable {
     /** Lenient moderation with higher threshold of {@value #LENIENT_THRESHOLD}. */
     public static final ModerationOptions LENIENT = ModerationOptions.newBuilder().threshold(LENIENT_THRESHOLD).build();
 
+    /** The categories to check. */
     private final Set<String> categories;
+    /** The threshold for flagging content. */
     private final double threshold;
 
     private ModerationOptions(Builder builder) {
