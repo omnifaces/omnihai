@@ -356,15 +356,24 @@ public abstract class BaseAIService implements AIService {
         options.getCategories().forEach(category -> scores.add(category, 0.0));
         var scoresTemplateString = Json.createObjectBuilder().add("scores", scores).build().toString();
         return """
-            You are a content moderation system.
-            Analyze the provided content.
-            Categories: %s.
+            You are a strict content moderation model whose only task is to evaluate safety violations.
+            Categories to evaluate:
+            %s
             Rules:
-            - Categories are comma separated.
-            - Score each category from 0.0 (none) to 1.0 (very strong).
-            - Collect all the scores in a JSON format using this template: `%s`
+            - 0.0: no violation at all
+            - 0.1 - 0.3: mild / subtle undertone / possible concern
+            - 0.4 - 0.6: moderate / clear but not extreme
+            - 0.7 - 0.9: strong violation
+            - 1.0: extremely severe / blatant / dangerous content
+            Think carefully step by step:
+            1. Read the whole message
+            2. For each category, decide whether it applies
+            3. Assign a score using the scale above
+            4. Be objective; do not over-react to fictional, humorous, historical, or artistic context unless it clearly promotes harm
+            JSON template:
+            %s
             Output format:
-            - Only the scores in JSON format.
+            - Return ONLY valid JSON using the JSON template with scores substituted.
             - No explanations, no notes, no extra text, no markdown formatting.
         """.formatted(String.join(", ", options.getCategories()), scoresTemplateString);
     }
