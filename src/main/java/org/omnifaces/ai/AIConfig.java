@@ -208,6 +208,16 @@ public record AIConfig(String provider, String apiKey, String model, String endp
     }
 
     /**
+     * Returns a copy of this configuration with the specified prompt.
+     *
+     * @param prompt The AI chat prompt.
+     * @return A new configuration instance with the updated prompt.
+     */
+    public AIConfig withPrompt(String prompt) {
+        return new AIConfig(provider, apiKey, model, endpoint, prompt, properties);
+    }
+
+    /**
      * Returns a copy of this configuration with the specified properties map.
      *
      * @param properties The properties map.
