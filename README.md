@@ -326,18 +326,10 @@ The design strongly suggests yes:
 - You're building agentic workflows
 - You can wait for the specification to mature
 
-### The trade-off
+As said, OmniAI is "a sharp chef's knife — does a few things very well" rather than being a full framework.
 
-OmniAI achieves this by being intentionally focused:
-- ❌ No streaming (by design choice)
-- ❌ No function calling, RAG, embeddings, agents
-- ✅ Multi-provider chat, text analysis, image generation
-- ✅ Native CDI integration with EL expressions
-
-As the README describes it: "a sharp chef's knife — does a few things very well" rather than being a full framework.
-
-Bottom line: If someone needs a lightweight utility for AI chat/text operations in Jakarta EE without framework overhead, OmniAI is dramatically smaller and should be faster with less GC pressure. If they need streaming, RAG, or agent
-pipelines, Langchain4j's larger footprint comes with those capabilities.
+Bottom line: If you need a lightweight utility for AI chat/text operations in Jakarta EE without framework overhead, OmniAI is dramatically smaller and should be faster with less GC pressure. If you need streaming, RAG, or agent
+pipelines, LangChain4J's / Spring AI's larger footprint comes with those capabilities.
 
 ## License
 
