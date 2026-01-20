@@ -62,7 +62,7 @@ On non-Jakarta EE containers such as Tomcat, you'll need to add JSON-P and optio
 
 ```java
 // Create a service instance
-var service = AIConfig.of(AIProvider.ANTHROPIC, "your-api-key").createService();
+AIService service = AIConfig.of(AIProvider.ANTHROPIC, "your-api-key").createService();
 
 // Simple chat
 String response = service.chat("What is Jakarta EE?");
@@ -187,7 +187,7 @@ All methods have async variants returning `CompletableFuture` (e.g., `summarizeA
 Implement `AIService` or extend `BaseAIService` and use the fully qualified class name as the provider:
 
 ```java
-var service = AIConfig.of("com.example.MyCustomAIService", "api-key").createService();
+AIService service = AIConfig.of("com.example.MyCustomAIService", "api-key").createService();
 ```
 
 ## OmniAI vs LangChain4J vs Spring AI vs Jakarta Agentic
@@ -331,8 +331,7 @@ The design strongly suggests yes:
 
 As said, OmniAI is "a sharp chef's knife — does a few things very well" rather than being a full framework.
 
-Bottom line: If you need a lightweight utility for AI chat/text operations in Jakarta EE without framework overhead, OmniAI is dramatically smaller and should be faster with less GC pressure. If you need streaming, RAG, or agent
-pipelines, LangChain4J's / Spring AI's larger footprint comes with those capabilities.
+Bottom line: If you need a lightweight utility for AI chat/text operations in Jakarta EE without framework overhead, OmniAI is dramatically smaller and should be faster with less GC pressure. If you need streaming, RAG, or agent pipelines, LangChain4J's / Spring AI's larger footprint comes with those capabilities.
 
 ## License
 
@@ -342,6 +341,7 @@ pipelines, LangChain4J's / Spring AI's larger footprint comes with those capabil
 
 - [OmniFaces](https://omnifaces.org)
 - [GitHub](https://github.com/omnifaces/omniai)
+- [Blog post: One API, any AI](https://balusc.omnifaces.org/2026/01/one-api-any-ai.html)
 
 ## Credits
 
