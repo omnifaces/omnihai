@@ -13,14 +13,14 @@
 package org.omnifaces.ai.helper;
 
 /**
- * Utility class for string operations.
+ * Utility class for text operations.
  *
  * @author Bauke Scholtz
  * @since 1.0
  */
-public final class StringHelper {
+public final class TextHelper {
 
-    private StringHelper() {
+    private TextHelper() {
         throw new AssertionError();
     }
 

@@ -12,7 +12,7 @@
  */
 package org.omnifaces.ai.helper;
 
-import static org.omnifaces.ai.helper.StringHelper.isBlank;
+import static org.omnifaces.ai.helper.TextHelper.isBlank;
 
 import java.io.StringReader;
 

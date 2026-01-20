@@ -19,7 +19,7 @@ import static java.util.function.Predicate.not;
 import static org.omnifaces.ai.AIConfig.PROPERTY_API_KEY;
 import static org.omnifaces.ai.helper.JsonHelper.extractByPath;
 import static org.omnifaces.ai.helper.JsonHelper.parseJson;
-import static org.omnifaces.ai.helper.StringHelper.isBlank;
+import static org.omnifaces.ai.helper.TextHelper.isBlank;
 
 import java.net.URI;
 import java.time.Duration;
@@ -40,7 +40,7 @@ import org.omnifaces.ai.ModerationOptions;
 import org.omnifaces.ai.ModerationResult;
 import org.omnifaces.ai.exception.AIApiResponseException;
 import org.omnifaces.ai.exception.AIException;
-import org.omnifaces.ai.helper.StringHelper;
+import org.omnifaces.ai.helper.TextHelper;
 
 /**
  * Base class for AI service implementations providing common API functionality.
@@ -169,7 +169,7 @@ public abstract class BaseAIService implements AIService {
             .maxTokens(estimateExtractKeyPointsMaxTokens(maxPoints))
             .build();
 
-        return chatAsync(text, options).thenApply(response -> Arrays.asList(response.split("\n")).stream().map(line -> line.strip()).filter(not(StringHelper::isBlank)).toList());
+        return chatAsync(text, options).thenApply(response -> Arrays.asList(response.split("\n")).stream().map(line -> line.strip()).filter(not(TextHelper::isBlank)).toList());
     }
 
     /**

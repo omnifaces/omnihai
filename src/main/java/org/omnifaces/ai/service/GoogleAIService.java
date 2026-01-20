@@ -14,7 +14,7 @@ package org.omnifaces.ai.service;
 
 import static org.omnifaces.ai.helper.ImageHelper.guessImageMimeType;
 import static org.omnifaces.ai.helper.ImageHelper.toImageBase64;
-import static org.omnifaces.ai.helper.StringHelper.isBlank;
+import static org.omnifaces.ai.helper.TextHelper.isBlank;
 
 import java.net.URI;
 import java.util.List;

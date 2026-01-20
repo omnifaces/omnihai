@@ -15,8 +15,8 @@ package org.omnifaces.ai;
 import static java.util.Collections.emptyMap;
 import static java.util.Optional.ofNullable;
 import static java.util.stream.Collectors.toUnmodifiableMap;
-import static org.omnifaces.ai.helper.StringHelper.isBlank;
-import static org.omnifaces.ai.helper.StringHelper.stripToNull;
+import static org.omnifaces.ai.helper.TextHelper.isBlank;
+import static org.omnifaces.ai.helper.TextHelper.stripToNull;
 
 import java.io.Serializable;
 import java.util.HashMap;
