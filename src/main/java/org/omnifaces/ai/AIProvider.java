@@ -113,13 +113,31 @@ public enum AIProvider {
     OPENROUTER("OpenRouter", OpenRouterAIService.class, true, "google/gemma-3-27b-it:free", "https://openrouter.ai/api/v1"),
 
     /**
-     * Ollama: Local models, e.g. Llama, Mistral, etc via local server.
+     * Ollama: Local models, e.g. Llama, Gemma, Mistral, etc via local server.
      * <p>
-     * Defaults currently to model {@code llama3.2} at endpoint {@code http://localhost:11434}.
+     * Defaults currently to model {@code gemma3} at endpoint {@code http://localhost:11434}.
+     * <p>
+     * To install it:
+     * <pre>
+     * # Install
+     * curl -fsSL https://ollama.com/install.sh | sh
+     *
+     * # Start
+     * sudo systemctl start ollama
+     *
+     * # Enable on boot
+     * sudo systemctl enable ollama
+     *
+     * # Run and chat with specific model (will download if absent; gemma3 is ~3.3GB and supports vision)
+     * ollama run gemma3
+     * </pre>
+     * <p>
+     * Test by opening {@code http://localhost:11434} in web browser.
+     *
      * @see OllamaAIService
      * @see <a href="https://ollama.com/library">Available Ollama Models</a>
      */
-    OLLAMA("Ollama", OllamaAIService.class, false, "llama3.2", "http://localhost:11434"),
+    OLLAMA("Ollama", OllamaAIService.class, false, "gemma3", "http://localhost:11434"),
 
     /**
      * Custom: provide the FQN of your custom {@link AIService} implementation as the provider in {@link AIConfig},
