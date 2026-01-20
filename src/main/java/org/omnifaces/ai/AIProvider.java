@@ -54,6 +54,7 @@ public enum AIProvider {
      * <p>
      * Defaults currently to model {@code gpt-5-mini} at endpoint {@code https://api.openai.com/v1}.
      * @see OpenAIService
+     * @see <a href="https://platform.openai.com/api-keys">Manage OpenAI API Keys</a>
      * @see <a href="https://platform.openai.com/docs/models">Available OpenAI models</a>
      */
     OPENAI("OpenAI", OpenAIService.class, true, "gpt-5-mini", "https://api.openai.com/v1"),
@@ -62,8 +63,9 @@ public enum AIProvider {
      * Anthropic: Claude Opus, Claude Sonnet, Claude Haiku, etc.
      * <p>
      * Defaults currently to model {@code claude-sonnet-4-5-20250929} at endpoint {@code https://api.anthropic.com/v1}.
-     * @see <a href="https://platform.claude.com/docs/en/about-claude/models/overview">Available Anthropic AI Models</a>
      * @see AnthropicAIService
+     * @see <a href="https://platform.claude.com/settings/keys">Manage Anthropic API Keys</a>
+     * @see <a href="https://platform.claude.com/docs/en/about-claude/models/overview">Available Anthropic AI Models</a>
      */
     ANTHROPIC("Anthropic", AnthropicAIService.class, true, "claude-sonnet-4-5-20250929", "https://api.anthropic.com/v1"),
 
@@ -71,8 +73,9 @@ public enum AIProvider {
      * Google AI: Gemini Pro, Gemini Flash, Gemini Flash Lite, etc.
      * <p>
      * Defaults currently to model {@code gemini-2.5-flash} at endpoint {@code https://generativelanguage.googleapis.com/v1beta}.
-     * @see <a href="https://ai.google.dev/gemini-api/docs/models">Available Google AI Models</a>
      * @see GoogleAIService
+     * @see <a href="https://aistudio.google.com/app/api-keys">Manage Google AI API Keys</a>
+     * @see <a href="https://ai.google.dev/gemini-api/docs/models">Available Google AI Models</a>
      */
     GOOGLE("Google AI", GoogleAIService.class, true, "gemini-2.5-flash", "https://generativelanguage.googleapis.com/v1beta"),
 
@@ -81,6 +84,7 @@ public enum AIProvider {
      * <p>
      * Defaults currently to model {@code grok-4-1-fast-reasoning} at endpoint {@code https://api.x.ai/v1}.
      * @see XAIService
+     * @see <a href="https://console.x.ai/">Manage xAI API Keys</a>
      * @see <a href="https://docs.x.ai/docs/models">Available xAI Models</a>
      */
     XAI("xAI", XAIService.class, true, "grok-4-1-fast-reasoning", "https://api.x.ai/v1"),
@@ -90,7 +94,8 @@ public enum AIProvider {
      * <p>
      * Defaults currently to model {@code Llama-4-Scout-17B-16E-Instruct-FP8} at endpoint {@code https://api.llama.com/v1}.
      * @see MetaAIService
-     * @see <a href="https://llama.developer.meta.com/docs/models/">Available Meta Llama Models</a>
+     * @see <a href="https://llama.developer.meta.com/docs/api-keys/">Manage Meta AI API Keys</a>
+     * @see <a href="https://llama.developer.meta.com/docs/models/">Available Meta AI Models</a>
      */
     META("Meta Llama", MetaAIService.class, true, "Llama-4-Scout-17B-16E-Instruct-FP8", "https://api.llama.com/v1"),
 
@@ -99,6 +104,7 @@ public enum AIProvider {
      * <p>
      * Defaults currently to model {@code gpt-5-mini} at endpoint {@code https://{org.omnifaces.ai.AZURE_RESOURCE}.openai.azure.com/openai/v1}.
      * @see AzureAIService
+     * @see <a href="https://portal.azure.com/">Manage Azure OpenAI API Keys</a>
      * @see <a href="https://ai.azure.com/catalog">Available Azure OpenAI Models</a>
      */
     AZURE("Azure OpenAI", AzureAIService.class, true, "gpt-5-mini", "https://{org.omnifaces.ai.AZURE_RESOURCE}.openai.azure.com/openai/v1"),
@@ -108,6 +114,7 @@ public enum AIProvider {
      * <p>
      * Defaults currently to model {@code google/gemma-3-27b-it:free} at endpoint {@code https://openrouter.ai/api/v1}.
      * @see OpenRouterAIService
+     * @see <a href="https://openrouter.ai/settings/keys/">Manage OpenRouter API Keys</a>
      * @see <a href="https://openrouter.ai/models">Available OpenRouter Models</a>
      */
     OPENROUTER("OpenRouter", OpenRouterAIService.class, true, "google/gemma-3-27b-it:free", "https://openrouter.ai/api/v1"),
@@ -135,7 +142,7 @@ public enum AIProvider {
      * Test by opening {@code http://localhost:11434} in web browser.
      *
      * @see OllamaAIService
-     * @see <a href="https://ollama.com/library">Available Ollama Models</a>
+     * @see <a href="https://ollama.com/library">Available Ollama Models</a> (no API Keys required)
      */
     OLLAMA("Ollama", OllamaAIService.class, false, "gemma3", "http://localhost:11434"),
 
