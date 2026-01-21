@@ -31,7 +31,7 @@ import java.util.Map;
  * <p>
  * Use the static {@code of(...)} factory methods to create instances, and the {@code withXxx(...)} methods to create modified copies.
  *
- * @param provider The AI provider name or custom service class name.
+ * @param provider The {@link AIProvider} enum name or custom service class name.
  * @param apiKey The API key for authentication.
  * @param model The AI model name.
  * @param endpoint The API endpoint URL.
@@ -74,6 +74,11 @@ public record AIConfig(String provider, String apiKey, String model, String endp
      */
     public AIConfig {
         provider = stripToNull(provider);
+
+        if (provider == null) {
+            throw new IllegalArgumentException("provider is required");
+        }
+
         apiKey = stripToNull(apiKey);
         model = stripToNull(model);
         endpoint = stripToNull(endpoint);
@@ -84,123 +89,47 @@ public record AIConfig(String provider, String apiKey, String model, String endp
     }
 
     /**
-     * Creates a new configuration with the specified properties.
+     * Creates a new {@code AIConfig} using the given provider and API key, with model, endpoint, and prompt left unset (to use provider defaults or be set
+     * later via {@code withXxx} methods).
+     * <p>
+     * This is the most common entry point when working with one of the built-in providers (e.g. {@link AIProvider#OPENAI}, {@link AIProvider#ANTHROPIC}).
      *
-     * @param provider The AI provider name or custom service class name.
-     * @param apiKey The API key.
-     * @param model The AI model name.
-     * @param endpoint The API endpoint URL.
-     * @param prompt The AI chat prompt.
-     * @return A new configuration instance.
-     */
-    public static AIConfig of(String provider, String apiKey, String model, String endpoint, String prompt) {
-        return new AIConfig(provider, apiKey, model, endpoint, prompt, emptyMap());
-    }
-
-    /**
-     * Creates a new configuration with the specified properties.
-     *
-     * @param provider The AI provider.
-     * @param apiKey The API key.
-     * @param model The AI model name.
-     * @param endpoint The API endpoint URL.
-     * @param prompt The AI chat prompt.
-     * @return A new configuration instance.
-     */
-    public static AIConfig of(AIProvider provider, String apiKey, String model, String endpoint, String prompt) {
-        return of(provider.name(), apiKey, model, endpoint, prompt);
-    }
-
-    /**
-     * Creates a new configuration with the specified properties.
-     *
-     * @param provider The AI provider name or custom service class name.
-     * @param apiKey The API key.
-     * @param model The AI model name.
-     * @param endpoint The API endpoint URL.
-     * @return A new configuration instance.
-     */
-    public static AIConfig of(String provider, String apiKey, String model, String endpoint) {
-        return of(provider, apiKey, model, endpoint, null);
-    }
-
-    /**
-     * Creates a new configuration with the specified properties.
-     *
-     * @param provider The AI provider.
-     * @param apiKey The API key.
-     * @param model The AI model name.
-     * @param endpoint The API endpoint URL.
-     * @return A new configuration instance.
-     */
-    public static AIConfig of(AIProvider provider, String apiKey, String model, String endpoint) {
-        return of(provider.name(), apiKey, model, endpoint);
-    }
-
-    /**
-     * Creates a new configuration with the specified properties and default endpoint.
-     *
-     * @param provider The AI provider name or custom service class name.
-     * @param apiKey The API key.
-     * @param model The AI model name.
-     * @return A new configuration instance.
-     */
-    public static AIConfig of(String provider, String apiKey, String model) {
-        return of(provider, apiKey, model, null);
-    }
-
-    /**
-     * Creates a new configuration with the specified properties and default endpoint.
-     *
-     * @param provider The AI provider.
-     * @param apiKey The API key.
-     * @param model The AI model name.
-     * @return A new configuration instance.
-     */
-    public static AIConfig of(AIProvider provider, String apiKey, String model) {
-        return of(provider.name(), apiKey, model);
-    }
-
-    /**
-     * Creates a new configuration with the specified properties and default model and endpoint.
-     *
-     * @param provider The AI provider name or custom service class name.
-     * @param apiKey The API key.
-     * @return A new configuration instance.
-     */
-    public static AIConfig of(String provider, String apiKey) {
-        return of(provider, apiKey, null);
-    }
-
-    /**
-     * Creates a new configuration with the specified properties and default model and endpoint.
-     *
-     * @param provider The AI provider.
-     * @param apiKey The API key.
-     * @return A new configuration instance.
+     * @param provider The built-in AI provider to use (must not be {@code null}).
+     * @param apiKey The authentication API key or token (recommended to be non-null; may be set later via {@link #withProperty} if obtained dynamically).
+     * @return A new configuration instance ready for further customization or service creation.
+     * @throws NullPointerException If {@code provider} is {@code null}.
      */
     public static AIConfig of(AIProvider provider, String apiKey) {
-        return of(provider.name(), apiKey);
+        return new AIConfig(provider.name(), apiKey, null, null, null, emptyMap());
     }
 
     /**
-     * Creates a new configuration with the specified properties and default model and endpoint.
+     * Creates a new {@code AIConfig} for a custom {@link AIService} implementation using the provided service class, with all other properties (API key, model,
+     * endpoint, prompt) left unset (to be set later via {@code withXxx} methods).
+     * <p>
+     * For custom providers that still require an API key at construction time, prefer {@link #of(Class, String)} instead.
      *
-     * @param provider The AI provider name or custom service class name.
-     * @return A new configuration instance.
+     * @param serviceClass The custom class that implements {@link AIService} and has a public constructor accepting {@code AIConfig} (must not be {@code null}).
+     * @return A new configuration instance ready for further customization or service creation.
+     * @throws NullPointerException If {@code serviceClass} is {@code null}.
+     * @throws IllegalArgumentException If the class does not implement {@link AIService} (checked at service creation time).
      */
-    public static AIConfig of(String provider) {
-        return of(provider, null);
+    public static AIConfig of(Class<? extends AIService> serviceClass) {
+        return new AIConfig(serviceClass.getName(), null, null, null, null, emptyMap());
     }
 
     /**
-     * Creates a new configuration with the specified properties and default model and endpoint.
+     * Creates a new {@code AIConfig} for a custom {@link AIService} implementation using the provided service class and API key, with all other properties
+     * (model, endpoint, prompt) left unset (to be set later via {@code withXxx} methods).
      *
-     * @param provider The AI provider.
-     * @return A new configuration instance.
+     * @param serviceClass The custom class that implements {@link AIService} and has a public constructor accepting {@code AIConfig} (must not be {@code null}).
+     * @param apiKey The authentication API key or token (recommended to be non-null; may be set later via {@link #withProperty} if obtained dynamically).
+     * @return A new configuration instance ready for further customization or service creation.
+     * @throws NullPointerException If {@code serviceClass} is {@code null}.
+     * @throws IllegalArgumentException If the class does not implement {@link AIService} (checked at service creation time).
      */
-    public static AIConfig of(AIProvider provider) {
-        return of(provider.name());
+    public static AIConfig of(Class<? extends AIService> serviceClass, String apiKey) {
+        return new AIConfig(serviceClass.getName(), apiKey, null, null, null, emptyMap());
     }
 
     /**
@@ -293,27 +222,30 @@ public record AIConfig(String provider, String apiKey, String model, String endp
     }
 
     /**
-     * Returns the value of the specified configuration property.
+     * Retrieves the value for the given configuration property key.
      * <p>
-     * For core properties ({@link #PROPERTY_PROVIDER}, {@link #PROPERTY_API_KEY}, {@link #PROPERTY_MODEL}, {@link #PROPERTY_ENDPOINT}),
-     * the corresponding record field takes precedence over the properties map.
+     * Lookup follows this precedence for <em>core properties</em> (those matching one of the constants {@link #PROPERTY_PROVIDER}, {@link #PROPERTY_API_KEY},
+     * {@link #PROPERTY_MODEL}, {@link #PROPERTY_ENDPOINT}, {@link #PROPERTY_PROMPT}):
+     * <ol>
+     * <li>The value from the {@code properties} map, if present (external / override source)</li>
+     * <li>The corresponding record component value (explicitly set via factory or {@code withXxx} methods)</li>
+     * </ol>
+     * This allows external configuration (e.g. system properties, environment variables, config files) to override values provided at construction time.
+     * <p>
+     * For any other (provider-specific) key, only the {@code properties} map is consulted.
      *
-     * @param key The property key.
-     * @return The property value, or {@code null} if not found.
+     * @param key the property key to look up (case-sensitive), must not be {@code null}
+     * @return the resolved property value, or {@code null} if no value is found in either source
      */
     public String property(String key) {
         return switch (key) {
-            case PROPERTY_PROVIDER -> coalesce(provider(), key);
-            case PROPERTY_API_KEY -> coalesce(apiKey(), key);
-            case PROPERTY_MODEL -> coalesce(model(), key);
-            case PROPERTY_ENDPOINT -> coalesce(endpoint(), key);
-            case PROPERTY_PROMPT -> coalesce(prompt(), key);
+            case PROPERTY_PROVIDER -> properties().getOrDefault(key, provider());
+            case PROPERTY_API_KEY -> properties().getOrDefault(key, apiKey());
+            case PROPERTY_MODEL -> properties().getOrDefault(key, model());
+            case PROPERTY_ENDPOINT -> properties().getOrDefault(key, endpoint());
+            case PROPERTY_PROMPT -> properties().getOrDefault(key, prompt());
             default -> properties().get(key);
         };
-    }
-
-    private String coalesce(String field, String key) {
-        return field != null ? field : properties().get(key);
     }
 
     /**
@@ -323,7 +255,7 @@ public record AIConfig(String provider, String apiKey, String model, String endp
      * @return The property value.
      * @throws IllegalStateException If the property is not found.
      */
-    public String require(String key) {
+    public String require(String key) throws IllegalStateException {
         return ofNullable(property(key)).orElseThrow(() -> new IllegalStateException(key + " property is required"));
     }
 

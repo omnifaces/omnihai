@@ -12,6 +12,8 @@
  */
 package org.omnifaces.ai.cdi;
 
+import static java.util.Collections.emptyMap;
+
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -69,7 +71,7 @@ class AIServiceProducer {
         var model = resolveELIfNecessary(beanManager, annotation.model());
         var endpoint = resolveELIfNecessary(beanManager, annotation.endpoint());
         var prompt = resolveELIfNecessary(beanManager, annotation.prompt());
-        var config = AIConfig.of(provider, apiKey, model, endpoint, prompt);
+        var config = new AIConfig(provider, apiKey, model, endpoint, prompt, emptyMap());
 
         return serviceCache.computeIfAbsent(config, AIConfig::createService);
     }

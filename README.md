@@ -217,7 +217,7 @@ Implement `AIService` or extend `BaseAIService`:
 ### Programmatic Configuration
 
 ```java
-AIService service = AIConfig.of("com.example.MyCustomAIService", "api-key").createService();
+AIService service = AIConfig.of(MyCustomAIService.class, "api-key").createService();
 ```
 
 ### CDI Integration

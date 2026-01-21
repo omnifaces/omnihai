@@ -48,7 +48,7 @@ abstract class AIServiceIT {
 
     @BeforeAll
     void setup() {
-        service = AIConfig.of(getProvider(), System.getenv(getApiKeyEnvName()), getModel()).createService();
+        service = AIConfig.of(getProvider(), System.getenv(getApiKeyEnvName())).withModel(getModel()).createService();
     }
 
     @BeforeEach
