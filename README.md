@@ -52,7 +52,7 @@ You can also use it on Java SE, you'll still need the JSON-P implementation, but
 | Anthropic | claude-sonnet-4-5-20250929 | [Yes](https://platform.claude.com/settings/keys) | [List](https://platform.claude.com/docs/en/about-claude/models/overview) |
 | Google AI | gemini-2.5-flash | [Yes](https://aistudio.google.com/app/api-keys) | [List](https://ai.google.dev/gemini-api/docs/models) |
 | xAI | grok-4-1-fast-reasoning | [Yes](https://console.x.ai) | [List](https://docs.x.ai/docs/models) |
-| Meta Llama | Llama-4-Scout-17B-16E-Instruct-FP8 | [Yes](https://llama.developer.meta.com/join-waitlist) | [List](https://llama.developer.meta.com/docs/models/) |
+| Meta AI | Llama-4-Scout-17B-16E-Instruct-FP8 | [Yes](https://llama.developer.meta.com/join-waitlist) | [List](https://llama.developer.meta.com/docs/models/) |
 | Azure OpenAI | gpt-5-mini | [Yes](https://portal.azure.com) | [List](https://ai.azure.com/catalog) |
 | OpenRouter | google/gemma-3-27b-it:free | [Yes](https://openrouter.ai/settings/keys) | [List](https://openrouter.ai/models) |
 | Ollama | llama3.2 | No (localhost) | [List](https://ollama.com/library) |
@@ -268,7 +268,7 @@ private AIService custom;
 | Azure OpenAI | ✅ | ✅ | ✅ |
 | Ollama | ✅ | ✅ | ✅ |
 | xAI (Grok) | ✅ | ❌ | ❌ |
-| Meta Llama | ✅ | ❌ | ❌ |
+| Meta AI | ✅ | ❌ | ❌ |
 | OpenRouter | ✅ | ❌ | ❌ |
 | AWS Bedrock | ❌ | ✅ | ✅ |
 | Mistral | ❌ | ✅ | ✅ |

@@ -23,14 +23,14 @@ import org.omnifaces.ai.AIProvider;
 import org.omnifaces.ai.AIService;
 
 /**
- * AI service implementation using Microsoft Azure API.
+ * AI service implementation using Microsoft Azure OpenAI API.
  *
  * <h2>Required Configuration</h2>
  * <p>
  * The following configuration properties must be provided via {@link AIConfig}:
  * <ul>
  *     <li>provider: {@link AIProvider#AZURE}</li>
- *     <li>apiKey: your Azure API key</li>
+ *     <li>apiKey: your Azure OpenAI API key</li>
  *     <li>{@code org.omnifaces.ai.AZURE_RESOURCE}: your Azure resource name</li>
  * </ul>
  * <p>

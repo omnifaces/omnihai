@@ -31,7 +31,7 @@ import org.omnifaces.ai.GenerateImageOptions;
 import org.omnifaces.ai.exception.AIException;
 
 /**
- * AI service implementation using Google API.
+ * AI service implementation using Google AI API.
  *
  * <h2>Required Configuration</h2>
  * <p>

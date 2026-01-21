@@ -19,7 +19,7 @@ import org.omnifaces.ai.AIProvider;
 import org.omnifaces.ai.AIService;
 
 /**
- * AI service implementation using Meta Llama API.
+ * AI service implementation using Meta AI API.
  *
  * <h2>Required Configuration</h2>
  * <p>
@@ -52,7 +52,7 @@ public class MetaAIService extends OpenAIService {
     private static final long serialVersionUID = 1L;
 
     /**
-     * Constructs a Meta Llama service with the specified configuration.
+     * Constructs a Meta AI service with the specified configuration.
      *
      * @param config the AI configuration
      * @see AIConfig

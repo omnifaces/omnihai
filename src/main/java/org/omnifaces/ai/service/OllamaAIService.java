@@ -30,7 +30,7 @@ import org.omnifaces.ai.GenerateImageOptions;
 import org.omnifaces.ai.exception.AIException;
 
 /**
- * AI service implementation using Ollama for local/self-hosted models.
+ * AI service implementation using Ollama API for local/self-hosted models.
  *
  * <h2>Required Configuration</h2>
  * <p>

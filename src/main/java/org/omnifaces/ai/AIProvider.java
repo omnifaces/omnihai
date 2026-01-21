@@ -90,14 +90,14 @@ public enum AIProvider {
     XAI("xAI", XAIService.class, true, "grok-4-1-fast-reasoning", "https://api.x.ai/v1"),
 
     /**
-     * Meta Llama: Llama Maverick, Llama Scout, Llama default, etc.
+     * Meta AI: Llama Maverick, Llama Scout, Llama default, etc.
      * <p>
      * Defaults currently to model {@code Llama-4-Scout-17B-16E-Instruct-FP8} at endpoint {@code https://api.llama.com/v1}.
      * @see MetaAIService
      * @see <a href="https://llama.developer.meta.com/docs/api-keys/">Manage Meta AI API Keys</a>
      * @see <a href="https://llama.developer.meta.com/docs/models/">Available Meta AI Models</a>
      */
-    META("Meta Llama", MetaAIService.class, true, "Llama-4-Scout-17B-16E-Instruct-FP8", "https://api.llama.com/v1"),
+    META("Meta AI", MetaAIService.class, true, "Llama-4-Scout-17B-16E-Instruct-FP8", "https://api.llama.com/v1"),
 
     /**
      * Azure OpenAI: OpenAI, Anthropic, xAI, DeepSeek, etc via Microsoft Azure.
