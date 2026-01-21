@@ -33,12 +33,12 @@ import org.opentest4j.TestAbortedException;
  */
 public class FailFastOnRateLimitExtension implements BeforeEachCallback, TestExecutionExceptionHandler {
 
-    private static final ConcurrentMap<AIProvider, AtomicBoolean> RATE_LIMITS = new ConcurrentHashMap<>();
+    private static final ConcurrentMap<AIProvider, AtomicBoolean> RATE_LIMIT_HITS = new ConcurrentHashMap<>();
 
     @Override
     public void beforeEach(ExtensionContext context) throws Exception {
         var provider = getProvider(context);
-        if (RATE_LIMITS.computeIfAbsent(provider, p -> new AtomicBoolean(false)).get()) {
+        if (RATE_LIMIT_HITS.computeIfAbsent(provider, p -> new AtomicBoolean(false)).get()) {
             throw new TestAbortedException("Rate limit hit for " + provider + "; skipping remaining tests for this provider, we better retry later.");
         }
     }
@@ -46,7 +46,7 @@ public class FailFastOnRateLimitExtension implements BeforeEachCallback, TestExe
     @Override
     public void handleTestExecutionException(ExtensionContext context, Throwable throwable) throws Throwable {
         if (throwable instanceof AIApiRateLimitExceededException) {
-            RATE_LIMITS.computeIfAbsent(getProvider(context), p -> new AtomicBoolean(false)).set(true);
+            RATE_LIMIT_HITS.computeIfAbsent(getProvider(context), p -> new AtomicBoolean(false)).set(true);
         }
 
         throw throwable;

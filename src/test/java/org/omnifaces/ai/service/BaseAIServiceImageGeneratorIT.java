@@ -38,7 +38,7 @@ abstract class BaseAIServiceImageGeneratorIT extends AIServiceIT {
         var mimeType = guessMimeTypeSuppressException(response);
         var targetDir = Path.of(System.getProperty("user.dir"), "target", "image-generator-test-results");
         targetDir.toFile().mkdirs();
-        var tempFilePath = Files.createTempFile(targetDir, getClass().getSimpleName(), "." + mimeType.split("/", 2)[1]);
+        var tempFilePath = Files.createTempFile(targetDir, getClass().getSimpleName() + "-", "." + mimeType.split("/", 2)[1]);
         Files.write(tempFilePath, response);
         log("saved in " + tempFilePath.toString());
 
