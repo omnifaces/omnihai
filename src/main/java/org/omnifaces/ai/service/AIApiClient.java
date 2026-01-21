@@ -13,6 +13,9 @@
 package org.omnifaces.ai.service;
 
 import static java.net.http.HttpClient.newBuilder;
+import static java.util.stream.Collectors.joining;
+import static org.omnifaces.ai.service.AIApiClient.ContentType.APPLICATION_JSON;
+import static org.omnifaces.ai.service.AIApiClient.ContentType.EVENT_STREAM;
 
 import java.io.IOException;
 import java.net.http.HttpClient;
@@ -20,11 +23,11 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpRequest.BodyPublishers;
 import java.net.http.HttpResponse.BodyHandlers;
 import java.time.Duration;
-import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BiConsumer;
 import java.util.stream.Stream;
 
 import org.omnifaces.ai.exception.AIApiBadRequestException;
@@ -47,6 +50,30 @@ final class AIApiClient {
     public static final int MAX_RETRIES = 3;
     /** Initial retry backoff time: {@value}ms (increases exponentially on every retry) */
     public static final long INITIAL_BACKOFF_MS = 1000;
+
+    /**
+     * Standard content types.
+     */
+    public enum ContentType {
+        /** application/json */
+        APPLICATION_JSON("application/json"),
+        /** text/event-stream */
+        EVENT_STREAM("text/event-stream");
+
+        private final String header;
+
+        private ContentType(String header) {
+            this.header = header;
+        }
+
+        /**
+         * Returns value suitable for {@code Content-Type} header.
+         * @return Value suitable for {@code Content-Type} header.
+         */
+        public String header() {
+            return header;
+        }
+    }
 
     private final HttpClient client;
     private final Duration requestTimeout;
@@ -78,15 +105,33 @@ final class AIApiClient {
      * @throws AIApiException if the request fails
      */
     public CompletableFuture<String> post(BaseAIService service, String path, String body) throws AIApiException {
-        return send(HttpRequest.newBuilder(service.resolveURI(path)).timeout(requestTimeout).POST(BodyPublishers.ofString(body)), service.getRequestHeaders());
+        return attemptSendAsync(newRequest(service, path, body, APPLICATION_JSON), 0);
     }
 
-    private CompletableFuture<String> send(HttpRequest.Builder requestBuilder, Map<String, String> headers) {
+    /**
+     * Sends a STREAM (SSE) request for the specified {@link BaseAIService}.
+     * Will retry at most {@value #MAX_RETRIES} times in case of a connection error with exponentially incremental backoff of {@value #INITIAL_BACKOFF_MS}ms.
+     *
+     * @param service The {@link BaseAIService} to extract URI and headers from.
+     * @param path the API path
+     * @param body The request body
+     * @param streamEventDataProcessor The stream event data processor.
+     * @return A future that completes when stream ends or fails.
+     * @throws AIApiException if the request fails
+     */
+    public CompletableFuture<Void> stream(BaseAIService service, String path, String body, BiConsumer<CompletableFuture<Void>, String> streamEventDataProcessor) throws AIApiException {
+        var request = newRequest(service, path, body, EVENT_STREAM);
+        return attemptStreamAsync(request, streamEventDataProcessor, 0);
+    }
+
+    private HttpRequest newRequest(BaseAIService service, String path, String body, ContentType accept) {
+        var requestBuilder = HttpRequest.newBuilder(service.resolveURI(path)).timeout(requestTimeout).POST(BodyPublishers.ofString(body));
         requestBuilder.header("User-Agent", USER_AGENT);
-        requestBuilder.header("Content-Type", "application/json");
-        headers.forEach(requestBuilder::header);
+        requestBuilder.header("Content-Type", APPLICATION_JSON.header());
+        requestBuilder.header("Accept", accept.header());
+        service.getRequestHeaders().forEach(requestBuilder::header);
         var request = requestBuilder.build();
-        return attemptSendAsync(request, 0);
+        return request;
     }
 
     private CompletableFuture<String> attemptSendAsync(HttpRequest request, int attempt) {
@@ -115,6 +160,42 @@ final class AIApiClient {
             });
     }
 
+    private CompletableFuture<Void> attemptStreamAsync(HttpRequest request, BiConsumer<CompletableFuture<Void>, String> eventDataProcessor, int attempt) {
+        return client.sendAsync(request, BodyHandlers.ofLines())
+            .thenCompose(response -> {
+                var statusCode = response.statusCode();
+
+                if (statusCode >= AIApiBadRequestException.STATUS_CODE) {
+                    return CompletableFuture.failedFuture(AIApiException.fromStatusCode(request.uri(), statusCode, response.body().collect(joining("\n"))));
+                }
+
+                var processingFuture = new CompletableFuture<Void>();
+                CompletableFuture.runAsync(() -> {
+                    try {
+                        response.body().forEach(line -> eventDataProcessor.accept(processingFuture, line));
+                    }
+                    catch (Throwable throwable) {
+                        processingFuture.completeExceptionally(throwable);
+                    }
+                });
+
+                return processingFuture;
+            })
+            .exceptionallyCompose(throwable -> {
+                var cause = (throwable instanceof CompletionException completionException) ? completionException.getCause() : throwable;
+
+                if (cause instanceof AIException) {
+                    return CompletableFuture.failedFuture(cause);
+                }
+                else if (attempt >= MAX_RETRIES - 1 || !isRetryable(cause)) {
+                    return CompletableFuture.failedFuture(new AIApiException("Request failed (" + attempt + " retries)", cause));
+                }
+
+                var delayed = CompletableFuture.delayedExecutor(INITIAL_BACKOFF_MS * (1L << attempt), TimeUnit.MILLISECONDS);
+                return CompletableFuture.supplyAsync(() -> attemptStreamAsync(request, eventDataProcessor, attempt + 1), delayed).thenCompose(f -> f);
+            });
+    }
+
     /**
      * Determines whether a failed request should be retried based on the exception.
      * <p>
@@ -129,10 +210,6 @@ final class AIApiClient {
             return false;
         }
 
-        System.out.println("======================================================================================");
-        throwable.printStackTrace();
-        System.out.println("======================================================================================");
-
         return Stream.iterate(throwable, Objects::nonNull, Throwable::getCause)
             .filter(IOException.class::isInstance)
             .findFirst()
@@ -145,4 +222,5 @@ final class AIApiClient {
             )
             .orElse(false);
     }
+
 }

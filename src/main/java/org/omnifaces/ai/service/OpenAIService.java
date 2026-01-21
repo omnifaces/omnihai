@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
 
 import jakarta.json.Json;
 
@@ -127,7 +128,51 @@ public class OpenAIService extends BaseAIService {
 
     @Override
     public CompletableFuture<String> chatAsync(String message, ChatOptions options) throws AIException {
-        return asyncPostAndExtractMessageContent(supportsResponsesApi() ? "responses" : "chat/completions", buildChatPayload(message, options));
+        return asyncPostAndExtractMessageContent(supportsResponsesApi() ? "responses" : "chat/completions", buildChatPayload(message, options, false));
+    }
+
+    @Override
+    public CompletableFuture<Void> chatStream(String message, ChatOptions options, Consumer<String> onToken) {
+        if (!supportsResponsesApi()) {
+            throw new UnsupportedOperationException("This feature is only supported in gpt-4 or newer");
+        }
+
+        return asyncPostAndExtractStreamEventData("responses", buildChatPayload(message, options, true), (future, line) -> {
+            if (line.isBlank() || line.startsWith(":")) {
+                return;
+            }
+
+            System.out.println("===> " + line);
+
+            if (line.startsWith("data:")) {
+                var data = line.substring(5).trim();
+
+                if (data.contains("response.output_text.delta")) { // Cheap pre-filter before expensive parse.
+                    try {
+                        var json = parseJson(data);
+
+                        if ("response.output_text.delta".equals(json.getString("type", null))) {
+                            var token = json.getString("delta", "");
+
+                            if (!token.isEmpty()) { // Do not use isBlank! Whitespace can be a valid token.
+                                onToken.accept(token);
+                            }
+                        }
+                    }
+                    catch (Exception skipBadLines) {
+                        // TODO: logger
+                    }
+                }
+            }
+
+            if (line.startsWith("event:")) {
+                var event = line.substring(6).trim();
+
+                if (event.equals("response.completed") || event.equals("response.incomplete")) {
+                    future.complete(null);
+                }
+            }
+        });
     }
 
     @Override
@@ -157,9 +202,10 @@ public class OpenAIService extends BaseAIService {
      *
      * @param message The user message.
      * @param options The chat options.
+     * @param streaming Whether to stream the chat response.
      * @return The JSON request payload.
      */
-    protected String buildChatPayload(String message, ChatOptions options) {
+    protected String buildChatPayload(String message, ChatOptions options, boolean streaming) {
         if (isBlank(message)) {
             throw new IllegalArgumentException("Message cannot be blank");
         }
@@ -187,6 +233,10 @@ public class OpenAIService extends BaseAIService {
             .add("content", message));
 
         payload.add(supportsResponsesApi() ? "input" : "messages", input);
+
+        if (streaming) {
+            payload.add("stream", true);
+        }
 
         if (currentModelVersion.ne(GPT_5)) {
             payload.add("temperature", options.getTemperature());

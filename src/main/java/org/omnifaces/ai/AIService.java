@@ -16,6 +16,7 @@ import java.io.Serializable;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.function.Consumer;
 
 import jakarta.enterprise.context.ApplicationScoped;
 
@@ -110,6 +111,23 @@ public interface AIService extends Serializable {
      */
     CompletableFuture<String> chatAsync(String message, ChatOptions options);
 
+    /**
+     * Send a message to the AI and retrieve an asynchronous stream of tokens.
+     * <p>
+     * This is the core method for chat-based AI interactions.
+     * The message represents the user's input, while the system prompt in options defines the AI's behavior.
+     *
+     * @param message The user's message to send to the AI.
+     * @param options Chat options (system prompt, temperature, max tokens, etc.).
+     * @param onToken The token consumer, this will be invoked for every chat response token in the stream.
+     * @return An empty CompletableFuture which only completes when the end of stream is reached, never {@code null}.
+     * @throws IllegalArgumentException if message is blank.
+     * @throws UnsupportedOperationException if chat capability is not supported by the implementation.
+     */
+    default CompletableFuture<Void> chatStream(String message, ChatOptions options, Consumer<String> onToken) {
+        throw new UnsupportedOperationException();
+    }
+
 
     // Text Analysis Capabilities -------------------------------------------------------------------------------------
 
@@ -141,7 +159,9 @@ public interface AIService extends Serializable {
      * @throws IllegalArgumentException if text is blank.
      * @throws UnsupportedOperationException if summarization capability is not supported by the implementation.
      */
-    CompletableFuture<String> summarizeAsync(String text, int maxWords);
+    default CompletableFuture<String> summarizeAsync(String text, int maxWords) {
+        throw new UnsupportedOperationException();
+    }
 
     /**
      * Extracts key points from text as a list.
@@ -171,7 +191,9 @@ public interface AIService extends Serializable {
      * @throws IllegalArgumentException if text is blank.
      * @throws UnsupportedOperationException if key point extraction capability is not supported by the implementation.
      */
-    CompletableFuture<List<String>> extractKeyPointsAsync(String text, int maxPoints);
+    default CompletableFuture<List<String>> extractKeyPointsAsync(String text, int maxPoints) {
+        throw new UnsupportedOperationException();
+    }
 
 
     // Text Translation Capabilities --------------------------------------------------------------------------------------
@@ -202,7 +224,9 @@ public interface AIService extends Serializable {
      * @throws IllegalArgumentException if text is blank.
      * @throws UnsupportedOperationException if language detection capability is not supported by the implementation.
      */
-    CompletableFuture<String> detectLanguageAsync(String text);
+    default CompletableFuture<String> detectLanguageAsync(String text) {
+        throw new UnsupportedOperationException();
+    }
 
     /**
      * Translates text from source language to target language while preserving any markup and placeholders.
@@ -234,7 +258,9 @@ public interface AIService extends Serializable {
      * @throws IllegalArgumentException if text or targetLang is blank.
      * @throws UnsupportedOperationException if translation capability is not supported by the implementation.
      */
-    CompletableFuture<String> translateAsync(String text, String sourceLang, String targetLang);
+    default CompletableFuture<String> translateAsync(String text, String sourceLang, String targetLang) {
+        throw new UnsupportedOperationException();
+    }
 
 
     // Text Moderation Capabilities -----------------------------------------------------------------------------------
@@ -305,7 +331,9 @@ public interface AIService extends Serializable {
      * @throws IllegalArgumentException if content is blank.
      * @throws UnsupportedOperationException if content moderation capability is not supported by the implementation.
      */
-    CompletableFuture<ModerationResult> moderateContentAsync(String content, ModerationOptions options);
+    default CompletableFuture<ModerationResult> moderateContentAsync(String content, ModerationOptions options) {
+        throw new UnsupportedOperationException();
+    }
 
 
     // Image Analysis Capabilities ------------------------------------------------------------------------------------
@@ -342,7 +370,9 @@ public interface AIService extends Serializable {
      * @throws IllegalArgumentException if prompt is blank.
      * @throws UnsupportedOperationException if image analysis capability is not supported by the implementation.
      */
-    CompletableFuture<String> analyzeImageAsync(byte[] image, String prompt);
+    default CompletableFuture<String> analyzeImageAsync(byte[] image, String prompt) {
+        throw new UnsupportedOperationException();
+    }
 
     /**
      * Generates alt text for an image suitable for accessibility purposes.
@@ -368,7 +398,9 @@ public interface AIService extends Serializable {
      * @return A CompletableFuture that will contain the alt text description, never {@code null}.
      * @throws UnsupportedOperationException if image analysis capability is not supported by the implementation.
      */
-    CompletableFuture<String> generateAltTextAsync(byte[] image);
+    default CompletableFuture<String> generateAltTextAsync(byte[] image) {
+        throw new UnsupportedOperationException();
+    }
 
 
     // Image Generation Capabilities ----------------------------------------------------------------------------------
@@ -435,7 +467,9 @@ public interface AIService extends Serializable {
      * @throws IllegalArgumentException if prompt is blank.
      * @throws UnsupportedOperationException if image generation capability is not supported by the implementation.
      */
-    CompletableFuture<byte[]> generateImageAsync(String prompt, GenerateImageOptions options);
+    default CompletableFuture<byte[]> generateImageAsync(String prompt, GenerateImageOptions options) {
+        throw new UnsupportedOperationException();
+    }
 
 
     // Service Metadata -----------------------------------------------------------------------------------------------

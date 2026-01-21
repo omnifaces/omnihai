@@ -31,6 +31,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.BiConsumer;
 
 import jakarta.json.Json;
 import jakarta.json.JsonObject;
@@ -488,8 +489,8 @@ public abstract class BaseAIService implements AIService {
     }
 
     /**
-     * Send POST request to API at given path with given payload via {@link AIApiClient#post(BaseAIService, String, String)} along with request headers obtained
-     * from {@link #getRequestHeaders()}, and extract message content from the POST response with help of {@link #extractMessageContent(String)}.
+     * Send POST request to API at given path with given payload along with request headers obtained from {@link #getRequestHeaders()}, and extract
+     * message content from the POST response with help of {@link #extractMessageContent(String)}.
      * @param path API path, relative to {@link #endpoint}.
      * @param payload POST request payload, usually a JSON object with instructions.
      * @return The message content of the POST request.
@@ -500,8 +501,8 @@ public abstract class BaseAIService implements AIService {
     }
 
     /**
-     * Send POST request to API at given path with given payload via {@link AIApiClient#post(BaseAIService, String, String)} along with request headers obtained
-     * from {@link #getRequestHeaders()}, and extract image content from the POST response with help of {@link #extractImageContent(String)}.
+     * Send POST request to API at given path with given payload along with request headers obtained from {@link #getRequestHeaders()}, and extract
+     * image content from the POST response with help of {@link #extractImageContent(String)}.
      * @param path API path, relative to {@link #endpoint}.
      * @param payload POST request payload, usually a JSON object with instructions.
      * @return The image content of the POST request.
@@ -509,6 +510,19 @@ public abstract class BaseAIService implements AIService {
      */
     protected CompletableFuture<byte[]> asyncPostAndExtractImageContent(String path, String payload) throws AIException {
         return API_CLIENT.post(this, path, payload).thenApply(this::extractImageContent);
+    }
+
+    /**
+     * Send SSE request to API at given path with given payload along with request headers obtained from {@link #getRequestHeaders()}, and process
+     * each reveived stream event data with help of supplied {@code streamEventDataProcessor}.
+     * @param path API path, relative to {@link #endpoint}.
+     * @param payload initial SSE POST request payload, usually a JSON object with instructions.
+     * @param streamEventDataProcessor Callback receiving each stream data chunk (often one delta/token/line).
+     * @return A future that completes when stream ends or fails.
+     * @throws AIException if anything fails during the process.
+     */
+    protected CompletableFuture<Void> asyncPostAndExtractStreamEventData(String path, String payload, BiConsumer<CompletableFuture<Void>, String> streamEventDataProcessor) throws AIException {
+        return API_CLIENT.stream(this, path, payload, streamEventDataProcessor);
     }
 
     /**

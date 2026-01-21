@@ -39,6 +39,7 @@ public class AIApiResponseException extends AIException {
      * Constructs a new API response exception with the specified message and HTTP response body.
      *
      * @param message The detail message.
+     * @param responseBody The HTTP response body.
      */
     public AIApiResponseException(String message, String responseBody) {
         this(message, responseBody, null);
@@ -48,6 +49,7 @@ public class AIApiResponseException extends AIException {
      * Constructs a new API response exception with the specified message, HTTP response body and cause.
      *
      * @param message The detail message.
+     * @param responseBody The HTTP response body.
      * @param cause The cause of this exception.
      */
     public AIApiResponseException(String message, String responseBody, Throwable cause) {

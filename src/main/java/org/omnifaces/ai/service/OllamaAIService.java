@@ -26,7 +26,6 @@ import org.omnifaces.ai.AIModelVersion;
 import org.omnifaces.ai.AIProvider;
 import org.omnifaces.ai.AIService;
 import org.omnifaces.ai.ChatOptions;
-import org.omnifaces.ai.GenerateImageOptions;
 import org.omnifaces.ai.exception.AIException;
 
 /**
@@ -92,11 +91,6 @@ public class OllamaAIService extends BaseAIService {
     @Override
     public CompletableFuture<String> analyzeImageAsync(byte[] image, String prompt) throws AIException {
         return asyncPostAndExtractMessageContent("api/chat", buildVisionPayload(image, buildAnalyzeImagePrompt(prompt)));
-    }
-
-    @Override
-    public CompletableFuture<byte[]> generateImageAsync(String prompt, GenerateImageOptions options) throws AIException {
-        throw new UnsupportedOperationException();
     }
 
     /**
