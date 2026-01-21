@@ -93,6 +93,10 @@ class AIServiceProducer {
             return stripped;
         }
 
+        if (!stripped.contains("}")) {
+            throw new IllegalStateException("The EL expression '" + stripped + "' in an @AI annotation attribute appears corrupted, it is missing the trailing '}'.");
+        }
+
         if (!isELAwareBeanManagerAvailable(beanManager)) {
             throw new UnsupportedOperationException("You need a runtime implementation of jakarta.enterprise.cdi-el-api in order for EL resolution in @AI attributes to work."
                     + " E.g. org.jboss.weld.servlet:weld-servlet-shaded:6.0.0.Final or org.jboss.weld.se:weld-se-core:6.0.0.Final");
