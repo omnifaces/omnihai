@@ -12,6 +12,7 @@
  */
 package org.omnifaces.ai.service;
 
+import static java.util.logging.Level.WARNING;
 import static org.omnifaces.ai.helper.ImageHelper.toImageDataUri;
 import static org.omnifaces.ai.helper.JsonHelper.isEmpty;
 import static org.omnifaces.ai.helper.JsonHelper.parseJson;
@@ -23,6 +24,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
+import java.util.logging.Logger;
 
 import jakarta.json.Json;
 
@@ -70,6 +72,7 @@ import org.omnifaces.ai.exception.AIException;
 public class OpenAIService extends BaseAIService {
 
     private static final long serialVersionUID = 1L;
+    private static final Logger logger = Logger.getLogger(OpenAIService.class.getName());
 
     private static final AIModelVersion GPT_4 = AIModelVersion.of("gpt", 4);
     private static final AIModelVersion GPT_5 = AIModelVersion.of("gpt", 5);
@@ -142,8 +145,6 @@ public class OpenAIService extends BaseAIService {
                 return;
             }
 
-            System.out.println("===> " + line);
-
             if (line.startsWith("data:")) {
                 var data = line.substring(5).trim();
 
@@ -159,8 +160,8 @@ public class OpenAIService extends BaseAIService {
                             }
                         }
                     }
-                    catch (Exception skipBadLines) {
-                        // TODO: logger
+                    catch (Exception e) {
+                        logger.log(WARNING, "Skipping unparseable stream event data: " + data, e);
                     }
                 }
             }
