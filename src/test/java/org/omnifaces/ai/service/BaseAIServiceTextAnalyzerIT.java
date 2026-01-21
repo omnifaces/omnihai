@@ -12,6 +12,7 @@
  */
 package org.omnifaces.ai.service;
 
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -35,10 +36,13 @@ abstract class BaseAIServiceTextAnalyzerIT extends AIServiceIT {
         var response = service.summarize("The quick brown fox jumps over the lazy dog near the river.", 5);
         log(response);
         assertFalse(response.isBlank(), response);
-        assertTrue(response.split("\\s+").length <= 6, "max 6 words (slack of 1)");
-        assertTrue(response.toLowerCase().contains("fox"));
-        assertTrue(response.toLowerCase().contains("jump"));
-        assertTrue(response.toLowerCase().contains("dog"));
+        assertAll(
+            () -> assertTrue(response.split("\\s+").length <= 6, "max 6 words (slack of 1)"),
+            () -> assertTrue(response.toLowerCase().contains("fox")),
+            () -> assertTrue(response.toLowerCase().contains("jump")),
+            () -> assertTrue(response.toLowerCase().contains("dog"))
+        );
+
     }
 
     @Test
@@ -46,13 +50,15 @@ abstract class BaseAIServiceTextAnalyzerIT extends AIServiceIT {
         var response = service.extractKeyPoints("Willemstad is the capital of Curacao. Amsterdam is the capital of The Netherlands.", 2);
         log(response.toString());
         assertFalse(response.isEmpty(), response.toString());
-        assertEquals(2, response.size(), response.toString());
-        assertTrue(response.get(0).split("\\s+").length <= 30, "max 30 words (slack of 5)");
-        assertTrue(response.get(0).toLowerCase().contains("willemstad"));
-        assertTrue(response.get(0).toLowerCase().contains("cura"));
-        assertTrue(response.get(1).split("\\s+").length <= 30, "max 30 words (slack of 5)");
-        assertTrue(response.get(1).toLowerCase().contains("amsterdam"));
-        assertTrue(response.get(1).toLowerCase().contains("netherlands"));
+        assertAll(
+            () -> assertEquals(2, response.size(), response.toString()),
+            () -> assertTrue(response.get(0).split("\\s+").length <= 30, "max 30 words (slack of 5)"),
+            () -> assertTrue(response.get(0).toLowerCase().contains("willemstad")),
+            () -> assertTrue(response.get(0).toLowerCase().contains("cura")),
+            () -> assertTrue(response.get(1).split("\\s+").length <= 30, "max 30 words (slack of 5)"),
+            () -> assertTrue(response.get(1).toLowerCase().contains("amsterdam")),
+            () -> assertTrue(response.get(1).toLowerCase().contains("netherlands"))
+        );
     }
 
     @Test

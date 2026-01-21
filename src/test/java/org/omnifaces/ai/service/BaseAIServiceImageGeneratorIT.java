@@ -16,8 +16,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.omnifaces.ai.helper.ImageHelper.guessImageMimeType;
 import static org.omnifaces.ai.helper.ImageHelper.toImageBase64;
 
+import java.io.ByteArrayInputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+
+import javax.imageio.ImageIO;
 
 import org.junit.jupiter.api.Test;
 
@@ -31,11 +34,26 @@ abstract class BaseAIServiceImageGeneratorIT extends AIServiceIT {
     @Test
     void generateImage() throws Exception {
         var response = service.generateImage("Willemstad, Curacao");
-        assertTrue(response.length > 0);
-        var mimeType = guessImageMimeType(toImageBase64(response));
-        var targetDir = Path.of(System.getProperty("user.dir"), "target");
+        assertTrue(response.length > 0, "Image response should not be empty");
+        var mimeType = guessMimeTypeSuppressException(response);
+        var targetDir = Path.of(System.getProperty("user.dir"), "target", "image-generator-results");
+        targetDir.toFile().mkdirs();
         var tempFilePath = Files.createTempFile(targetDir, getClass().getSimpleName(), "." + mimeType.split("/", 2)[1]);
         Files.write(tempFilePath, response);
-        log(tempFilePath.toString());
+        log("saved in " + tempFilePath.toString());
+
+        var image = ImageIO.read(new ByteArrayInputStream(response));
+        var size = image.getWidth() + "x" + image.getHeight();
+        assertTrue(image.getWidth() >= 512 && image.getHeight() >= 512, "Image size should be at least 512x512: " + size);
+        assertTrue(image.getWidth() * image.getHeight() <= 2048 * 2048 * 2, "Image resolution is not supposed to exceed 8k: " + size);
+    }
+
+    String guessMimeTypeSuppressException(byte[] image) {
+        try {
+            return guessImageMimeType(toImageBase64(image));
+        }
+        catch (Exception ignore) {
+            return "image/png";
+        }
     }
 }
