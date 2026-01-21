@@ -262,12 +262,12 @@ public class OpenAIService extends BaseAIService {
 
     @Override
     protected List<String> getResponseMessageContentPaths() {
-        return List.of("output[0].content[0].text", "choices[0].message.content");
+        return List.of("output[*].content[*].text", "choices[0].message.content");
     }
 
     @Override
     protected List<String> getResponseImageContentPaths() {
-        return List.of("output[0].content[0].image_base64", "data[0].b64_json");
+        return List.of("output[*].content[*].image_base64", "data[0].b64_json");
     }
 
     /**
@@ -283,7 +283,7 @@ public class OpenAIService extends BaseAIService {
         var results = responseJson.getJsonArray("results");
 
         if (isEmpty(results)) {
-            throw new AIApiResponseException("Response is empty");
+            throw new AIApiResponseException("Response is empty", responseBody);
         }
 
         var result = results.getJsonObject(0);

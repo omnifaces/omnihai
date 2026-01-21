@@ -61,7 +61,7 @@ public abstract class BaseAIService implements AIService {
     private static final Duration DEFAULT_REQUEST_TIMEOUT = Duration.ofSeconds(60);
 
     private static final int DEFAULT_REASONING_TOKENS = 500;
-    private static final int DEFAULT_DETECTION_TOKENS = 50;
+    private static final int DEFAULT_DETECTION_TOKENS = 100;
     private static final int DEFAULT_WORDS_PER_KEYPOINT = 25;
     private static final int DEFAULT_WORDS_PER_MODERATE_CONTENT_CATEGORY = 10;
     private static final double DEFAULT_TEXT_ANALYSIS_TEMPERATURE = 0.5;
@@ -285,7 +285,7 @@ public abstract class BaseAIService implements AIService {
 
         return chatAsync(text, options).thenApply(response -> {
             if (isBlank(response)) {
-                throw new AIApiResponseException("Response is empty");
+                throw new AIApiResponseException("Response is empty", response);
             }
 
             return response.strip().toLowerCase().replaceAll("[^a-z]", "");
@@ -537,7 +537,7 @@ public abstract class BaseAIService implements AIService {
             }
         }
 
-        throw new AIApiResponseException("No message content found at paths " + messageContentPaths);
+        throw new AIApiResponseException("No message content found at paths " + messageContentPaths, responseBody);
     }
 
     /**
@@ -566,12 +566,12 @@ public abstract class BaseAIService implements AIService {
                     return Base64.getDecoder().decode(imageContent);
                 }
                 catch (Exception e) {
-                    throw new AIApiResponseException("Cannot Base64-decode image:" + imageContent, e);
+                    throw new AIApiResponseException("Cannot Base64-decode image", responseBody, e);
                 }
             }
         }
 
-        throw new AIApiResponseException("No image content found at paths " + imageContentPaths);
+        throw new AIApiResponseException("No image content found at paths " + imageContentPaths, responseBody);
     }
 
     private JsonObject parseResponseBodyAndCheckErrorMessages(String responseBody) throws AIApiResponseException {
@@ -581,7 +581,7 @@ public abstract class BaseAIService implements AIService {
             var errorMessage = extractByPath(responseJson, errorMessagePath);
 
             if (!isBlank(errorMessage)) {
-                throw new AIApiResponseException(errorMessage);
+                throw new AIApiResponseException(errorMessage, responseBody);
             }
         }
 

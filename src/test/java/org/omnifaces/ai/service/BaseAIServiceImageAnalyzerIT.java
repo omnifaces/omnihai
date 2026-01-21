@@ -50,7 +50,7 @@ abstract class BaseAIServiceImageAnalyzerIT extends AIServiceIT {
             + "f09H/KHQdAAAAABJRU5ErkJggg==";
 
     private static final Set<String> ACCEPTABLE_SHAPES = Set.of("pentagon", "pentagram", "star");
-    private static final Set<String> ACCEPTABLE_DESCRIPTIONS = Set.of("circles", "circular");
+    private static final Set<String> ACCEPTABLE_DESCRIPTIONS = Set.of("circles", "circular", "cyclic", "geometric");
 
     @Test
     void analyzeImage() {

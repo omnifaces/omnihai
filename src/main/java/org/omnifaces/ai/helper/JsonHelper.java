@@ -15,6 +15,8 @@ package org.omnifaces.ai.helper;
 import static org.omnifaces.ai.helper.TextHelper.isBlank;
 
 import java.io.StringReader;
+import java.util.ArrayList;
+import java.util.List;
 
 import jakarta.json.Json;
 import jakarta.json.JsonArray;
@@ -74,63 +76,105 @@ public final class JsonHelper {
             return reader.readObject();
         }
         catch (Exception e) {
-            throw new AIApiResponseException("Cannot parse json " + json, e);
+            throw new AIApiResponseException("Cannot parse json", json, e);
         }
     }
 
     /**
-     * Extracts a string value from a JSON object using a dot-separated path.
+     * Extracts the first non-blank string value from a JSON object found at the given dot-separated path.
      * <p>
      * Supports array indexing with bracket notation, e.g. {@code "choices[0].message.content"}.
+     * Also supports wildcard array indexes, e.g. {@code "output[*].content[*].text"}.
      *
-     * @param root The JSON object to extract from.
-     * @param path The dot-separated path to the value, with optional array indices in brackets.
-     * @return The stripped string value at the path, or {@code null} if the path doesn't exist, is null, or is empty.
+     * @param root JSON root value (usually a {@link JsonObject})
+     * @param path dot-separated path, may contain {@code [index]} or {@code [*]} segments
+     * @return first non-blank stripped string value, or {@code null} if no value was found
      */
     public static String extractByPath(JsonObject root, String path) {
-        JsonValue current = root;
+        var values = extractAllByPath(root, path);
+        return values.isEmpty() ? null : values.get(0);
+    }
+
+    private static List<String> extractAllByPath(JsonValue root, String path) {
+        if (root == null || path == null) {
+            return List.of();
+        }
+
+        var currentNodes = List.of(root);
 
         for (var segment : path.split("\\.")) {
-            if (!(current instanceof JsonObject || current instanceof JsonArray)) {
+            var nextNodes = new ArrayList<JsonValue>();
+
+            for (var node : currentNodes) {
+                collectNextLevelValues(node, segment, nextNodes);
+            }
+
+            if (nextNodes.isEmpty()) {
+                return List.of();
+            }
+
+            currentNodes = nextNodes;
+        }
+
+        var result = new ArrayList<String>();
+
+        for (var terminal : currentNodes) {
+            if (terminal == null) {
                 return null;
             }
 
-            var startBracket = segment.indexOf('[');
+            var string = terminal instanceof JsonString jsonString ? jsonString.getString() : terminal.toString();
 
-            if (startBracket >= 0) {
-                var key = segment.substring(0, startBracket);
-                var endBracket = segment.indexOf(']', startBracket);
-                var index = Integer.parseInt(segment.substring(startBracket + 1, endBracket));
-                var jsonObject = current.asJsonObject();
-
-                if (!jsonObject.containsKey(key) || jsonObject.isNull(key)) {
-                    return null;
-                }
-
-                var array = jsonObject.getJsonArray(key);
-
-                if (array == null || index < 0 || index >= array.size()) {
-                    return null;
-                }
-
-                current = array.get(index);
-            }
-            else {
-                var jsonObject = current.asJsonObject();
-
-                if (!jsonObject.containsKey(segment) || jsonObject.isNull(segment)) {
-                    return null;
-                }
-
-                current = jsonObject.get(segment);
+            if (!isBlank(string)) {
+                result.add(string.strip());
             }
         }
 
+        return result;
+    }
+
+    private static void collectNextLevelValues(JsonValue current, String segment, List<JsonValue> collector) {
         if (current == null) {
-            return null;
+            return;
         }
 
-        var string = current instanceof JsonString jsonString ? jsonString.getString() : current.toString();
-        return isBlank(string) ? null : string.strip();
+        if (!(current instanceof JsonObject || current instanceof JsonArray)) {
+            return;
+        }
+
+        int startBracket = segment.indexOf('[');
+
+        if (startBracket < 0) {
+            if (current instanceof JsonObject obj && obj.containsKey(segment) && !obj.isNull(segment)) {
+                collector.add(obj.get(segment));
+            }
+
+            return;
+        }
+
+        var propertyName = segment.substring(0, startBracket);
+        var indexPart = segment.substring(startBracket + 1, segment.indexOf(']', startBracket));
+
+        if (!(current instanceof JsonObject object) || !object.containsKey(propertyName) || object.isNull(propertyName)) {
+            return;
+        }
+
+        var array = object.getJsonArray(propertyName);
+
+        if (array == null) {
+            return;
+        }
+
+        if ("*".equals(indexPart)) {
+            for (var item : array) {
+                collector.add(item);
+            }
+        } else {
+            int index = Integer.parseInt(indexPart);
+
+            if (index < array.size()) {
+                collector.add(array.get(index));
+            }
+        }
     }
 }

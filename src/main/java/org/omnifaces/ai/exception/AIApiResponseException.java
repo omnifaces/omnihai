@@ -32,22 +32,34 @@ public class AIApiResponseException extends AIException {
 
     private static final long serialVersionUID = 1L;
 
+    /** The HTTP response body. */
+    private final String responseBody;
+
     /**
-     * Constructs a new API response exception with the specified message.
+     * Constructs a new API response exception with the specified message and HTTP response body.
      *
      * @param message The detail message.
      */
-    public AIApiResponseException(String message) {
-        super(message);
+    public AIApiResponseException(String message, String responseBody) {
+        this(message, responseBody, null);
     }
 
     /**
-     * Constructs a new API response exception with the specified message and cause.
+     * Constructs a new API response exception with the specified message, HTTP response body and cause.
      *
      * @param message The detail message.
      * @param cause The cause of this exception.
      */
-    public AIApiResponseException(String message, Throwable cause) {
-        super(message, cause);
+    public AIApiResponseException(String message, String responseBody, Throwable cause) {
+        super(message + ": " + responseBody, cause);
+        this.responseBody = responseBody;
+    }
+
+    /**
+     * Returns The HTTP response body.
+     * @return The HTTP response body.
+     */
+    public String getResponseBody() {
+        return responseBody;
     }
 }
