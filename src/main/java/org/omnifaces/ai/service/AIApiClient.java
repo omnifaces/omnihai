@@ -28,6 +28,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
+import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 import org.omnifaces.ai.exception.AIApiBadRequestException;
@@ -135,65 +137,54 @@ final class AIApiClient {
     }
 
     private CompletableFuture<String> attemptSendAsync(HttpRequest request, int attempt) {
-        return client.sendAsync(request, BodyHandlers.ofString())
-            .thenCompose(response -> {
-                var statusCode = response.statusCode();
+        return withRetry(() -> client.sendAsync(request, BodyHandlers.ofString()).thenCompose(response -> {
+            var statusCode = response.statusCode();
 
-                if (statusCode >= AIApiBadRequestException.STATUS_CODE) {
-                    return CompletableFuture.failedFuture(AIApiException.fromStatusCode(request.uri(), statusCode, response.body()));
-                }
+            if (statusCode >= AIApiBadRequestException.STATUS_CODE) {
+                return CompletableFuture.failedFuture(AIApiException.fromStatusCode(request.uri(), statusCode, response.body()));
+            }
 
-                return CompletableFuture.completedFuture(response.body());
-            })
-            .exceptionallyCompose(throwable -> {
-                var cause = (throwable instanceof CompletionException completionException) ? completionException.getCause() : throwable;
-
-                if (cause instanceof AIException) {
-                    return CompletableFuture.failedFuture(cause);
-                }
-                else if (attempt >= MAX_RETRIES - 1 || !isRetryable(cause)) {
-                    return CompletableFuture.failedFuture(new AIApiException("Request failed (" + attempt + " retries)", cause));
-                }
-
-                var delayed = CompletableFuture.delayedExecutor(INITIAL_BACKOFF_MS * (1L << attempt), TimeUnit.MILLISECONDS);
-                return CompletableFuture.supplyAsync(() -> attemptSendAsync(request, attempt + 1), delayed).thenCompose(f -> f);
-            });
+            return CompletableFuture.completedFuture(response.body());
+        }), attempt);
     }
 
     private CompletableFuture<Void> attemptStreamAsync(HttpRequest request, BiConsumer<CompletableFuture<Void>, String> eventDataProcessor, int attempt) {
-        return client.sendAsync(request, BodyHandlers.ofLines())
-            .thenCompose(response -> {
-                var statusCode = response.statusCode();
+        return withRetry(() -> client.sendAsync(request, BodyHandlers.ofLines()).thenCompose(response -> {
+            var statusCode = response.statusCode();
 
-                if (statusCode >= AIApiBadRequestException.STATUS_CODE) {
-                    return CompletableFuture.failedFuture(AIApiException.fromStatusCode(request.uri(), statusCode, response.body().collect(joining("\n"))));
+            if (statusCode >= AIApiBadRequestException.STATUS_CODE) {
+                return CompletableFuture.failedFuture(AIApiException.fromStatusCode(request.uri(), statusCode, response.body().collect(joining("\n"))));
+            }
+
+            var future = new CompletableFuture<Void>();
+            CompletableFuture.runAsync(() -> {
+                try {
+                    response.body().forEach(line -> eventDataProcessor.accept(future, line));
                 }
-
-                var processingFuture = new CompletableFuture<Void>();
-                CompletableFuture.runAsync(() -> {
-                    try {
-                        response.body().forEach(line -> eventDataProcessor.accept(processingFuture, line));
-                    }
-                    catch (Throwable throwable) {
-                        processingFuture.completeExceptionally(throwable);
-                    }
-                });
-
-                return processingFuture;
-            })
-            .exceptionallyCompose(throwable -> {
-                var cause = (throwable instanceof CompletionException completionException) ? completionException.getCause() : throwable;
-
-                if (cause instanceof AIException) {
-                    return CompletableFuture.failedFuture(cause);
+                catch (Throwable throwable) {
+                    future.completeExceptionally(throwable);
                 }
-                else if (attempt >= MAX_RETRIES - 1 || !isRetryable(cause)) {
-                    return CompletableFuture.failedFuture(new AIApiException("Request failed (" + attempt + " retries)", cause));
-                }
-
-                var delayed = CompletableFuture.delayedExecutor(INITIAL_BACKOFF_MS * (1L << attempt), TimeUnit.MILLISECONDS);
-                return CompletableFuture.supplyAsync(() -> attemptStreamAsync(request, eventDataProcessor, attempt + 1), delayed).thenCompose(f -> f);
             });
+
+            return future;
+        }), attempt);
+    }
+
+    private <T> CompletableFuture<T> withRetry(Supplier<CompletableFuture<T>> action, int attempt) {
+        return action.get().exceptionallyCompose(throwable -> {
+            var cause = (throwable instanceof CompletionException ce) ? ce.getCause() : throwable;
+
+            if (cause instanceof AIException) {
+                return CompletableFuture.failedFuture(cause);
+            }
+
+            if (attempt >= MAX_RETRIES - 1 || !isRetryable(cause)) {
+                return CompletableFuture.failedFuture(new AIApiException("Request failed (" + attempt + " retries)", cause));
+            }
+
+            var delayed = CompletableFuture.delayedExecutor(INITIAL_BACKOFF_MS * (1L << attempt), TimeUnit.MILLISECONDS);
+            return CompletableFuture.supplyAsync(() -> withRetry(action, attempt + 1), delayed).thenCompose(Function.identity());
+        });
     }
 
     /**
