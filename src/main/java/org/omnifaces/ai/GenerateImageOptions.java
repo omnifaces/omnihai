@@ -40,9 +40,6 @@ public class GenerateImageOptions implements Serializable {
     /** Default quality: {@value}. */
     public static final String DEFAULT_QUALITY = "auto";
 
-    /** Default style: {@value}. */
-    public static final String DEFAULT_STYLE = "vivid";
-
     /** Default output format: {@value}. */
     public static final String DEFAULT_OUTPUT_FORMAT = "png";
 
@@ -55,8 +52,6 @@ public class GenerateImageOptions implements Serializable {
     private final String aspectRatio;
     /** The image quality. */
     private final String quality;
-    /** The image style. */
-    private final String style;
     /** The output format. */
     private final String outputFormat;
 
@@ -64,7 +59,6 @@ public class GenerateImageOptions implements Serializable {
         this.size = builder.size;
         this.aspectRatio = builder.aspectRatio;
         this.quality = builder.quality;
-        this.style = builder.style;
         this.outputFormat = builder.outputFormat;
     }
 
@@ -119,21 +113,6 @@ public class GenerateImageOptions implements Serializable {
     }
 
     /**
-     * Gets the style of the generated image. Defaults to {@value #DEFAULT_STYLE}.
-     * <p>
-     * Common values include:
-     * <ul>
-     * <li>{@code "vivid"} - Hyper-real and dramatic images
-     * <li>{@code "natural"} - More natural, less hyper-real images
-     * </ul>
-     *
-     * @return The image style string.
-     */
-    public String getStyle() {
-        return style;
-    }
-
-    /**
      * Gets the output format of the generated image. Defaults to {@value #DEFAULT_OUTPUT_FORMAT}.
      * <p>
      * Common values include:
@@ -175,7 +154,6 @@ public class GenerateImageOptions implements Serializable {
         private String size = GenerateImageOptions.DEFAULT_SIZE;
         private String aspectRatio = GenerateImageOptions.DEFAULT_ASPECT_RATIO;
         private String quality = GenerateImageOptions.DEFAULT_QUALITY;
-        private String style = GenerateImageOptions.DEFAULT_STYLE;
         private String outputFormat = GenerateImageOptions.DEFAULT_OUTPUT_FORMAT;
 
         private Builder() {}
@@ -257,25 +235,6 @@ public class GenerateImageOptions implements Serializable {
         public Builder quality(String quality) {
             requireNonNull(quality, "quality");
             this.quality = quality;
-            return this;
-        }
-
-        /**
-         * Sets the style of the generated image. Defaults to {@value GenerateImageOptions#DEFAULT_STYLE}.
-         * <p>
-         * Common values include:
-         * <ul>
-         * <li>{@code "vivid"} - Hyper-real and dramatic images
-         * <li>{@code "natural"} - More natural, less hyper-real images
-         * </ul>
-         *
-         * @param style The image style string.
-         * @return This builder instance for chaining.
-         * @throws NullPointerException when style is null.
-         */
-        public Builder style(String style) {
-            requireNonNull(style, "style");
-            this.style = style;
             return this;
         }
 

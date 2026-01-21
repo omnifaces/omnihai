@@ -211,7 +211,6 @@ public class OpenAIService extends BaseAIService {
             .add("n", 1)
             .add("size", options.getSize())
             .add("quality", options.getQuality())
-            .add("style", options.getStyle())
             .add("output_format", options.getOutputFormat())
             .add("response_format", "b64_json")
             .build()
