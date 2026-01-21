@@ -21,6 +21,8 @@ OPENROUTER_API_KEY=your-openrouter-api-key-or-empty-if-you-have-none
 OLLAMA_API_KEY=no-key-needed-but-non-empty-env-var-will-trigger-the-test-if-you-have-ollama-installed
 ```
 
+<sup><em>(.env.* files are already excluded via .gitignore)</em></sup>
+
 Then ensure that `it.sh` is executable:
 
 ```bash
@@ -29,8 +31,14 @@ chmod +x it.sh
 
 Then run it:
 
-```
+```bash
 ./it.sh
 ```
 
-This by default skips Javadoc plugin.
+It will pass-through all arguments to underlying `mvn clean verify`:
+
+```bash
+./it.sh -Dit.test=OllamaAIServiceImageAnalyzerIT
+```
+
+The `it.sh` script by default skips Javadoc plugin.
