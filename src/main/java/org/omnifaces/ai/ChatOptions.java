@@ -61,18 +61,12 @@ public class ChatOptions implements Serializable {
     private final int maxTokens;
     /** The Top-P value. */
     private final double topP;
-    /** The frequency penalty. */
-    private final double frequencyPenalty;
-    /** The presence penalty. */
-    private final double presencePenalty;
 
     private ChatOptions(Builder builder) {
         this.systemPrompt = builder.systemPrompt;
         this.temperature = builder.temperature;
         this.maxTokens = builder.maxTokens;
         this.topP = builder.topP;
-        this.frequencyPenalty = builder.frequencyPenalty;
-        this.presencePenalty = builder.presencePenalty;
     }
 
     /**
@@ -131,34 +125,6 @@ public class ChatOptions implements Serializable {
     }
 
     /**
-     * Gets the frequency penalty value. Defaults to {@value #DEFAULT_FREQUENCY_PENALTY}.
-     * <p>
-     * This parameter applies a penalty to new tokens based on their total count in the response so far.
-     * It is designed to prevent the model from repeating specific words or phrases multiple times.
-     * <p>
-     * This is not per definition supported by all AI services.
-     *
-     * @return The frequency penalty coefficient [-2.0, 2.0].
-     */
-    public double getFrequencyPenalty() {
-        return frequencyPenalty;
-    }
-
-    /**
-     * Gets the presence penalty value. Defaults to {@value #DEFAULT_PRESENCE_PENALTY}.
-     * <p>
-     * This parameter applies a one-time penalty to tokens that have already appeared in the response.
-     * It is used to push the model toward exploring new topics rather than dwelling on existing concepts.
-     * <p>
-     * This is not per definition supported by all AI services.
-     *
-     * @return The presence penalty coefficient [-2.0, 2.0].
-     */
-    public double getPresencePenalty() {
-        return presencePenalty;
-    }
-
-    /**
      * Creates a new builder for constructing {@link ChatOptions} instances. For example:
      * <pre>
      * ChatOptions options = ChatOptions.newBuilder()
@@ -184,8 +150,6 @@ public class ChatOptions implements Serializable {
         private double temperature = ChatOptions.DEFAULT_TEMPERATURE;
         private int maxTokens = ChatOptions.DEFAULT_MAX_TOKENS;
         private double topP = ChatOptions.DEFAULT_TOP_P;
-        private double frequencyPenalty = ChatOptions.DEFAULT_FREQUENCY_PENALTY;
-        private double presencePenalty = ChatOptions.DEFAULT_PRESENCE_PENALTY;
 
         private Builder() {}
 
@@ -265,48 +229,6 @@ public class ChatOptions implements Serializable {
             }
 
             this.topP = topP;
-            return this;
-        }
-
-        /**
-         * Sets the frequency penalty value. Defaults to {@value ChatOptions#DEFAULT_FREQUENCY_PENALTY}.
-         * <p>
-         * This parameter applies a penalty to new tokens based on their total count in the response so far.
-         * It is designed to prevent the model from repeating specific words or phrases multiple times.
-         * <p>
-         * This is not per definition supported by all AI services.
-         *
-         * @param frequencyPenalty A value between -2.0 and 2.0.
-         * @return This builder instance for chaining.
-         * @throws IllegalArgumentException if the value is outside the range [-2.0, 2.0].
-         */
-        public Builder frequencyPenalty(double frequencyPenalty) {
-            if (frequencyPenalty < -2.0 || frequencyPenalty > 2.0) {
-                throw new IllegalArgumentException("Frequency penalty must be between -2.0 and 2.0");
-            }
-
-            this.frequencyPenalty = frequencyPenalty;
-            return this;
-        }
-
-        /**
-         * Sets the presence penalty value. Defaults to {@value ChatOptions#DEFAULT_PRESENCE_PENALTY}.
-         * <p>
-         * This parameter applies a one-time penalty to tokens that have already appeared in the response.
-         * It is used to push the model toward exploring new topics rather than dwelling on existing concepts.
-         * <p>
-         * This is not per definition supported by all AI services.
-         *
-         * @param presencePenalty A value between -2.0 and 2.0.
-         * @return This builder instance for chaining.
-         * @throws IllegalArgumentException if the value is outside the range [-2.0, 2.0].
-         */
-        public Builder presencePenalty(double presencePenalty) {
-            if (presencePenalty < -2.0 || presencePenalty > 2.0) {
-                throw new IllegalArgumentException("Presence penalty must be between -2.0 and 2.0");
-            }
-
-            this.presencePenalty = presencePenalty;
             return this;
         }
 

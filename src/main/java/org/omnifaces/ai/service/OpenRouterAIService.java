@@ -78,4 +78,9 @@ public class OpenRouterAIService extends OpenAIService {
     protected boolean supportsModerationCapability(Set<String> categories) {
         return false;
     }
+
+    @Override
+    protected boolean supportsResponsesApi() {
+        return false;
+    }
 }

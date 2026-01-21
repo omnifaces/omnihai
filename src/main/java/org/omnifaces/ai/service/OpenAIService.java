@@ -111,6 +111,15 @@ public class OpenAIService extends BaseAIService {
         return categories.stream().allMatch(Category.OPENAI_SUPPORTED_CATEGORY_NAMES::contains);
     }
 
+    /**
+     * Returns whether this OpenAI based service implementation supports the new /responses API as replacement for the legacy /chat/completions API.
+     * The default implementation returns true if {@link #getModelVersion()} is at least {@code gpt-4}.
+     * @return Whether this OpenAI based service implementation supports the new /responses API as replacement for the legacy /chat/completions API.
+     */
+    protected boolean supportsResponsesApi() {
+        return getModelVersion().gte(GPT_4);
+    }
+
     @Override
     protected Map<String, String> getRequestHeaders() {
         return Map.of("Authorization", "Bearer ".concat(apiKey));
@@ -118,7 +127,7 @@ public class OpenAIService extends BaseAIService {
 
     @Override
     public CompletableFuture<String> chatAsync(String message, ChatOptions options) throws AIException {
-        return asyncPostAndExtractMessageContent("chat/completions", buildChatPayload(message, options));
+        return asyncPostAndExtractMessageContent(supportsResponsesApi() ? "responses" : "chat/completions", buildChatPayload(message, options));
     }
 
     @Override
@@ -134,7 +143,7 @@ public class OpenAIService extends BaseAIService {
 
     @Override
     public CompletableFuture<String> analyzeImageAsync(byte[] image, String prompt) throws AIException {
-        return asyncPostAndExtractMessageContent("chat/completions", buildVisionPayload(image, buildAnalyzeImagePrompt(prompt)));
+        return asyncPostAndExtractMessageContent(supportsResponsesApi() ? "responses" : "chat/completions", buildVisionPayload(image, buildAnalyzeImagePrompt(prompt)));
     }
 
     @Override
@@ -155,41 +164,39 @@ public class OpenAIService extends BaseAIService {
             throw new IllegalArgumentException("Message cannot be blank");
         }
 
-        var messages = Json.createArrayBuilder();
+        var currentModelVersion = getModelVersion();
+        var payload = Json.createObjectBuilder()
+            .add("model", model)
+            .add(supportsResponsesApi() ? "max_output_tokens" : currentModelVersion.gte(GPT_5) ? "max_completion_tokens" : "max_tokens", options.getMaxTokens());
+
+        var input = Json.createArrayBuilder();
 
         if (!isBlank(options.getSystemPrompt())) {
-            messages.add(Json.createObjectBuilder()
-                .add("role", "system")
-                .add("content", options.getSystemPrompt()));
+            if (supportsResponsesApi()) {
+                payload.add("instructions", options.getSystemPrompt());
+            }
+            else {
+                input.add(Json.createObjectBuilder()
+                        .add("role", "system")
+                        .add("content", options.getSystemPrompt()));
+            }
         }
 
-        messages.add(Json.createObjectBuilder()
+        input.add(Json.createObjectBuilder()
             .add("role", "user")
             .add("content", message));
 
-        var currentModelVersion = getModelVersion();
-        var optionsBuilder = Json.createObjectBuilder()
-            .add("model", model)
-            .add("messages", messages)
-            .add(currentModelVersion.gte(GPT_5) ? "max_completion_tokens" : "max_tokens", options.getMaxTokens());
+        payload.add(supportsResponsesApi() ? "input" : "messages", input);
 
         if (currentModelVersion.ne(GPT_5)) {
-            optionsBuilder.add("temperature", options.getTemperature());
+            payload.add("temperature", options.getTemperature());
         }
 
         if (options.getTopP() != 1.0) {
-            optionsBuilder.add("top_p", options.getTopP());
+            payload.add("top_p", options.getTopP());
         }
 
-        if (options.getFrequencyPenalty() != 0.0) {
-            optionsBuilder.add("frequency_penalty", options.getFrequencyPenalty());
-        }
-
-        if (options.getPresencePenalty() != 0.0) {
-            optionsBuilder.add("presence_penalty", options.getPresencePenalty());
-        }
-
-        return optionsBuilder.build().toString();
+        return payload.build().toString();
     }
 
     /**
@@ -205,19 +212,26 @@ public class OpenAIService extends BaseAIService {
             throw new IllegalArgumentException("Prompt cannot be blank");
         }
 
+        var imageJson = Json.createObjectBuilder()
+            .add("type", supportsResponsesApi() ? "input_image" : "image_url");
+
+        if (supportsResponsesApi()) {
+            imageJson.add("image_url", toImageDataUri(image));
+        }
+        else {
+            imageJson.add("image_url", Json.createObjectBuilder().add("url", toImageDataUri(image)));
+        }
+
         return Json.createObjectBuilder()
             .add("model", model)
-            .add("messages", Json.createArrayBuilder()
+            .add(supportsResponsesApi() ? "input" : "messages", Json.createArrayBuilder()
                 .add(Json.createObjectBuilder()
                     .add("role", "user")
                     .add("content", Json.createArrayBuilder()
                         .add(Json.createObjectBuilder()
-                            .add("type", "text")
+                            .add("type", supportsResponsesApi() ? "input_text" : "text")
                             .add("text", prompt))
-                        .add(Json.createObjectBuilder()
-                            .add("type", "image_url")
-                            .add("image_url", Json.createObjectBuilder()
-                                .add("url", toImageDataUri(image)))))))
+                        .add(imageJson))))
             .build()
             .toString();
     }
@@ -248,12 +262,12 @@ public class OpenAIService extends BaseAIService {
 
     @Override
     protected List<String> getResponseMessageContentPaths() {
-        return List.of("choices[0].message.content");
+        return List.of("output[0].content[0].text", "choices[0].message.content");
     }
 
     @Override
     protected List<String> getResponseImageContentPaths() {
-        return List.of("data[0].b64_json");
+        return List.of("output[0].content[0].image_base64", "data[0].b64_json");
     }
 
     /**

@@ -92,6 +92,11 @@ public class AzureAIService extends OpenAIService {
     }
 
     @Override
+    protected boolean supportsResponsesApi() {
+        return false;
+    }
+
+    @Override
     protected Map<String, String> getRequestHeaders() {
         return Map.of("api-key", apiKey);
     }

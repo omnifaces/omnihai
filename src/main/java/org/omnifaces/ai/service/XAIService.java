@@ -89,6 +89,11 @@ public class XAIService extends OpenAIService {
     }
 
     @Override
+    protected boolean supportsResponsesApi() {
+        return false;
+    }
+
+    @Override
     protected String buildGenerateImagePayload(String prompt, GenerateImageOptions options) {
         if (isBlank(prompt)) {
             throw new IllegalArgumentException("Prompt cannot be blank");

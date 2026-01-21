@@ -13,6 +13,7 @@
 package org.omnifaces.ai.service;
 
 import java.util.List;
+import java.util.Set;
 
 import org.omnifaces.ai.AIConfig;
 import org.omnifaces.ai.AIProvider;
@@ -59,6 +60,16 @@ public class MetaAIService extends OpenAIService {
      */
     public MetaAIService(AIConfig config) {
         super(config);
+    }
+
+    @Override
+    protected boolean supportsModerationCapability(Set<String> categories) {
+        return false;
+    }
+
+    @Override
+    protected boolean supportsResponsesApi() {
+        return false;
     }
 
     @Override

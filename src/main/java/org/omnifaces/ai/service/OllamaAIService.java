@@ -132,14 +132,6 @@ public class OllamaAIService extends BaseAIService {
             optionsBuilder.add("top_p", options.getTopP());
         }
 
-        if (options.getFrequencyPenalty() != 0.0) {
-            optionsBuilder.add("frequency_penalty", options.getFrequencyPenalty());
-        }
-
-        if (options.getPresencePenalty() != 0.0) {
-            optionsBuilder.add("presence_penalty", options.getPresencePenalty());
-        }
-
         return Json.createObjectBuilder()
             .add("model", model)
             .add("messages", messages)

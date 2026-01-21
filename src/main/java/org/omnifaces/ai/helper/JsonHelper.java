@@ -68,7 +68,7 @@ public final class JsonHelper {
      * @throws AIApiResponseException If the string cannot be parsed as JSON.
      */
     public static JsonObject parseJson(String json) throws AIApiResponseException {
-        var sanitizedJson = json.substring(json.indexOf('{'), json.lastIndexOf('}') + 1); // Some APIs stubbornly put JSON in markdown formatting like ```json\n{...}\n```.
+        var sanitizedJson = json.substring(json.indexOf('{'), json.lastIndexOf('}') + 1); // Some chat APIs stubbornly put JSON in markdown formatting like ```json\n{...}\n``` when asking for JSON-only output.
 
         try (var reader = Json.createReader(new StringReader(sanitizedJson))) {
             return reader.readObject();
