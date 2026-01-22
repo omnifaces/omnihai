@@ -12,7 +12,6 @@
  */
 package org.omnifaces.ai.service;
 
-import java.util.Map;
 import java.util.Set;
 
 import org.omnifaces.ai.AICapability;
