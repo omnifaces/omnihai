@@ -26,9 +26,9 @@ import org.omnifaces.ai.AICapability;
 import org.omnifaces.ai.AIConfig;
 import org.omnifaces.ai.AIProvider;
 import org.omnifaces.ai.AIService;
-import org.omnifaces.ai.ChatOptions;
-import org.omnifaces.ai.GenerateImageOptions;
 import org.omnifaces.ai.exception.AIException;
+import org.omnifaces.ai.model.ChatOptions;
+import org.omnifaces.ai.model.GenerateImageOptions;
 
 /**
  * AI service implementation using Google AI API.

@@ -23,7 +23,7 @@ import org.omnifaces.ai.AIConfig;
 import org.omnifaces.ai.AIModelVersion;
 import org.omnifaces.ai.AIProvider;
 import org.omnifaces.ai.AIService;
-import org.omnifaces.ai.GenerateImageOptions;
+import org.omnifaces.ai.model.GenerateImageOptions;
 
 /**
  * AI service implementation using xAI API.

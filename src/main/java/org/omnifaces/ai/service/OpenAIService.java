@@ -35,13 +35,13 @@ import org.omnifaces.ai.AIConfig;
 import org.omnifaces.ai.AIModelVersion;
 import org.omnifaces.ai.AIProvider;
 import org.omnifaces.ai.AIService;
-import org.omnifaces.ai.ChatOptions;
-import org.omnifaces.ai.GenerateImageOptions;
-import org.omnifaces.ai.ModerationOptions;
-import org.omnifaces.ai.ModerationOptions.Category;
-import org.omnifaces.ai.ModerationResult;
 import org.omnifaces.ai.exception.AIApiResponseException;
 import org.omnifaces.ai.exception.AIException;
+import org.omnifaces.ai.model.ChatOptions;
+import org.omnifaces.ai.model.GenerateImageOptions;
+import org.omnifaces.ai.model.ModerationOptions;
+import org.omnifaces.ai.model.ModerationOptions.Category;
+import org.omnifaces.ai.model.ModerationResult;
 import org.omnifaces.ai.model.Sse.Event;
 
 /**

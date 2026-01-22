@@ -26,8 +26,8 @@ import org.omnifaces.ai.AICapability;
 import org.omnifaces.ai.AIConfig;
 import org.omnifaces.ai.AIProvider;
 import org.omnifaces.ai.AIService;
-import org.omnifaces.ai.ChatOptions;
 import org.omnifaces.ai.exception.AIException;
+import org.omnifaces.ai.model.ChatOptions;
 
 /**
  * AI service implementation using Anthropic API.

@@ -27,7 +27,7 @@ import jakarta.inject.Qualifier;
 
 import org.omnifaces.ai.AIProvider;
 import org.omnifaces.ai.AIService;
-import org.omnifaces.ai.ChatOptions;
+import org.omnifaces.ai.model.ChatOptions;
 
 /**
  * CDI qualifier annotation for injecting configured {@link AIService} instances.

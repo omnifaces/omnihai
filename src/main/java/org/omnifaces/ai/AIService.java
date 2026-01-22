@@ -20,8 +20,12 @@ import java.util.function.Consumer;
 
 import jakarta.enterprise.context.ApplicationScoped;
 
-import org.omnifaces.ai.ModerationOptions.Category;
 import org.omnifaces.ai.exception.AIException;
+import org.omnifaces.ai.model.ChatOptions;
+import org.omnifaces.ai.model.GenerateImageOptions;
+import org.omnifaces.ai.model.ModerationOptions;
+import org.omnifaces.ai.model.ModerationOptions.Category;
+import org.omnifaces.ai.model.ModerationResult;
 
 /**
  * Generic interface for AI service providers.
