@@ -77,7 +77,7 @@ public class GoogleAIService extends BaseAIService {
         var fullModelName = getModelName().toLowerCase();
 
         return switch (capability) {
-            case TEXT_ANALYSIS, TEXT_GENERATION, IMAGE_ANALYSIS -> true;
+            case IMAGE_ANALYSIS -> true;
             case IMAGE_GENERATION -> fullModelName.contains("image");
             default -> false;
         };

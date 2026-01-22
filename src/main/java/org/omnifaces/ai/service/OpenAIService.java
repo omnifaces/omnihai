@@ -97,7 +97,7 @@ public class OpenAIService extends BaseAIService {
         var fullModelName = getModelName().toLowerCase();
 
         return switch (capability) {
-            case TEXT_ANALYSIS, TEXT_GENERATION, IMAGE_ANALYSIS -> true;
+            case IMAGE_ANALYSIS -> currentModelVersion.gte(GPT_4) || fullModelName.contains("vision");
             case IMAGE_GENERATION -> currentModelVersion.gte(DALL_E) || fullModelName.contains("image");
             case AUDIO_ANALYSIS -> currentModelVersion.gte(GPT_4) || fullModelName.contains("transcribe");
             case AUDIO_GENERATION -> currentModelVersion.gte(GPT_4) || fullModelName.contains("tts");

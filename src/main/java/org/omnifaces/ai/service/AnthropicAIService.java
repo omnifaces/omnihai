@@ -76,7 +76,7 @@ public class AnthropicAIService extends BaseAIService {
     @Override
     public boolean supportsCapability(AICapability capability) {
         return switch (capability) {
-            case TEXT_ANALYSIS, TEXT_GENERATION, IMAGE_ANALYSIS -> true;
+            case IMAGE_ANALYSIS -> true;
             default -> false;
         };
     }

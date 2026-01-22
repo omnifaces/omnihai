@@ -29,12 +29,6 @@ package org.omnifaces.ai;
  */
 public enum AICapability {
 
-    /** Ability to analyze, understand, summarize, classify, extract information from, or answer questions about textual input. */
-    TEXT_ANALYSIS,
-
-    /** Ability to generate new coherent text (completion, continuation, creative writing, instruction following, chat responses, code generation, translation, summarization, etc.). */
-    TEXT_GENERATION,
-
     /** Ability to analyze, describe, interpret, caption, answer questions about, or extract information from images provided as input (vision / multimodal understanding). */
     IMAGE_ANALYSIS,
 

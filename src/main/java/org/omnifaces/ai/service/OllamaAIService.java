@@ -77,7 +77,6 @@ public class OllamaAIService extends BaseAIService {
         var fullModelName = getModelName().toLowerCase();
 
         return switch (capability) {
-            case TEXT_ANALYSIS, TEXT_GENERATION -> true;
             case IMAGE_ANALYSIS -> currentModelVersion.gte(LLAMA_4) || fullModelName.contains("vision") || fullModelName.contains("llava") || fullModelName.contains("gemma");
             default -> false;
         };

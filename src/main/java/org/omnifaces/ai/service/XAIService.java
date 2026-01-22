@@ -76,7 +76,6 @@ public class XAIService extends OpenAIService {
         var fullModelName = getModelName().toLowerCase();
 
         return switch (capability) {
-            case TEXT_ANALYSIS, TEXT_GENERATION -> true;
             case IMAGE_ANALYSIS -> currentModelVersion.gte(GROK_4) || fullModelName.contains("vision");
             case IMAGE_GENERATION -> fullModelName.contains("image");
             default -> false;
