@@ -31,7 +31,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.BiConsumer;
+import java.util.function.Predicate;
 
 import jakarta.json.Json;
 import jakarta.json.JsonObject;
@@ -45,6 +45,7 @@ import org.omnifaces.ai.ModerationResult;
 import org.omnifaces.ai.exception.AIApiResponseException;
 import org.omnifaces.ai.exception.AIException;
 import org.omnifaces.ai.helper.TextHelper;
+import org.omnifaces.ai.model.Sse.Event;
 
 /**
  * Base class for AI service implementations providing common API functionality.
@@ -514,16 +515,15 @@ public abstract class BaseAIService implements AIService {
 
     /**
      * Send SSE request to API at given path with given payload along with request headers obtained from {@link #getRequestHeaders()}, and process
-     * each reveived stream event data with help of supplied {@code streamEventDataProcessor}.
+     * each reveived stream event using supplied {@code eventProcessor}.
      * @param path API path, relative to {@link #endpoint}.
-     * @param payload initial SSE POST request payload, usually a JSON object with instructions.
-     * @param streamEventDataProcessor Callback receiving each event stream line, along with a {@link CompletableFuture} which needs to be marked complete
-     * when end of stream is reached.
-     * @return A future that completes when stream ends or fails.
+     * @param payload Initial SSE POST request payload, usually a JSON object with instructions.
+     * @param eventProcessor Callback invoked for each stream event; it must return {@code true} to continue processing the stream, or {@code false} to stop processing the stream.
+     * @return A future that completes when stream ends normally, is stopped by the processor, or fails exceptionally.
      * @throws AIException if anything fails during the process.
      */
-    protected CompletableFuture<Void> asyncPostAndProcessStreamEventData(String path, String payload, BiConsumer<CompletableFuture<Void>, String> streamEventDataProcessor) throws AIException {
-        return API_CLIENT.stream(this, path, payload, streamEventDataProcessor);
+    protected CompletableFuture<Void> asyncPostAndProcessStreamEvents(String path, String payload, Predicate<Event> eventProcessor) throws AIException {
+        return API_CLIENT.stream(this, path, payload, eventProcessor);
     }
 
     /**

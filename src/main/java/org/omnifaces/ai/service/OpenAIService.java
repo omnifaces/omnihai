@@ -17,6 +17,8 @@ import static org.omnifaces.ai.helper.ImageHelper.toImageDataUri;
 import static org.omnifaces.ai.helper.JsonHelper.isEmpty;
 import static org.omnifaces.ai.helper.JsonHelper.parseJson;
 import static org.omnifaces.ai.helper.TextHelper.isBlank;
+import static org.omnifaces.ai.model.Sse.Event.Type.DATA;
+import static org.omnifaces.ai.model.Sse.Event.Type.EVENT;
 
 import java.util.HashMap;
 import java.util.List;
@@ -40,6 +42,7 @@ import org.omnifaces.ai.ModerationOptions.Category;
 import org.omnifaces.ai.ModerationResult;
 import org.omnifaces.ai.exception.AIApiResponseException;
 import org.omnifaces.ai.exception.AIException;
+import org.omnifaces.ai.model.Sse.Event;
 
 /**
  * AI service implementation using OpenAI API.
@@ -140,31 +143,25 @@ public class OpenAIService extends BaseAIService {
             throw new UnsupportedOperationException("This feature is only supported in gpt-4 or newer");
         }
 
-        return asyncPostAndProcessStreamEventData("responses", buildChatPayload(message, options, true), (future, line) -> processStreamEventData(future, line, onToken));
+        return asyncPostAndProcessStreamEvents("responses", buildChatPayload(message, options, true), (event) -> processStreamEvent(event, onToken));
     }
 
     /**
-     * Processes each stream event data line for {@link #chatStream(String, ChatOptions, Consumer)}.
+     * Processes each stream event line for {@link #chatStream(String, ChatOptions, Consumer)}.
      * You can override this method to customize the payload.
      *
-     * @param future A {@link CompletableFuture} which needs to be marked complete when end of stream is reached.
-     * @param line Event stream line.
+     * @param event Stream event.
      * @param onToken Callback receiving each stream data chunk (often one word/token/line).
+     * @return {@code true} to continue processing the stream, or {@code false} when end of stream is reached.
      */
-    protected void processStreamEventData(CompletableFuture<Void> future, String line, Consumer<String> onToken) {
-        if (line.startsWith("event:")) {
-            var event = line.substring(6).trim();
-
-            if (event.equals("response.completed") || event.equals("response.incomplete")) {
-                future.complete(null);
-            }
+    protected boolean processStreamEvent(Event event, Consumer<String> onToken) {
+        if (event.type() == EVENT) {
+            return !(event.value().equals("response.completed") || event.value().equals("response.incomplete"));
         }
-        else if (line.startsWith("data:")) {
-            var data = line.substring(5).trim();
-
-            if (data.contains("response.output_text.delta")) { // Cheap pre-filter before expensive parse.
+        else if (event.type() == DATA) {
+            if (event.value().contains("response.output_text.delta")) { // Cheap pre-filter before expensive parse.
                 try {
-                    var json = parseJson(data);
+                    var json = parseJson(event.value());
 
                     if ("response.output_text.delta".equals(json.getString("type", null))) {
                         var token = json.getString("delta", "");
@@ -175,10 +172,12 @@ public class OpenAIService extends BaseAIService {
                     }
                 }
                 catch (Exception e) {
-                    logger.log(WARNING, "Skipping unparseable stream event data: " + data, e);
+                    logger.log(WARNING, "Skipping unparseable stream event data: " + event.value(), e);
                 }
             }
         }
+
+        return true;
     }
 
     @Override

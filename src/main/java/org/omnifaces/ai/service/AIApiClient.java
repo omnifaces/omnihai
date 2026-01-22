@@ -13,28 +13,38 @@
 package org.omnifaces.ai.service;
 
 import static java.net.http.HttpClient.newBuilder;
+import static java.net.http.HttpResponse.BodyHandlers.ofLines;
+import static java.net.http.HttpResponse.BodyHandlers.ofString;
+import static java.util.concurrent.CompletableFuture.completedFuture;
+import static java.util.concurrent.CompletableFuture.delayedExecutor;
+import static java.util.concurrent.CompletableFuture.failedFuture;
+import static java.util.concurrent.CompletableFuture.runAsync;
+import static java.util.concurrent.CompletableFuture.supplyAsync;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.joining;
-import static org.omnifaces.ai.service.AIApiClient.ContentType.APPLICATION_JSON;
-import static org.omnifaces.ai.service.AIApiClient.ContentType.EVENT_STREAM;
+import static org.omnifaces.ai.exception.AIApiException.fromStatusCode;
 
 import java.io.IOException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpRequest.BodyPublishers;
-import java.net.http.HttpResponse.BodyHandlers;
+import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
-import java.util.concurrent.TimeUnit;
-import java.util.function.BiConsumer;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
+import java.util.logging.Logger;
 import java.util.stream.Stream;
 
 import org.omnifaces.ai.exception.AIApiBadRequestException;
 import org.omnifaces.ai.exception.AIApiException;
 import org.omnifaces.ai.exception.AIException;
+import org.omnifaces.ai.model.Sse.Event;
+import org.omnifaces.ai.model.Sse.Event.Type;
 
 /**
  * API client utility for {@link BaseAIService} implementations.
@@ -46,36 +56,17 @@ import org.omnifaces.ai.exception.AIException;
  */
 final class AIApiClient {
 
+    private static final Logger logger = Logger.getLogger(AIApiClient.class.getName());
+
+    private static final String APPLICATION_JSON = "application/json";
+    private static final String EVENT_STREAM = "text/event-stream";
+
     /** The User-Agent header: {@value} */
     public static final String USER_AGENT = "OmniAI 1.0 (https://github.com/omnifaces/omniai)";
     /** Default max retries: {@value} */
     public static final int MAX_RETRIES = 3;
     /** Initial retry backoff time: {@value}ms (increases exponentially on every retry) */
     public static final long INITIAL_BACKOFF_MS = 1000;
-
-    /**
-     * Standard content types.
-     */
-    public enum ContentType {
-        /** application/json */
-        APPLICATION_JSON("application/json"),
-        /** text/event-stream */
-        EVENT_STREAM("text/event-stream");
-
-        private final String header;
-
-        private ContentType(String header) {
-            this.header = header;
-        }
-
-        /**
-         * Returns value suitable for {@code Content-Type} header.
-         * @return Value suitable for {@code Content-Type} header.
-         */
-        public String header() {
-            return header;
-        }
-    }
 
     private final HttpClient client;
     private final Duration requestTimeout;
@@ -107,7 +98,7 @@ final class AIApiClient {
      * @throws AIApiException if the request fails
      */
     public CompletableFuture<String> post(BaseAIService service, String path, String body) throws AIApiException {
-        return attemptSendAsync(newRequest(service, path, body, APPLICATION_JSON), 0);
+        return sendWithRetryAsync(newRequest(service, path, body, APPLICATION_JSON), 0);
     }
 
     /**
@@ -117,81 +108,113 @@ final class AIApiClient {
      * @param service The {@link BaseAIService} to extract URI and headers from.
      * @param path the API path
      * @param body The request body
-     * @param streamEventDataProcessor The stream event data processor.
+     * @param eventProcessor The stream event processor.
      * @return A future that completes when stream ends or fails.
      * @throws AIApiException if the request fails
      */
-    public CompletableFuture<Void> stream(BaseAIService service, String path, String body, BiConsumer<CompletableFuture<Void>, String> streamEventDataProcessor) throws AIApiException {
+    public CompletableFuture<Void> stream(BaseAIService service, String path, String body, Predicate<Event> eventProcessor) throws AIApiException {
         var request = newRequest(service, path, body, EVENT_STREAM);
-        return attemptStreamAsync(request, streamEventDataProcessor, 0);
+        return streamWithRetryAsync(request, eventProcessor, 0);
     }
 
-    private HttpRequest newRequest(BaseAIService service, String path, String body, ContentType accept) {
+    private HttpRequest newRequest(BaseAIService service, String path, String body, String accept) {
         var requestBuilder = HttpRequest.newBuilder(service.resolveURI(path)).timeout(requestTimeout).POST(BodyPublishers.ofString(body));
         requestBuilder.header("User-Agent", USER_AGENT);
-        requestBuilder.header("Content-Type", APPLICATION_JSON.header());
-        requestBuilder.header("Accept", accept.header());
+        requestBuilder.header("Content-Type", APPLICATION_JSON);
+        requestBuilder.header("Accept", accept);
         service.getRequestHeaders().forEach(requestBuilder::header);
-        var request = requestBuilder.build();
-        return request;
+        return requestBuilder.build();
     }
 
-    private CompletableFuture<String> attemptSendAsync(HttpRequest request, int attempt) {
-        return withRetry(() -> client.sendAsync(request, BodyHandlers.ofString()).thenCompose(response -> {
-            var statusCode = response.statusCode();
-
-            if (statusCode >= AIApiBadRequestException.STATUS_CODE) {
-                return CompletableFuture.failedFuture(AIApiException.fromStatusCode(request.uri(), statusCode, response.body()));
-            }
-
-            return CompletableFuture.completedFuture(response.body());
-        }), attempt);
+    private CompletableFuture<String> sendWithRetryAsync(HttpRequest request, int attempt) {
+        return withRetry(() -> client.sendAsync(request, ofString()).thenCompose(response -> handleResponse(request, response, r -> r.body(), r -> completedFuture(r.body()))), attempt);
     }
 
-    private CompletableFuture<Void> attemptStreamAsync(HttpRequest request, BiConsumer<CompletableFuture<Void>, String> eventDataProcessor, int attempt) {
-        return withRetry(() -> client.sendAsync(request, BodyHandlers.ofLines()).thenCompose(response -> {
-            var statusCode = response.statusCode();
+    private CompletableFuture<Void> streamWithRetryAsync(HttpRequest request, Predicate<Event> eventProcessor, int attempt) {
+        return withRetry(() -> client.sendAsync(request, ofLines()).thenCompose(response -> handleResponse(request, response, r -> r.body().collect(joining("\n")), r -> consumeEventStream(r, eventProcessor))), attempt);
+    }
 
-            if (statusCode >= AIApiBadRequestException.STATUS_CODE) {
-                return CompletableFuture.failedFuture(AIApiException.fromStatusCode(request.uri(), statusCode, response.body().collect(joining("\n"))));
-            }
+    private <R, T> CompletableFuture<R> handleResponse(HttpRequest request, HttpResponse<T> response, Function<HttpResponse<T>, String> bodyExtractor, Function<HttpResponse<T>, CompletableFuture<R>> successHandler) {
+        var statusCode = response.statusCode();
 
-            var future = new CompletableFuture<Void>();
-            CompletableFuture.runAsync(() -> {
-                try {
-                    response.body().forEach(line -> eventDataProcessor.accept(future, line));
+        if (statusCode >= AIApiBadRequestException.STATUS_CODE) {
+            return failedFuture(fromStatusCode(request.uri(), statusCode, bodyExtractor.apply(response)));
+        }
+
+        return successHandler.apply(response);
+    }
+
+    private CompletableFuture<Void> consumeEventStream(HttpResponse<Stream<String>> response, Predicate<Event> eventProcessor) {
+        var future = new CompletableFuture<Void>();
+        runAsync(() -> processEvents(response, future, eventProcessor));
+        return future;
+    }
+
+    private void processEvents(HttpResponse<Stream<String>> response, CompletableFuture<Void> future, Predicate<Event> eventProcessor) {
+        try {
+            var lines = response.body().iterator();
+
+            while (lines.hasNext()) {
+                var line = lines.next();
+
+                if (!line.isBlank() && !line.startsWith(":")) {
+                    var event = createEvent(line.strip());
+
+                    if (event != null && !eventProcessor.test(event)) {
+                        break;
+                    }
                 }
-                catch (Throwable throwable) {
-                    future.completeExceptionally(throwable);
-                }
-            });
+            }
 
-            return future;
-        }), attempt);
+            future.complete(null);
+        }
+        catch (Throwable t) {
+            future.completeExceptionally(t);
+        }
     }
 
-    private <T> CompletableFuture<T> withRetry(Supplier<CompletableFuture<T>> action, int attempt) {
-        return action.get().exceptionallyCompose(throwable -> {
-            var cause = (throwable instanceof CompletionException ce) ? ce.getCause() : throwable;
+    private Event createEvent(String line) {
+        if (line.startsWith("id:")) {
+            var id = line.substring(3).trim();
+            return new Event(Type.ID, id);
+        }
+        else if (line.startsWith("event:")) {
+            var event = line.substring(6).trim();
+            return new Event(Type.EVENT, event);
+        }
+        else if (line.startsWith("data:")) {
+            var data = line.substring(5).trim();
+            return new Event(Type.DATA, data);
+        }
+        else {
+            logger.fine("Ignoring unknown SSE line: " + line);
+            return null;
+        }
+    }
 
-            if (cause instanceof AIException) {
-                return CompletableFuture.failedFuture(cause);
-            }
+    private <R> CompletableFuture<R> withRetry(Supplier<CompletableFuture<R>> action, int attempt) {
+        return action.get().exceptionallyCompose(throwable -> handleFailureWithRetry(action, attempt, throwable));
+    }
 
-            if (attempt >= MAX_RETRIES - 1 || !isRetryable(cause)) {
-                return CompletableFuture.failedFuture(new AIApiException("Request failed (" + attempt + " retries)", cause));
-            }
+    private <R> CompletableFuture<R> handleFailureWithRetry(Supplier<CompletableFuture<R>> action, int attempt, Throwable throwable) {
+        var cause = (throwable instanceof CompletionException ce) ? ce.getCause() : throwable;
 
-            var delayed = CompletableFuture.delayedExecutor(INITIAL_BACKOFF_MS * (1L << attempt), TimeUnit.MILLISECONDS);
-            return CompletableFuture.supplyAsync(() -> withRetry(action, attempt + 1), delayed).thenCompose(Function.identity());
-        });
+        if (cause instanceof AIException) {
+            return failedFuture(cause);
+        }
+
+        if (attempt >= MAX_RETRIES - 1 || !isRetryable(cause)) {
+            return failedFuture(new AIApiException("Request failed (" + attempt + " retries)", cause));
+        }
+
+        return supplyAsync(() -> withRetry(action, attempt + 1), delayedExecutor(INITIAL_BACKOFF_MS * (1L << attempt), MILLISECONDS)).thenCompose(identity());
     }
 
     /**
      * Determines whether a failed request should be retried based on the exception.
      * <p>
      * Retryable errors are transient connection issues indicated by an {@link IOException}
-     * with a message containing "terminated", "reset", or "refused" anywhere in the cause chain.
+     * with a message containing "timed", "terminated", "reset", "refused", or "goaway" anywhere in the cause chain.
      *
      * @param throwable The exception to check.
      * @return {@code true} if the error is transient and the request should be retried.
@@ -209,7 +232,7 @@ final class AIApiClient {
                       .map(Throwable::getMessage)
                       .filter(Objects::nonNull)
                       .map(String::toLowerCase)
-                      .anyMatch(msg -> msg.contains("timed") || msg.contains("terminated") || msg.contains("reset") || msg.contains("refused"))
+                      .anyMatch(msg -> msg.contains("timed") || msg.contains("terminated") || msg.contains("reset") || msg.contains("refused") || msg.contains("goaway"))
             )
             .orElse(false);
     }
