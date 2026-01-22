@@ -12,20 +12,28 @@
  */
 package org.omnifaces.ai.service;
 
+import static java.util.logging.Level.WARNING;
 import static org.omnifaces.ai.helper.ImageHelper.guessImageMediaType;
 import static org.omnifaces.ai.helper.ImageHelper.toImageBase64;
+import static org.omnifaces.ai.helper.JsonHelper.parseJson;
 import static org.omnifaces.ai.helper.TextHelper.isBlank;
+import static org.omnifaces.ai.model.Sse.Event.Type.DATA;
+import static org.omnifaces.ai.model.Sse.Event.Type.EVENT;
 
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
+import java.util.logging.Logger;
 
 import jakarta.json.Json;
 
 import org.omnifaces.ai.AIConfig;
 import org.omnifaces.ai.AIModality;
+import org.omnifaces.ai.AIModelVersion;
 import org.omnifaces.ai.AIProvider;
 import org.omnifaces.ai.AIService;
 import org.omnifaces.ai.model.ChatOptions;
+import org.omnifaces.ai.model.Sse.Event;
 
 /**
  * AI service implementation using Anthropic API.
@@ -58,8 +66,10 @@ import org.omnifaces.ai.model.ChatOptions;
 public class AnthropicAIService extends BaseAIService {
 
     private static final long serialVersionUID = 1L;
+    private static final Logger logger = Logger.getLogger(AnthropicAIService.class.getName());
 
     private static final String ANTHROPIC_VERSION = "2023-06-01";
+    private static final AIModelVersion CLAUDE_3 = AIModelVersion.of("claude", 3);
 
     /**
      * Constructs an Anthropic service with the specified configuration.
@@ -77,6 +87,11 @@ public class AnthropicAIService extends BaseAIService {
             case IMAGE_ANALYSIS -> true;
             default -> false;
         };
+    }
+
+    @Override
+    protected boolean supportsStreaming() {
+        return getModelVersion().gte(CLAUDE_3);
     }
 
     @Override
@@ -108,6 +123,14 @@ public class AnthropicAIService extends BaseAIService {
                 .add("role", "user")
                 .add("content", message)));
 
+        if (streaming) {
+            if (!supportsStreaming()) {
+                throw new IllegalStateException();
+            }
+
+            payload.add("stream", true);
+        }
+
         if (options.getTemperature() != 0.7) {
             payload.add("temperature", options.getTemperature());
         }
@@ -117,6 +140,31 @@ public class AnthropicAIService extends BaseAIService {
         }
 
         return payload.build().toString();
+    }
+
+    @Override
+    protected boolean processStreamEvent(Event event, Consumer<String> onToken) {
+        if (event.type() == EVENT) {
+            return !"message_stop".equals(event.value()) && !"content_block_stop".equals(event.value());
+        }
+        else if (event.type() == DATA && event.value().contains("content_block_delta")) { // Cheap pre-filter before expensive parse.
+            try {
+                var json = parseJson(event.value());
+
+                if ("content_block_delta".equals(json.getString("type", null))) {
+                    var token = json.getJsonObject("delta").getString("text", "");
+
+                    if (!token.isEmpty()) { // Do not use isBlank! Whitespace can be a valid token.
+                        onToken.accept(token);
+                    }
+                }
+            }
+            catch (Exception e) {
+                logger.log(WARNING, e, () -> "Skipping unparseable stream event data: " + event.value());
+            }
+        }
+
+        return true;
     }
 
     @Override
