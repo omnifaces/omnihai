@@ -127,16 +127,34 @@ public class OpenAIService extends BaseAIService {
         return getModelVersion().gte(GPT_4);
     }
 
+    /**
+     * Returns whether this OpenAI based service implementation supports chat streaming.
+     * The default implementation returns true if {@link #supportsResponsesApi()} returns true.
+     * @return Whether this OpenAI based service implementation supports chat streaming.
+     */
+    protected boolean supportsStreaming() {
+        return supportsResponsesApi();
+    }
+
+    /**
+     * Returns only authorization bearer header with API key as value.
+     */
     @Override
     protected Map<String, String> getRequestHeaders() {
         return Map.of("Authorization", "Bearer ".concat(apiKey));
     }
 
+    /**
+     * If {@link #supportsResponsesApi()} then returns {@code responses} else {@code chat/completions}.
+     */
     @Override
     protected String getChatPath() {
         return supportsResponsesApi() ? "responses" : "chat/completions";
     }
 
+    /**
+     * Returns {@code image/generations}.
+     */
     @Override
     protected String getGenerateImagePath() {
         return "images/generations";
@@ -144,11 +162,11 @@ public class OpenAIService extends BaseAIService {
 
     @Override
     public CompletableFuture<Void> chatStream(String message, ChatOptions options, Consumer<String> onToken) {
-        if (!supportsResponsesApi()) {
-            throw new UnsupportedOperationException("This feature is only supported in gpt-4 or newer");
+        if (!supportsStreaming()) {
+            throw new UnsupportedOperationException("This feature is only supported in gpt-4 or similar");
         }
 
-        return asyncPostAndProcessStreamEvents("responses", buildChatPayload(message, options, true), event -> processStreamEvent(event, onToken));
+        return asyncPostAndProcessStreamEvents(getChatPath(), buildChatPayload(message, options, true), event -> processStreamEvent(event, onToken));
     }
 
     /**
@@ -225,6 +243,10 @@ public class OpenAIService extends BaseAIService {
         payload.add(supportsResponsesApi() ? "input" : "messages", input);
 
         if (streaming) {
+            if (!supportsStreaming()) {
+                throw new IllegalStateException();
+            }
+
             payload.add("stream", true);
         }
 

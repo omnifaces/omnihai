@@ -12,12 +12,21 @@
  */
 package org.omnifaces.ai.service;
 
+import static java.util.logging.Level.WARNING;
+import static org.omnifaces.ai.helper.JsonHelper.parseJson;
+import static org.omnifaces.ai.model.Sse.Event.Type.DATA;
+
 import java.util.Set;
+import java.util.function.Consumer;
+import java.util.logging.Logger;
 
 import org.omnifaces.ai.AIConfig;
 import org.omnifaces.ai.AIModality;
+import org.omnifaces.ai.AIModelVersion;
 import org.omnifaces.ai.AIProvider;
 import org.omnifaces.ai.AIService;
+import org.omnifaces.ai.helper.JsonHelper;
+import org.omnifaces.ai.model.Sse.Event;
 
 /**
  * AI service implementation using Mistral AI API.
@@ -51,6 +60,9 @@ import org.omnifaces.ai.AIService;
 public class MistralAIService extends OpenAIService {
 
     private static final long serialVersionUID = 1L;
+    private static final Logger logger = Logger.getLogger(MistralAIService.class.getName());
+
+    private static final AIModelVersion MISTRAL_2402 = AIModelVersion.of("mistral", 2402);
 
     /**
      * Constructs a Mistral AI service with the specified configuration.
@@ -78,5 +90,37 @@ public class MistralAIService extends OpenAIService {
     @Override
     protected boolean supportsResponsesApi() {
         return false;
+    }
+
+    @Override
+    protected boolean supportsStreaming() {
+        return getModelVersion().gte(MISTRAL_2402);
+    }
+
+    @Override
+    protected boolean processStreamEvent(Event event, Consumer<String> onToken) {
+        if (event.type() == DATA) {
+            if ("DONE".equalsIgnoreCase(event.value())) {
+                return false;
+            }
+            else if (event.value().contains("chat.completion.chunk")) { // Cheap pre-filter before expensive parse.
+                try {
+                    var json = parseJson(event.value());
+
+                    if ("chat.completion.chunk".equals(json.getString("object", null))) {
+                        var token = JsonHelper.extractByPath(json, "choices[0].delta.content");
+
+                        if (token != null && !token.isEmpty()) { // Do not use isBlank! Whitespace can be a valid token.
+                            onToken.accept(token);
+                        }
+                    }
+                }
+                catch (Exception e) {
+                    logger.log(WARNING, e, () -> "Skipping unparseable stream event data: " + event.value());
+                }
+            }
+        }
+
+        return true;
     }
 }

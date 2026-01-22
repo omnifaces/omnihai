@@ -13,7 +13,6 @@
 package org.omnifaces.ai.helper;
 
 import static java.util.Collections.emptyList;
-import static org.omnifaces.ai.helper.TextHelper.isBlank;
 
 import java.io.StringReader;
 import java.util.ArrayList;
@@ -51,14 +50,7 @@ public final class JsonHelper {
         }
         else if (value instanceof JsonObject object) {
             return object.isEmpty();
-        }
-        else if (value instanceof JsonArray array) {
-            return array.isEmpty();
-        }
-        else if (value instanceof JsonString string) {
-            return isBlank(string.getString());
-        }
-        else {
+        } else {
             throw new UnsupportedOperationException("Not implemented yet, just add a new else-if block here");
         }
     }
@@ -126,8 +118,8 @@ public final class JsonHelper {
 
             var string = terminal instanceof JsonString jsonString ? jsonString.getString() : terminal.toString();
 
-            if (!isBlank(string)) {
-                result.add(string.strip());
+            if (!string.isEmpty()) { // Do not use isBlank! Whitespace can be significant.
+                result.add(string);
             }
         }
 
@@ -139,7 +131,7 @@ public final class JsonHelper {
             return;
         }
 
-        if (!(current instanceof JsonObject || current instanceof JsonArray)) {
+        if (!(current instanceof JsonObject) && !(current instanceof JsonArray)) {
             return;
         }
 
@@ -167,9 +159,7 @@ public final class JsonHelper {
         }
 
         if ("*".equals(indexPart)) {
-            for (var item : array) {
-                collector.add(item);
-            }
+            collector.addAll(array);
         } else {
             int index = Integer.parseInt(indexPart);
 
