@@ -13,21 +13,27 @@
 package org.omnifaces.ai;
 
 /**
- * Represents a specific capability that an AI service may support.
+ * Represents a supported input/output modality of an AI service.
  * <p>
- * These constants are used to query whether a given {@link AIService} can perform certain types of input processing (analysis/understanding) or output generation.
+ * Each constant indicates whether a given {@link AIService} can process a specific type of media as input
+ * (analysis/understanding) and/or generate that media type as output.
  * <p>
- * Capabilities are deliberately separated into <em>analysis</em> (understanding/processing input) and <em>generation</em> (producing new content) to allow
- * fine-grained support checks, since many models support one direction but not the other (e.g., vision input but no image output).
+ * The enum deliberately separates <em>analysis</em> (consuming/understanding media) from <em>generation</em> (producing
+ * new media) because many models support one direction but not the other — for example, strong vision understanding
+ * without image generation, or high-quality text-to-speech without audio transcription.
  * <p>
- * Not all providers/models support every capability. Callers should use {@link AIService#supportsCapability(AICapability)} or equivalent to check availability
- * before invoking related operations.
+ * Text is considered the default modality and is implicitly supported by nearly all services; it is therefore not
+ * enumerated here. Without the text modality the AI service wouldn't be able to process input and give response in
+ * first place.
+ * <p>
+ * Not every provider or model supports every modality. Callers should use {@link AIService#supports(AIModality)}
+ * to check availability before attempting modality-specific operations.
  *
  * @author Bauke Scholtz
  * @since 1.0
- * @see AIService#supportsCapability(AICapability)
+ * @see AIService#supportsCapability(AIModality)
  */
-public enum AICapability {
+public enum AIModality {
 
     /** Ability to analyze, describe, interpret, caption, answer questions about, or extract information from images provided as input (vision / multimodal understanding). */
     IMAGE_ANALYSIS,

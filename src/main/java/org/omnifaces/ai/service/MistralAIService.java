@@ -14,7 +14,7 @@ package org.omnifaces.ai.service;
 
 import java.util.Set;
 
-import org.omnifaces.ai.AICapability;
+import org.omnifaces.ai.AIModality;
 import org.omnifaces.ai.AIConfig;
 import org.omnifaces.ai.AIProvider;
 import org.omnifaces.ai.AIService;
@@ -63,15 +63,15 @@ public class MistralAIService extends OpenAIService {
     }
 
     @Override
-    public boolean supportsCapability(AICapability capability) {
-        return switch (capability) {
+    public boolean supportsModality(AIModality modality) {
+        return switch (modality) {
             case IMAGE_ANALYSIS -> true;
             default -> false;
         };
     }
 
     @Override
-    protected boolean supportsModerationCapability(Set<String> categories) {
+    protected boolean supportsOpenAIModerationCapability(Set<String> categories) {
         return false;
     }
 

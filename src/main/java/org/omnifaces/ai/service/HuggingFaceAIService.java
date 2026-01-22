@@ -14,7 +14,7 @@ package org.omnifaces.ai.service;
 
 import java.util.Set;
 
-import org.omnifaces.ai.AICapability;
+import org.omnifaces.ai.AIModality;
 import org.omnifaces.ai.AIConfig;
 import org.omnifaces.ai.AIProvider;
 import org.omnifaces.ai.AIService;
@@ -63,10 +63,10 @@ public class HuggingFaceAIService extends OpenAIService {
     }
 
     @Override
-    public boolean supportsCapability(AICapability capability) {
+    public boolean supportsModality(AIModality modality) {
         var fullModelName = getModelName().toLowerCase();
 
-        return switch (capability) {
+        return switch (modality) {
             case IMAGE_ANALYSIS -> true;
             case IMAGE_GENERATION -> fullModelName.contains("image");
             case AUDIO_ANALYSIS -> fullModelName.contains("transcribe");
@@ -75,7 +75,7 @@ public class HuggingFaceAIService extends OpenAIService {
     }
 
     @Override
-    protected boolean supportsModerationCapability(Set<String> categories) {
+    protected boolean supportsOpenAIModerationCapability(Set<String> categories) {
         return false;
     }
 

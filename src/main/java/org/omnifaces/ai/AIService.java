@@ -39,7 +39,7 @@ import org.omnifaces.ai.model.ModerationResult;
  * @since 1.0
  * @see AIProvider
  * @see AIConfig
- * @see AICapability
+ * @see AIModality
  */
 public interface AIService extends Serializable {
 
@@ -61,7 +61,6 @@ public interface AIService extends Serializable {
      * @param message The user's message to send to the AI.
      * @return The AI's response, never {@code null}.
      * @throws IllegalArgumentException if message is blank.
-     * @throws UnsupportedOperationException if chat capability is not supported by the implementation.
      * @throws AIException if the chat request fails.
      * @see #chat(String, ChatOptions)
      */
@@ -90,7 +89,6 @@ public interface AIService extends Serializable {
      * @param message The user's message to send to the AI.
      * @return A CompletableFuture that will contain the AI's response, never {@code null}.
      * @throws IllegalArgumentException if message is blank.
-     * @throws UnsupportedOperationException if chat capability is not supported by the implementation.
      * @see #chatAsync(String, ChatOptions)
      */
     default CompletableFuture<String> chatAsync(String message) {
@@ -116,7 +114,7 @@ public interface AIService extends Serializable {
      * @param onToken The token consumer, this will be invoked for every chat response token in the stream.
      * @return An empty CompletableFuture which only completes when the end of stream is reached, never {@code null}.
      * @throws IllegalArgumentException if message is blank.
-     * @throws UnsupportedOperationException if chat capability is not supported by the implementation.
+     * @throws UnsupportedOperationException if chat streaming is not supported by the implementation.
      * @see #chatStream(String, ChatOptions, Consumer)
      */
     default CompletableFuture<Void> chatStream(String message, Consumer<String> onToken) {
@@ -143,7 +141,6 @@ public interface AIService extends Serializable {
      * @param options Chat options (system prompt, temperature, max tokens, etc.).
      * @return The AI's response, never {@code null}.
      * @throws IllegalArgumentException if message is blank.
-     * @throws UnsupportedOperationException if chat capability is not supported by the implementation.
      * @throws AIException if the chat request fails.
      */
     default String chat(String message, ChatOptions options) throws AIException {
@@ -175,7 +172,6 @@ public interface AIService extends Serializable {
      * @param options Chat options (system prompt, temperature, max tokens, etc.).
      * @return A CompletableFuture that will contain the AI's response, never {@code null}.
      * @throws IllegalArgumentException if message is blank.
-     * @throws UnsupportedOperationException if chat capability is not supported by the implementation.
      */
     CompletableFuture<String> chatAsync(String message, ChatOptions options);
 
@@ -202,7 +198,7 @@ public interface AIService extends Serializable {
      * @param onToken The token consumer, this will be invoked for every chat response token in the stream.
      * @return An empty CompletableFuture which only completes when the end of stream is reached, never {@code null}.
      * @throws IllegalArgumentException if message is blank.
-     * @throws UnsupportedOperationException if chat capability is not supported by the implementation.
+     * @throws UnsupportedOperationException if chat streaming is not supported by the implementation.
      */
     default CompletableFuture<Void> chatStream(String message, ChatOptions options, Consumer<String> onToken) {
         throw new UnsupportedOperationException();
@@ -218,7 +214,7 @@ public interface AIService extends Serializable {
      * @param maxWords Maximum number of words in the summary.
      * @return The summarized text, never {@code null}.
      * @throws IllegalArgumentException if text is blank.
-     * @throws UnsupportedOperationException if summarization capability is not supported by the implementation.
+     * @throws UnsupportedOperationException if summarization is not supported by the implementation.
      * @throws AIException if summarization fails.
      */
     default String summarize(String text, int maxWords) throws AIException {
@@ -237,7 +233,7 @@ public interface AIService extends Serializable {
      * @param maxWords Maximum number of words in the summary.
      * @return A CompletableFuture that will contain the summarized text, never {@code null}.
      * @throws IllegalArgumentException if text is blank.
-     * @throws UnsupportedOperationException if summarization capability is not supported by the implementation.
+     * @throws UnsupportedOperationException if summarization is not supported by the implementation.
      */
     default CompletableFuture<String> summarizeAsync(String text, int maxWords) {
         throw new UnsupportedOperationException();
@@ -250,7 +246,7 @@ public interface AIService extends Serializable {
      * @param maxPoints Maximum number of key points to extract.
      * @return List of key points, never {@code null}.
      * @throws IllegalArgumentException if text is blank.
-     * @throws UnsupportedOperationException if key point extraction capability is not supported by the implementation.
+     * @throws UnsupportedOperationException if key point extraction is not supported by the implementation.
      * @throws AIException if extraction fails.
      */
     default List<String> extractKeyPoints(String text, int maxPoints) throws AIException {
@@ -269,7 +265,7 @@ public interface AIService extends Serializable {
      * @param maxPoints Maximum number of key points to extract.
      * @return A CompletableFuture that will contain a list of key points, never {@code null}.
      * @throws IllegalArgumentException if text is blank.
-     * @throws UnsupportedOperationException if key point extraction capability is not supported by the implementation.
+     * @throws UnsupportedOperationException if key point extraction is not supported by the implementation.
      */
     default CompletableFuture<List<String>> extractKeyPointsAsync(String text, int maxPoints) {
         throw new UnsupportedOperationException();
@@ -284,7 +280,7 @@ public interface AIService extends Serializable {
      * @param text The text to analyze.
      * @return The detected language code (ISO 639-1), never {@code null}.
      * @throws IllegalArgumentException if text is blank.
-     * @throws UnsupportedOperationException if language detection capability is not supported by the implementation.
+     * @throws UnsupportedOperationException if language detection is not supported by the implementation.
      * @throws AIException if language detection fails.
      */
     default String detectLanguage(String text) throws AIException {
@@ -302,7 +298,7 @@ public interface AIService extends Serializable {
      * @param text The text to analyze.
      * @return A CompletableFuture that will contain the detected language code (ISO 639-1), never {@code null}.
      * @throws IllegalArgumentException if text is blank.
-     * @throws UnsupportedOperationException if language detection capability is not supported by the implementation.
+     * @throws UnsupportedOperationException if language detection is not supported by the implementation.
      */
     default CompletableFuture<String> detectLanguageAsync(String text) {
         throw new UnsupportedOperationException();
@@ -316,7 +312,7 @@ public interface AIService extends Serializable {
      * @param targetLang Target language code (ISO 639-1).
      * @return The translated text, never {@code null}.
      * @throws IllegalArgumentException if text or targetLang is blank.
-     * @throws UnsupportedOperationException if translation capability is not supported by the implementation.
+     * @throws UnsupportedOperationException if translation is not supported by the implementation.
      * @throws AIException if translation fails.
      */
     default String translate(String text, String sourceLang, String targetLang) throws AIException {
@@ -336,7 +332,7 @@ public interface AIService extends Serializable {
      * @param targetLang Target language code (ISO 639-1).
      * @return A CompletableFuture that will contain the translated text, never {@code null}.
      * @throws IllegalArgumentException if text or targetLang is blank.
-     * @throws UnsupportedOperationException if translation capability is not supported by the implementation.
+     * @throws UnsupportedOperationException if translation is not supported by the implementation.
      */
     default CompletableFuture<String> translateAsync(String text, String sourceLang, String targetLang) {
         throw new UnsupportedOperationException();
@@ -353,7 +349,7 @@ public interface AIService extends Serializable {
      * @param content The content to moderate.
      * @return Moderation result with detected violations, never {@code null}.
      * @throws IllegalArgumentException if content is blank.
-     * @throws UnsupportedOperationException if content moderation capability is not supported by the implementation.
+     * @throws UnsupportedOperationException if content moderation is not supported by the implementation.
      * @throws AIException if moderation fails.
      * @see #moderateContent(String, ModerationOptions)
      * @see ModerationOptions#DEFAULT
@@ -375,7 +371,7 @@ public interface AIService extends Serializable {
      * @param content The content to moderate.
      * @return A CompletableFuture that will contain the moderation result with detected violations, never {@code null}.
      * @throws IllegalArgumentException if content is blank.
-     * @throws UnsupportedOperationException if content moderation capability is not supported by the implementation.
+     * @throws UnsupportedOperationException if content moderation is not supported by the implementation.
      * @see #moderateContent(String, ModerationOptions)
      * @see ModerationOptions#DEFAULT
      */
@@ -390,7 +386,7 @@ public interface AIService extends Serializable {
      * @param options Moderation options (categories to check, threshold, etc.).
      * @return Moderation result with detected violations, never {@code null}.
      * @throws IllegalArgumentException if content is blank.
-     * @throws UnsupportedOperationException if content moderation capability is not supported by the implementation.
+     * @throws UnsupportedOperationException if content moderation is not supported by the implementation.
      * @throws AIException if moderation fails.
      */
     default ModerationResult moderateContent(String content, ModerationOptions options) throws AIException {
@@ -409,7 +405,7 @@ public interface AIService extends Serializable {
      * @param options Moderation options (categories to check, threshold, etc.).
      * @return A CompletableFuture that will contain the moderation result with detected violations, never {@code null}.
      * @throws IllegalArgumentException if content is blank.
-     * @throws UnsupportedOperationException if content moderation capability is not supported by the implementation.
+     * @throws UnsupportedOperationException if content moderation is not supported by the implementation.
      */
     default CompletableFuture<ModerationResult> moderateContentAsync(String content, ModerationOptions options) {
         throw new UnsupportedOperationException();
@@ -424,10 +420,11 @@ public interface AIService extends Serializable {
      * Useful for generating alt text for accessibility, extracting information from images, or describing visual content.
      *
      * @param image The image bytes to analyze.
-     * @param prompt The prompt describing what to focus on (e.g., "describe the product", "what's the main subject"), or {@code null} for a general description.
+     * @param prompt The prompt describing what to focus on (e.g., "describe the product", "what's the main subject"),
+     * or {@code null} for a general description.
      * @return Description of the image, never {@code null}.
      * @throws IllegalArgumentException if prompt is blank.
-     * @throws UnsupportedOperationException if image analysis capability is not supported by the implementation.
+     * @throws UnsupportedOperationException if image analysis is not supported by the implementation.
      * @throws AIException if image analysis fails.
      */
     default String analyzeImage(byte[] image, String prompt) throws AIException {
@@ -445,10 +442,11 @@ public interface AIService extends Serializable {
      * Useful for generating alt text for accessibility, extracting information from images, or describing visual content.
      *
      * @param image The image bytes to analyze.
-     * @param prompt The prompt describing what to focus on (e.g., "describe the product", "what's the main subject"), or {@code null} for a general description.
+     * @param prompt The prompt describing what to focus on (e.g., "describe the product", "what's the main subject"),
+     * or {@code null} for a general description.
      * @return A CompletableFuture that will contain the description of the image, never {@code null}.
      * @throws IllegalArgumentException if prompt is blank.
-     * @throws UnsupportedOperationException if image analysis capability is not supported by the implementation.
+     * @throws UnsupportedOperationException if image analysis is not supported by the implementation.
      */
     default CompletableFuture<String> analyzeImageAsync(byte[] image, String prompt) {
         throw new UnsupportedOperationException();
@@ -459,7 +457,7 @@ public interface AIService extends Serializable {
      *
      * @param image The image bytes to analyze.
      * @return Alt text description, never {@code null}.
-     * @throws UnsupportedOperationException if image analysis capability is not supported by the implementation.
+     * @throws UnsupportedOperationException if image analysis is not supported by the implementation.
      * @throws AIException if image analysis fails.
      */
     default String generateAltText(byte[] image) throws AIException {
@@ -476,7 +474,7 @@ public interface AIService extends Serializable {
      *
      * @param image The image bytes to analyze.
      * @return A CompletableFuture that will contain the alt text description, never {@code null}.
-     * @throws UnsupportedOperationException if image analysis capability is not supported by the implementation.
+     * @throws UnsupportedOperationException if image analysis is not supported by the implementation.
      */
     default CompletableFuture<String> generateAltTextAsync(byte[] image) {
         throw new UnsupportedOperationException();
@@ -491,7 +489,7 @@ public interface AIService extends Serializable {
      * @param prompt The text prompt describing the image to generate.
      * @return Generated image bytes, never {@code null}.
      * @throws IllegalArgumentException if prompt is blank.
-     * @throws UnsupportedOperationException if image generation capability is not supported by the implementation.
+     * @throws UnsupportedOperationException if image generation is not supported by the implementation.
      * @throws AIException if image generation fails.
      * @see #generateImage(String, GenerateImageOptions)
      * @see GenerateImageOptions#DEFAULT
@@ -511,7 +509,7 @@ public interface AIService extends Serializable {
      * @param prompt The text prompt describing the image to generate.
      * @return A CompletableFuture that will contain the generated image bytes, never {@code null}.
      * @throws IllegalArgumentException if prompt is blank.
-     * @throws UnsupportedOperationException if image generation capability is not supported by the implementation.
+     * @throws UnsupportedOperationException if image generation is not supported by the implementation.
      * @see #generateImage(String, GenerateImageOptions)
      * @see GenerateImageOptions#DEFAULT
      */
@@ -526,7 +524,7 @@ public interface AIService extends Serializable {
      * @param options Image generation options (size, quality, style, etc.).
      * @return Generated image bytes, never {@code null}.
      * @throws IllegalArgumentException if prompt is blank.
-     * @throws UnsupportedOperationException if image generation capability is not supported by the implementation.
+     * @throws UnsupportedOperationException if image generation is not supported by the implementation.
      * @throws AIException if image generation fails.
      */
     default byte[] generateImage(String prompt, GenerateImageOptions options) throws AIException {
@@ -545,7 +543,7 @@ public interface AIService extends Serializable {
      * @param options Image generation options (size, quality, style, etc.).
      * @return A CompletableFuture that will contain the generated image bytes, never {@code null}.
      * @throws IllegalArgumentException if prompt is blank.
-     * @throws UnsupportedOperationException if image generation capability is not supported by the implementation.
+     * @throws UnsupportedOperationException if image generation is not supported by the implementation.
      */
     default CompletableFuture<byte[]> generateImageAsync(String prompt, GenerateImageOptions options) {
         throw new UnsupportedOperationException();
@@ -591,7 +589,8 @@ public interface AIService extends Serializable {
 
     /**
      * Returns the AI model version information for this AI service.
-     * The version is extracted from {@link #getModelName()} and includes the model name prefix, major version, and minor version.
+     * The version is extracted from {@link #getModelName()} and includes the model name prefix, major version, and
+     * minor version.
      *
      * @return The AI model version for this AI service.
      * @see AIModelVersion#of(AIService)
@@ -601,22 +600,28 @@ public interface AIService extends Serializable {
     }
 
     /**
-     * Returns whether the given capability is supported by this AI service, which is usually determined by {@link #getModelName()} or {@link #getModelVersion()}.
+     * Checks whether the given modality is supported by this AI service, which is usually determined by
+     * {@link #getModelName()} or {@link #getModelVersion()}.
      * <p>
-     * <strong>Important:</strong> This is a <em>hint</em> for callers. Implementations are <em>not required</em> to enforce this check before executing
-     * operations such as {@link #analyzeImage(byte[], String)}, {@link #generateImage(String)}, etc.
+     * <strong>Important:</strong> This method provides a <em>hint</em> rather than a strict guarantee. Implementations
+     * are <em>not required</em> to enforce this check before performing operations such as
+     * {@link #analyzeImage(byte[], String)}, {@link #generateImage(String)}, or other modality-specific calls.
      * <p>
-     * This method exists primarily as a convenience for callers who want to:
+     * The primary purposes of this method are to allow callers to:
      * <ul>
-     * <li>avoid unnecessary API calls when a capability is known to be unsupported,</li>
-     * <li>present better UX (e.g. disable UI buttons), or</li>
-     * <li>choose a fallback provider/model at runtime.</li>
+     * <li>skip unnecessary API calls when a modality is known to be unsupported,</li>
+     * <li>improve user experience (e.g., disable buttons or hide options in the UI),</li>
+     * <li>dynamically select a fallback provider or model at runtime.</li>
      * </ul>
-     * If a caller invokes a method corresponding to an unsupported capability anyway, the implementation <strong>may</strong> fail fast. Typically by throwing
-     * {@code UnsupportedOperationException}.
+     * <p>
+     * If a modality-specific operation is invoked despite {@code supports(AIModality)} returning {@code false},
+     * the implementation <strong>may</strong> fail fast, typically by throwing {@code UnsupportedOperationException}
+     * or a provider-specific exception.
      *
-     * @param capabilitiy The AI capabilitiy to check.
-     * @return {@code true} if this service is expected to support the capability with the current configuration, {@code false} otherwise.
+     * @param modality The modality (input analysis or output generation type) to check
+     * @return {@code true} If this service is expected to support the given modality with the current model and
+     * configuration, {@code false} otherwise.
+     * @see AIModality
      */
-    boolean supportsCapability(AICapability capabilitiy);
+    boolean supportsModality(AIModality modality);
 }

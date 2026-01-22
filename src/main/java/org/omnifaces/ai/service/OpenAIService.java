@@ -30,7 +30,7 @@ import java.util.logging.Logger;
 
 import jakarta.json.Json;
 
-import org.omnifaces.ai.AICapability;
+import org.omnifaces.ai.AIModality;
 import org.omnifaces.ai.AIConfig;
 import org.omnifaces.ai.AIModelVersion;
 import org.omnifaces.ai.AIProvider;
@@ -92,11 +92,11 @@ public class OpenAIService extends BaseAIService {
     }
 
     @Override
-    public boolean supportsCapability(AICapability capability) {
+    public boolean supportsModality(AIModality modality) {
         var currentModelVersion = getModelVersion();
         var fullModelName = getModelName().toLowerCase();
 
-        return switch (capability) {
+        return switch (modality) {
             case IMAGE_ANALYSIS -> currentModelVersion.gte(GPT_4) || fullModelName.contains("vision");
             case IMAGE_GENERATION -> currentModelVersion.gte(DALL_E) || fullModelName.contains("image");
             case AUDIO_ANALYSIS -> currentModelVersion.gte(GPT_4) || fullModelName.contains("transcribe");
@@ -114,7 +114,7 @@ public class OpenAIService extends BaseAIService {
      * @param categories The moderation categories to check.
      * @return {@code true} if all categories are supported by OpenAI's moderation API.
      */
-    protected boolean supportsModerationCapability(Set<String> categories) {
+    protected boolean supportsOpenAIModerationCapability(Set<String> categories) {
         return categories.stream().allMatch(Category.OPENAI_SUPPORTED_CATEGORY_NAMES::contains);
     }
 
@@ -180,7 +180,7 @@ public class OpenAIService extends BaseAIService {
 
     @Override
     public CompletableFuture<ModerationResult> moderateContentAsync(String content, ModerationOptions options) throws AIException {
-        if (supportsModerationCapability(options.getCategories())) {
+        if (supportsOpenAIModerationCapability(options.getCategories())) {
             var jsonPayload = Json.createObjectBuilder().add("input", content).build().toString();
             return API_CLIENT.post(this, "moderations", jsonPayload).thenApply(response -> parseOpenAIModerationResult(response, options));
         }

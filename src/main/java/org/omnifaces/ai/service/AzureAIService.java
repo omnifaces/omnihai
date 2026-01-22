@@ -87,7 +87,7 @@ public class AzureAIService extends OpenAIService {
     }
 
     @Override
-    protected boolean supportsModerationCapability(Set<String> categories) {
+    protected boolean supportsOpenAIModerationCapability(Set<String> categories) {
         return false;
     }
 

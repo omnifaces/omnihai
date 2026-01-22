@@ -18,7 +18,7 @@ import java.util.Set;
 
 import jakarta.json.Json;
 
-import org.omnifaces.ai.AICapability;
+import org.omnifaces.ai.AIModality;
 import org.omnifaces.ai.AIConfig;
 import org.omnifaces.ai.AIModelVersion;
 import org.omnifaces.ai.AIProvider;
@@ -71,11 +71,11 @@ public class XAIService extends OpenAIService {
     }
 
     @Override
-    public boolean supportsCapability(AICapability capability) {
+    public boolean supportsModality(AIModality modality) {
         var currentModelVersion = getModelVersion();
         var fullModelName = getModelName().toLowerCase();
 
-        return switch (capability) {
+        return switch (modality) {
             case IMAGE_ANALYSIS -> currentModelVersion.gte(GROK_4) || fullModelName.contains("vision");
             case IMAGE_GENERATION -> fullModelName.contains("image");
             default -> false;
@@ -83,7 +83,7 @@ public class XAIService extends OpenAIService {
     }
 
     @Override
-    protected boolean supportsModerationCapability(Set<String> categories) {
+    protected boolean supportsOpenAIModerationCapability(Set<String> categories) {
         return false;
     }
 

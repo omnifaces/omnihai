@@ -22,7 +22,7 @@ import java.util.concurrent.CompletableFuture;
 
 import jakarta.json.Json;
 
-import org.omnifaces.ai.AICapability;
+import org.omnifaces.ai.AIModality;
 import org.omnifaces.ai.AIConfig;
 import org.omnifaces.ai.AIProvider;
 import org.omnifaces.ai.AIService;
@@ -74,8 +74,8 @@ public class AnthropicAIService extends BaseAIService {
     }
 
     @Override
-    public boolean supportsCapability(AICapability capability) {
-        return switch (capability) {
+    public boolean supportsModality(AIModality modality) {
+        return switch (modality) {
             case IMAGE_ANALYSIS -> true;
             default -> false;
         };
