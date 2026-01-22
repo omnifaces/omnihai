@@ -13,6 +13,7 @@
 package org.omnifaces.ai.helper;
 
 import static java.util.Collections.emptyList;
+import static org.omnifaces.ai.helper.TextHelper.isBlank;
 
 import java.io.StringReader;
 import java.util.ArrayList;
@@ -50,7 +51,14 @@ public final class JsonHelper {
         }
         else if (value instanceof JsonObject object) {
             return object.isEmpty();
-        } else {
+        }
+        else if (value instanceof JsonArray array) {
+            return array.isEmpty();
+        }
+        else if (value instanceof JsonString string) {
+            return isBlank(string.getString());
+        }
+        else {
             throw new UnsupportedOperationException("Not implemented yet, just add a new else-if block here");
         }
     }
