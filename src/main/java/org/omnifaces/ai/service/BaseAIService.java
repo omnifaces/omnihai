@@ -30,6 +30,7 @@ import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
 import java.util.function.Predicate;
 
 import jakarta.json.JsonObject;
@@ -132,6 +133,15 @@ public abstract class BaseAIService implements AIService {
     protected abstract String getChatPath();
 
     /**
+     * Returns whether this AI service implementation supports chat streaming.
+     * The default implementation returns false.
+     * @return Whether this AI service implementation supports chat streaming.
+     */
+    protected boolean supportsStreaming() {
+        return false;
+    }
+
+    /**
      * Builds the JSON request payload for all chat operations.
      *
      * @param message The user message.
@@ -144,6 +154,26 @@ public abstract class BaseAIService implements AIService {
     @Override
     public CompletableFuture<String> chatAsync(String message, ChatOptions options) throws AIException {
         return asyncPostAndExtractMessageContent(getChatPath(), buildChatPayload(message, options, false).toString());
+    }
+
+    @Override
+    public CompletableFuture<Void> chatStream(String message, ChatOptions options, Consumer<String> onToken) {
+        if (!supportsStreaming()) {
+            throw new UnsupportedOperationException("supportsStreaming() returned false, so ...");
+        }
+
+        return asyncPostAndProcessStreamEvents(getChatPath(), buildChatPayload(message, options, true), event -> processStreamEvent(event, onToken));
+    }
+
+    /**
+     * Processes each stream event for {@link #chatStream(String, ChatOptions, Consumer)}.
+     *
+     * @param event Stream event.
+     * @param onToken Callback receiving each stream data chunk (often one word/token/line).
+     * @return {@code true} to continue processing the stream, or {@code false} when end of stream is reached.
+     */
+    protected boolean processStreamEvent(Event event, Consumer<String> onToken) {
+        throw new UnsupportedOperationException("Please implement processStreamEvent(Event event, Consumer<String> onToken) method in class " + getClass().getSimpleName());
     }
 
 

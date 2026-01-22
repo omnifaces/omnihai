@@ -127,11 +127,7 @@ public class OpenAIService extends BaseAIService {
         return getModelVersion().gte(GPT_4);
     }
 
-    /**
-     * Returns whether this OpenAI based service implementation supports chat streaming.
-     * The default implementation returns true if {@link #supportsResponsesApi()} returns true.
-     * @return Whether this OpenAI based service implementation supports chat streaming.
-     */
+    @Override
     protected boolean supportsStreaming() {
         return supportsResponsesApi();
     }
@@ -161,22 +157,6 @@ public class OpenAIService extends BaseAIService {
     }
 
     @Override
-    public CompletableFuture<Void> chatStream(String message, ChatOptions options, Consumer<String> onToken) {
-        if (!supportsStreaming()) {
-            throw new UnsupportedOperationException("This feature is only supported in gpt-4 or similar");
-        }
-
-        return asyncPostAndProcessStreamEvents(getChatPath(), buildChatPayload(message, options, true), event -> processStreamEvent(event, onToken));
-    }
-
-    /**
-     * Processes each stream event line for {@link #chatStream(String, ChatOptions, Consumer)}.
-     * You can override this method to customize the payload.
-     *
-     * @param event Stream event.
-     * @param onToken Callback receiving each stream data chunk (often one word/token/line).
-     * @return {@code true} to continue processing the stream, or {@code false} when end of stream is reached.
-     */
     protected boolean processStreamEvent(Event event, Consumer<String> onToken) {
         if (event.type() == EVENT) {
             return !"response.completed".equals(event.value()) && !"response.incomplete".equals(event.value());
