@@ -162,7 +162,15 @@ public abstract class BaseAIService implements AIService {
             throw new UnsupportedOperationException("supportsStreaming() returned false, so ...");
         }
 
-        return asyncPostAndProcessStreamEvents(getChatPath(), buildChatPayload(message, options, true), event -> processStreamEvent(event, onToken));
+        var neededForStackTrace = new Exception("Async chat streaming failed");
+
+        return asyncPostAndProcessStreamEvents(getChatPath(), buildChatPayload(message, options, true), event -> processStreamEvent(event, onToken)).handle((result, exception) -> {
+            if (exception == null) {
+                return result;
+            }
+
+            throw AIException.asyncRequestFailed(exception, neededForStackTrace);
+        });
     }
 
     /**

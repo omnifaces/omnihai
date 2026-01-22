@@ -33,19 +33,34 @@ public class AIException extends RuntimeException {
     private static final long serialVersionUID = 1L;
 
     /**
-     * Unwraps an {@link AIException} from a {@link CompletionException} thrown by async operations.
+     * Unwraps an {@link AIException} from an exception thrown by async operations.
+     * <p>
+     * If the cause is already an {@code AIException}, it is returned directly.
+     * Otherwise, a new {@code AIException} wrapping the cause is created.
+     * Then a suppressed exception is added, preserving the stack trace of the current thread.
+     *
+     * @param exception The completion exception from an async operation.
+     * @return The unwrapped or newly created AI exception.
+     */
+    public static AIException asyncRequestFailed(Throwable exception) {
+        return asyncRequestFailed(exception, new Exception("Async thread"));
+    }
+
+    /**
+     * Unwraps an {@link AIException} from an exception thrown by async operations and adds given exception as suppressed one.
      * <p>
      * If the cause is already an {@code AIException}, it is returned directly.
      * Otherwise, a new {@code AIException} wrapping the cause is created.
      *
-     * @param completionException The completion exception from an async operation.
+     * @param exception The completion exception from an async operation.
+     * @param suppressed The suppressed exception, preserving the stack trace of the thread wherein the exception was created.
      * @return The unwrapped or newly created AI exception.
      */
-    public static AIException asyncRequestFailed(CompletionException completionException) {
-        var cause = completionException.getCause();
-        var exception = cause instanceof AIException casted ? casted : new AIException("Async request failed", cause);
-        exception.addSuppressed(new Exception("Async thread"));
-        return exception;
+    public static AIException asyncRequestFailed(Throwable exception, Exception suppressed) {
+        var cause = exception instanceof CompletionException casted ? casted.getCause() : exception;
+        var aiException = cause instanceof AIException casted ? casted : new AIException("Async request failed", cause);
+        aiException.addSuppressed(suppressed);
+        return aiException;
     }
 
     /**
