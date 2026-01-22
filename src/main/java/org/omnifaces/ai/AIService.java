@@ -43,6 +43,16 @@ public interface AIService extends Serializable {
 
     /**
      * Sends a message to the AI with default system prompt from {@link #getChatPrompt()}.
+     * <p>
+     * Usage example:
+     * <pre>
+     * try {
+     *     var response = service.chat(message);
+     *     // handle full response
+     * } catch (Exception e) {
+     *     // handle exception
+     * }
+     * </pre>
      *
      * @param message The user's message to send to the AI.
      * @return The AI's response, never {@code null}.
@@ -62,6 +72,16 @@ public interface AIService extends Serializable {
 
     /**
      * Asynchronously sends a message to the AI with default system prompt from {@link #getChatPrompt()}.
+     * <p>
+     * Usage example:
+     * <pre>
+     * service.chatAsync(message).thenAccept(response -> {
+     *     // handle full response
+     * }).exceptionally(e -> {
+     *     // handle exception
+     *     return null;
+     * });
+     * </pre>
      *
      * @param message The user's message to send to the AI.
      * @return A CompletableFuture that will contain the AI's response, never {@code null}.
@@ -75,6 +95,18 @@ public interface AIService extends Serializable {
 
     /**
      * Send a message to the AI with default system prompt from {@link #getChatPrompt()} and retrieve an asynchronous stream of tokens.
+     * <p>
+     * Usage example:
+     * <pre>
+     * service.chatStream(message, token -> {
+     *     // handle partial response
+     * }).exceptionally(e -> {
+     *     // handle exception
+     *     return null;
+     * }).thenRun(() -> {
+     *     // handle completion
+     * });
+     * </pre>
      *
      * @param message The user's message to send to the AI.
      * @param onToken The token consumer, this will be invoked for every chat response token in the stream.
@@ -92,6 +124,16 @@ public interface AIService extends Serializable {
      * <p>
      * This is the core method for chat-based AI interactions.
      * The message represents the user's input, while the system prompt in options defines the AI's behavior.
+     * <p>
+     * Usage example:
+     * <pre>
+     * try {
+     *     var response = service.chat(message, options);
+     *     // handle full response
+     * } catch (Exception e) {
+     *     // handle exception
+     * }
+     * </pre>
      *
      * @param message The user's message to send to the AI.
      * @param options Chat options (system prompt, temperature, max tokens, etc.).
@@ -114,6 +156,16 @@ public interface AIService extends Serializable {
      * <p>
      * This is the core method for static chat-based AI interactions.
      * The message represents the user's input, while the system prompt in options defines the AI's behavior.
+     * <p>
+     * Usage example:
+     * <pre>
+     * service.chatAsync(message, options).thenAccept(response -> {
+     *     // handle full response
+     * }).exceptionally(e -> {
+     *     // handle exception
+     *     return null;
+     * });
+     * </pre>
      *
      * @param message The user's message to send to the AI.
      * @param options Chat options (system prompt, temperature, max tokens, etc.).
@@ -128,6 +180,18 @@ public interface AIService extends Serializable {
      * <p>
      * This is the core method for streaming chat-based AI interactions.
      * The message represents the user's input, while the system prompt in options defines the AI's behavior.
+     * <p>
+     * Usage example:
+     * <pre>
+     * service.chatStream(message, options, token -> {
+     *     // handle partial response
+     * }).exceptionally(e -> {
+     *     // handle exception
+     *     return null;
+     * }).thenRun(() -> {
+     *     // handle completion
+     * });
+     * </pre>
      *
      * @param message The user's message to send to the AI.
      * @param options Chat options (system prompt, temperature, max tokens, etc.).
