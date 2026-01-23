@@ -16,6 +16,7 @@ import static java.util.Collections.emptyMap;
 import static java.util.Optional.ofNullable;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.function.Predicate.not;
+import static java.util.logging.Level.WARNING;
 import static org.omnifaces.ai.AIConfig.PROPERTY_API_KEY;
 import static org.omnifaces.ai.AIConfig.PROPERTY_ENDPOINT;
 import static org.omnifaces.ai.AIConfig.PROPERTY_MODEL;
@@ -32,6 +33,7 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
+import java.util.logging.Logger;
 
 import jakarta.json.JsonObject;
 
@@ -495,5 +497,21 @@ public abstract class BaseAIService implements AIService {
      */
     protected List<String> getResponseImageContentPaths() {
         throw new UnsupportedOperationException("Please implement getResponseImageContentPaths() method in class " + getClass().getSimpleName());
+    }
+
+
+    // JSON parsing helper --------------------------------------------------------------------------------------------
+
+    static boolean tryParseEventDataJson(String eventData, Logger logger, Predicate<JsonObject> processor) {
+        JsonObject json;
+
+        try {
+            json = parseJson(eventData);
+        } catch (Exception e) {
+            logger.log(WARNING, e, () -> "Skipping unparseable stream event data: " + eventData);
+            return true;
+        }
+
+        return processor.test(json);
     }
 }

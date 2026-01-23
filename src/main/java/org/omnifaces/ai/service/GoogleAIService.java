@@ -12,16 +12,17 @@
  */
 package org.omnifaces.ai.service;
 
+import static java.util.logging.Level.FINE;
 import static org.omnifaces.ai.helper.ImageHelper.guessImageMediaType;
 import static org.omnifaces.ai.helper.ImageHelper.toImageBase64;
 import static org.omnifaces.ai.helper.JsonHelper.extractByPath;
-import static org.omnifaces.ai.helper.JsonHelper.parseJson;
 import static org.omnifaces.ai.helper.TextHelper.isBlank;
 import static org.omnifaces.ai.model.Sse.Event.Type.DATA;
 
 import java.net.URI;
 import java.util.List;
 import java.util.function.Consumer;
+import java.util.logging.Logger;
 
 import jakarta.json.Json;
 
@@ -29,6 +30,7 @@ import org.omnifaces.ai.AIConfig;
 import org.omnifaces.ai.AIModality;
 import org.omnifaces.ai.AIProvider;
 import org.omnifaces.ai.AIService;
+import org.omnifaces.ai.exception.AIApiTokenLimitExceededException;
 import org.omnifaces.ai.model.ChatOptions;
 import org.omnifaces.ai.model.GenerateImageOptions;
 import org.omnifaces.ai.model.Sse.Event;
@@ -64,6 +66,7 @@ import org.omnifaces.ai.model.Sse.Event;
 public class GoogleAIService extends BaseAIService {
 
     private static final long serialVersionUID = 1L;
+    private static final Logger logger = Logger.getLogger(AnthropicAIService.class.getPackageName());
 
     /**
      * Constructs a Google AI service with the specified configuration.
@@ -148,6 +151,8 @@ public class GoogleAIService extends BaseAIService {
 
     @Override
     protected boolean processChatStreamEvent(Event event, Consumer<String> onToken) {
+        logger.log(FINE, event::toString);
+
         if (event.type() == DATA) {
             var messageContentPaths = getResponseMessageContentPaths();
 
@@ -155,21 +160,27 @@ public class GoogleAIService extends BaseAIService {
                 throw new IllegalStateException("getResponseMessageContentPaths() may not return an empty list");
             }
 
-            var json = parseJson(event.value());
+            return tryParseEventDataJson(event.value(), logger, json -> {
+                for (var messageContentPath : messageContentPaths) {
+                    var token = extractByPath(json, messageContentPath);
 
-            for (var messageContentPath : messageContentPaths) {
-                var token = extractByPath(json, messageContentPath);
-
-                if (token != null && !token.isEmpty()) {
-                    onToken.accept(token);
+                    if (token != null && !token.isEmpty()) {
+                        onToken.accept(token);
+                    }
                 }
-            }
 
-            var finishReason = extractByPath(json, "candidates[0].finishReason");
+                var finishReason = extractByPath(json, "candidates[0].finishReason");
 
-            if ("STOP".equals(finishReason)) {
-                return false;
-            }
+                if ("STOP".equals(finishReason)) {
+                    return false;
+                }
+
+                if ("MAX_TOKENS".equals(finishReason)) {
+                    throw new AIApiTokenLimitExceededException();
+                }
+
+                return true;
+            });
         }
 
         return true;

@@ -556,7 +556,7 @@ public interface AIService extends Serializable {
      * Returns the name of this AI service.
      * @return The name of this AI service (e.g. AnthropicAIService (Anthropic claude-sonnet-4-5-20250929)).
      */
-    default String getServiceName() {
+    default String getName() {
         return getClass().getSimpleName() + " (" + getProviderName() + " " + getModelName() + ")";
     }
 

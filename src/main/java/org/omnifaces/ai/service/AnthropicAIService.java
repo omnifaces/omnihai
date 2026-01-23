@@ -12,10 +12,9 @@
  */
 package org.omnifaces.ai.service;
 
-import static java.util.logging.Level.WARNING;
+import static java.util.logging.Level.FINE;
 import static org.omnifaces.ai.helper.ImageHelper.guessImageMediaType;
 import static org.omnifaces.ai.helper.ImageHelper.toImageBase64;
-import static org.omnifaces.ai.helper.JsonHelper.parseJson;
 import static org.omnifaces.ai.helper.TextHelper.isBlank;
 import static org.omnifaces.ai.model.Sse.Event.Type.DATA;
 import static org.omnifaces.ai.model.Sse.Event.Type.EVENT;
@@ -32,6 +31,8 @@ import org.omnifaces.ai.AIModality;
 import org.omnifaces.ai.AIModelVersion;
 import org.omnifaces.ai.AIProvider;
 import org.omnifaces.ai.AIService;
+import org.omnifaces.ai.exception.AIApiResponseException;
+import org.omnifaces.ai.exception.AIApiTokenLimitExceededException;
 import org.omnifaces.ai.model.ChatOptions;
 import org.omnifaces.ai.model.Sse.Event;
 
@@ -66,7 +67,7 @@ import org.omnifaces.ai.model.Sse.Event;
 public class AnthropicAIService extends BaseAIService {
 
     private static final long serialVersionUID = 1L;
-    private static final Logger logger = Logger.getLogger(AnthropicAIService.class.getName());
+    private static final Logger logger = Logger.getLogger(AnthropicAIService.class.getPackageName());
 
     private static final String ANTHROPIC_VERSION = "2023-06-01";
     private static final AIModelVersion CLAUDE_3 = AIModelVersion.of("claude", 3);
@@ -144,24 +145,32 @@ public class AnthropicAIService extends BaseAIService {
 
     @Override
     protected boolean processChatStreamEvent(Event event, Consumer<String> onToken) {
+        logger.log(FINE, event::toString);
+
         if (event.type() == EVENT) {
+            if ("max_tokens".equals(event.value())) {
+                throw new AIApiTokenLimitExceededException();
+            }
+
             return !"message_stop".equals(event.value()) && !"content_block_stop".equals(event.value());
         }
-        else if (event.type() == DATA && event.value().contains("content_block_delta")) { // Cheap pre-filter before expensive parse.
-            try {
-                var json = parseJson(event.value());
+        else if (event.type() == DATA) {
+            return tryParseEventDataJson(event.value(), logger, json -> {
+                var type = json.getString("type", null);
 
-                if ("content_block_delta".equals(json.getString("type", null))) {
+                if ("content_block_delta".equals(type)) {
                     var token = json.getJsonObject("delta").getString("text", "");
 
                     if (!token.isEmpty()) { // Do not use isBlank! Whitespace can be a valid token.
                         onToken.accept(token);
                     }
                 }
-            }
-            catch (Exception e) {
-                logger.log(WARNING, e, () -> "Skipping unparseable stream event data: " + event.value());
-            }
+                else if ("error".equals(type)) {
+                    throw new AIApiResponseException("Error event returned", event.value());
+                }
+
+                return true;
+            });
         }
 
         return true;

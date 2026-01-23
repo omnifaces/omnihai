@@ -21,12 +21,14 @@ import java.util.concurrent.CompletionException;
  * <ul>
  * <li>{@link AIApiException} - HTTP-level errors (4xx/5xx status codes)
  * <li>{@link AIApiResponseException} - Response content errors (parsing, missing content)
+ * <li>{@link AIApiTokenLimitExceededException} - Token limit exceeded error
  * </ul>
  *
  * @author Bauke Scholtz
  * @since 1.0
  * @see AIApiException
  * @see AIApiResponseException
+ * @see AIApiTokenLimitExceededException
  */
 public class AIException extends RuntimeException {
 

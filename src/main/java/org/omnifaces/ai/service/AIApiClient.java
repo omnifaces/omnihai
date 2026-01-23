@@ -22,6 +22,7 @@ import static java.util.concurrent.CompletableFuture.runAsync;
 import static java.util.concurrent.CompletableFuture.supplyAsync;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.function.Function.identity;
+import static java.util.logging.Level.FINE;
 import static java.util.stream.Collectors.joining;
 import static org.omnifaces.ai.exception.AIApiException.fromStatusCode;
 
@@ -56,7 +57,7 @@ import org.omnifaces.ai.model.Sse.Event.Type;
  */
 final class AIApiClient {
 
-    private static final Logger logger = Logger.getLogger(AIApiClient.class.getName());
+    private static final Logger logger = Logger.getLogger(AIApiClient.class.getPackageName());
 
     private static final String APPLICATION_JSON = "application/json";
     private static final String EVENT_STREAM = "text/event-stream";
@@ -187,7 +188,7 @@ final class AIApiClient {
             return new Event(Type.DATA, data);
         }
         else {
-            logger.fine(() -> "Ignoring unknown SSE line: " + line);
+            logger.log(FINE, () -> "Ignoring unknown SSE line: " + line);
             return null;
         }
     }

@@ -12,8 +12,10 @@
  */
 package org.omnifaces.ai.service;
 
+import static java.util.logging.Level.FINE;
 import static java.util.logging.Level.WARNING;
 import static org.omnifaces.ai.helper.ImageHelper.toImageDataUri;
+import static org.omnifaces.ai.helper.JsonHelper.extractByPath;
 import static org.omnifaces.ai.helper.JsonHelper.isEmpty;
 import static org.omnifaces.ai.helper.JsonHelper.parseJson;
 import static org.omnifaces.ai.helper.TextHelper.isBlank;
@@ -29,6 +31,7 @@ import java.util.function.Consumer;
 import java.util.logging.Logger;
 
 import jakarta.json.Json;
+import jakarta.json.JsonObject;
 
 import org.omnifaces.ai.AIConfig;
 import org.omnifaces.ai.AIModality;
@@ -36,8 +39,8 @@ import org.omnifaces.ai.AIModelVersion;
 import org.omnifaces.ai.AIProvider;
 import org.omnifaces.ai.AIService;
 import org.omnifaces.ai.exception.AIApiResponseException;
+import org.omnifaces.ai.exception.AIApiTokenLimitExceededException;
 import org.omnifaces.ai.exception.AIException;
-import org.omnifaces.ai.helper.JsonHelper;
 import org.omnifaces.ai.model.ChatOptions;
 import org.omnifaces.ai.model.GenerateImageOptions;
 import org.omnifaces.ai.model.ModerationOptions;
@@ -76,7 +79,7 @@ import org.omnifaces.ai.model.Sse.Event;
 public class OpenAIService extends BaseAIService {
 
     private static final long serialVersionUID = 1L;
-    private static final Logger logger = Logger.getLogger(OpenAIService.class.getName());
+    private static final Logger logger = Logger.getLogger(OpenAIService.class.getPackageName());
 
     private static final AIModelVersion GPT_4 = AIModelVersion.of("gpt", 4);
     private static final AIModelVersion GPT_5 = AIModelVersion.of("gpt", 5);
@@ -164,14 +167,15 @@ public class OpenAIService extends BaseAIService {
         }
 
         var currentModelVersion = getModelVersion();
+        var supportsResponsesApi = supportsResponsesApi();
         var payload = Json.createObjectBuilder()
             .add("model", model)
-            .add(supportsResponsesApi() ? "max_output_tokens" : currentModelVersion.gte(GPT_5) ? "max_completion_tokens" : "max_tokens", options.getMaxTokens());
+            .add(supportsResponsesApi ? "max_output_tokens" : currentModelVersion.gte(GPT_5) ? "max_completion_tokens" : "max_tokens", options.getMaxTokens());
 
         var input = Json.createArrayBuilder();
 
         if (!isBlank(options.getSystemPrompt())) {
-            if (supportsResponsesApi()) {
+            if (supportsResponsesApi) {
                 payload.add("instructions", options.getSystemPrompt());
             }
             else {
@@ -185,7 +189,7 @@ public class OpenAIService extends BaseAIService {
             .add("role", "user")
             .add("content", message));
 
-        payload.add(supportsResponsesApi() ? "input" : "messages", input);
+        payload.add(supportsResponsesApi ? "input" : "messages", input);
 
         if (streaming) {
             if (!supportsStreaming()) {
@@ -208,7 +212,10 @@ public class OpenAIService extends BaseAIService {
 
     @Override
     protected boolean processChatStreamEvent(Event event, Consumer<String> onToken) {
-        if (supportsResponsesApi()) {
+        var supportsResponsesApi = supportsResponsesApi();
+        logger.log(FINE, () -> event + " (" + supportsResponsesApi + ")");
+
+        if (supportsResponsesApi) {
             return processChatStreamEventWithResponsesApi(event, onToken);
         }
         else {
@@ -224,22 +231,36 @@ public class OpenAIService extends BaseAIService {
      */
     protected boolean processChatStreamEventWithResponsesApi(Event event, Consumer<String> onToken) {
         if (event.type() == EVENT) {
-            return !"response.completed".equals(event.value()) && !"response.incomplete".equals(event.value());
+            if ("response.completed".equals(event.value())) {
+                return true;
+            }
+
+            if ("response.incomplete".equals(event.value())) {
+                throw new AIApiTokenLimitExceededException();
+            }
         }
-        else if (event.type() == DATA && event.value().contains("response.output_text.delta")) { // Cheap pre-filter before expensive parse.
+        else if (event.type() == DATA && (event.value().contains("response.output_text.delta") || event.value().contains("response.failed"))) { // Cheap pre-filter before expensive parse because OpenAI returns pretty a lot of events.
+            JsonObject json;
+
             try {
-                var json = parseJson(event.value());
-
-                if ("response.output_text.delta".equals(json.getString("type", null))) {
-                    var token = json.getString("delta", "");
-
-                    if (!token.isEmpty()) { // Do not use isBlank! Whitespace can be a valid token.
-                        onToken.accept(token);
-                    }
-                }
+                json = parseJson(event.value());
             }
             catch (Exception e) {
                 logger.log(WARNING, e, () -> "Skipping unparseable stream event data: " + event.value());
+                return true;
+            }
+
+            var type = json.getString("type", null);
+
+            if ("response.output_text.delta".equals(type)) {
+                var token = json.getString("delta", "");
+
+                if (!token.isEmpty()) { // Do not use isBlank! Whitespace can be a valid token.
+                    onToken.accept(token);
+                }
+            }
+            else if ("response.failed".equals(type)) {
+                throw new AIApiResponseException("Error event returned", event.value());
             }
         }
 
@@ -258,20 +279,23 @@ public class OpenAIService extends BaseAIService {
                 return false;
             }
             else if (event.value().contains("chat.completion.chunk")) { // Cheap pre-filter before expensive parse.
-                try {
-                    var json = parseJson(event.value());
-
+                return tryParseEventDataJson(event.value(), logger, json -> {
                     if ("chat.completion.chunk".equals(json.getString("object", null))) {
-                        var token = JsonHelper.extractByPath(json, "choices[0].delta.content");
+                        var token = extractByPath(json, "choices[0].delta.content");
 
                         if (token != null && !token.isEmpty()) { // Do not use isBlank! Whitespace can be a valid token.
                             onToken.accept(token);
                         }
+
+                        var finishReason = extractByPath(json, "choices[*].finish_reason");
+
+                        if ("length".equals(finishReason)) {
+                            throw new AIApiTokenLimitExceededException();
+                        }
                     }
-                }
-                catch (Exception e) {
-                    logger.log(WARNING, e, () -> "Skipping unparseable stream event data: " + event.value());
-                }
+
+                    return true;
+                });
             }
         }
 
