@@ -29,4 +29,9 @@ class OpenRouterAIServiceImageHandlerIT extends BaseAIServiceImageHandlerIT {
     protected String getApiKeyEnvName() {
         return API_KEY_ENV_NAME;
     }
+
+    @Override
+    protected String getModel() {
+        return "google/gemma-3-27b-it";
+    }
 }
