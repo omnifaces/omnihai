@@ -15,14 +15,14 @@ package org.omnifaces.ai.service;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.omnifaces.ai.AIProvider;
 
-@EnabledIfEnvironmentVariable(named = OpenRouterAIServiceImageAnalyzerIT.API_KEY_ENV_NAME, matches = ".+")
-class OpenRouterAIServiceImageAnalyzerIT extends BaseAIServiceImageAnalyzerIT {
+@EnabledIfEnvironmentVariable(named = XAIServiceImageHandlerIT.API_KEY_ENV_NAME, matches = ".+")
+class XAIServiceImageHandlerIT extends BaseAIServiceImageHandlerIT {
 
-    protected static final String API_KEY_ENV_NAME = "OPENROUTER_API_KEY";
+    protected static final String API_KEY_ENV_NAME = "XAI_API_KEY";
 
     @Override
     protected AIProvider getProvider() {
-        return AIProvider.OPENROUTER;
+        return AIProvider.XAI;
     }
 
     @Override

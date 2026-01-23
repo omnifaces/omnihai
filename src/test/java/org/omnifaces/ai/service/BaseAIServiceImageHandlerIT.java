@@ -25,7 +25,7 @@ import org.junit.jupiter.api.Test;
  *
  * NOTE: this is a separate class because image analysis might require a different model than e.g. text analysis.
  */
-abstract class BaseAIServiceImageAnalyzerIT extends AIServiceIT {
+abstract class BaseAIServiceImageHandlerIT extends AIServiceIT {
 
     private static final String OMNIFACES_LOGO = ""
             + "iVBORw0KGgoAAAANSUhEUgAAAFoAAABaCAMAAAAPdrEwAAAApVBMVEUAAAAAAgIAAgIAAgIAAgIAAgIAAgIAAgIAAgIAAgIAAgIAAgIA"

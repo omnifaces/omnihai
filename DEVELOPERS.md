@@ -40,7 +40,7 @@ Then run it:
 It will pass-through all arguments to underlying `mvn clean verify`:
 
 ```bash
-./it.sh -Dit.test=OllamaAIServiceImageAnalyzerIT
+./it.sh -Dit.test=OllamaAIServiceImageHandlerIT
 ```
 
 The `it.sh` script by default skips Javadoc plugin.

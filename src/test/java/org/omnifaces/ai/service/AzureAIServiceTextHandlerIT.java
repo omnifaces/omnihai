@@ -15,14 +15,14 @@ package org.omnifaces.ai.service;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.omnifaces.ai.AIProvider;
 
-@EnabledIfEnvironmentVariable(named = OllamaAIServiceTextAnalyzerIT.API_KEY_ENV_NAME, matches = ".+")
-class OllamaAIServiceTextAnalyzerIT extends BaseAIServiceTextAnalyzerIT {
+@EnabledIfEnvironmentVariable(named = AzureAIServiceTextHandlerIT.API_KEY_ENV_NAME, matches = ".+")
+class AzureAIServiceTextHandlerIT extends BaseAIServiceTextHandlerIT {
 
-    protected static final String API_KEY_ENV_NAME = "OLLAMA_API_KEY";
+    protected static final String API_KEY_ENV_NAME = "AZURE_API_KEY";
 
     @Override
     protected AIProvider getProvider() {
-        return AIProvider.OLLAMA;
+        return AIProvider.AZURE;
     }
 
     @Override

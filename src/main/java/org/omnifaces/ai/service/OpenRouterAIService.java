@@ -18,6 +18,7 @@ import org.omnifaces.ai.AIConfig;
 import org.omnifaces.ai.AIModality;
 import org.omnifaces.ai.AIProvider;
 import org.omnifaces.ai.AIService;
+import org.omnifaces.ai.AIStrategy;
 
 /**
  * AI service implementation using OpenRouter API.
@@ -53,13 +54,25 @@ public class OpenRouterAIService extends OpenAIService {
     private static final long serialVersionUID = 1L;
 
     /**
-     * Constructs an OpenRouter service with the specified configuration.
+     * Constructs an OpenRouter AI service with the specified configuration and default strategy.
      *
      * @param config the AI configuration
      * @see AIConfig
      */
     public OpenRouterAIService(AIConfig config) {
         super(config);
+    }
+
+    /**
+     * Constructs an OpenRouter AI service with the specified configuration and strategy.
+     *
+     * @param config the AI configuration
+     * @param strategy the AI strategy
+     * @see AIConfig
+     * @see AIStrategy
+     */
+    public OpenRouterAIService(AIConfig config, AIStrategy strategy) {
+        super(config, strategy);
     }
 
     @Override
@@ -75,17 +88,17 @@ public class OpenRouterAIService extends OpenAIService {
     }
 
     @Override
+    public boolean supportsStreaming() {
+        return true;
+    }
+
+    @Override
+    public boolean supportsResponsesApi() {
+        return false;
+    }
+
+    @Override
     protected boolean supportsOpenAIModerationCapability(Set<String> categories) {
         return false;
-    }
-
-    @Override
-    protected boolean supportsResponsesApi() {
-        return false;
-    }
-
-    @Override
-    protected boolean supportsStreaming() {
-        return true;
     }
 }

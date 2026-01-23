@@ -12,29 +12,17 @@
  */
 package org.omnifaces.ai.service;
 
-import static java.util.logging.Level.FINE;
-import static org.omnifaces.ai.helper.ImageHelper.guessImageMediaType;
-import static org.omnifaces.ai.helper.ImageHelper.toImageBase64;
-import static org.omnifaces.ai.helper.TextHelper.isBlank;
-import static org.omnifaces.ai.model.Sse.Event.Type.DATA;
-import static org.omnifaces.ai.model.Sse.Event.Type.EVENT;
-
 import java.util.List;
 import java.util.Map;
-import java.util.function.Consumer;
-import java.util.logging.Logger;
-
-import jakarta.json.Json;
 
 import org.omnifaces.ai.AIConfig;
 import org.omnifaces.ai.AIModality;
 import org.omnifaces.ai.AIModelVersion;
 import org.omnifaces.ai.AIProvider;
 import org.omnifaces.ai.AIService;
-import org.omnifaces.ai.exception.AIResponseException;
-import org.omnifaces.ai.exception.AITokenLimitExceededException;
-import org.omnifaces.ai.model.ChatOptions;
-import org.omnifaces.ai.model.Sse.Event;
+import org.omnifaces.ai.AIStrategy;
+import org.omnifaces.ai.modality.AnthropicAIImageHandler;
+import org.omnifaces.ai.modality.AnthropicAITextHandler;
 
 /**
  * AI service implementation using Anthropic API.
@@ -67,19 +55,30 @@ import org.omnifaces.ai.model.Sse.Event;
 public class AnthropicAIService extends BaseAIService {
 
     private static final long serialVersionUID = 1L;
-    private static final Logger logger = Logger.getLogger(AnthropicAIService.class.getPackageName());
 
     private static final String ANTHROPIC_VERSION = "2023-06-01";
     private static final AIModelVersion CLAUDE_3 = AIModelVersion.of("claude", 3);
 
     /**
-     * Constructs an Anthropic service with the specified configuration.
+     * Constructs an Anthropic AI service with the specified configuration and default strategy.
      *
      * @param config the AI configuration
      * @see AIConfig
      */
     public AnthropicAIService(AIConfig config) {
-        super(config);
+        super(config, new AIStrategy(new AnthropicAITextHandler(), new AnthropicAIImageHandler()));
+    }
+
+    /**
+     * Constructs an Anthropic AI service with the specified configuration and strategy.
+     *
+     * @param config the AI configuration
+     * @param strategy the AI strategy
+     * @see AIConfig
+     * @see AIStrategy
+     */
+    public AnthropicAIService(AIConfig config, AIStrategy strategy) {
+        super(config, strategy);
     }
 
     @Override
@@ -91,7 +90,7 @@ public class AnthropicAIService extends BaseAIService {
     }
 
     @Override
-    protected boolean supportsStreaming() {
+    public boolean supportsStreaming() {
         return getModelVersion().gte(CLAUDE_3);
     }
 
@@ -103,107 +102,6 @@ public class AnthropicAIService extends BaseAIService {
     @Override
     protected String getChatPath(boolean streaming) {
         return "messages";
-    }
-
-    @Override
-    protected String buildChatPayload(String message, ChatOptions options, boolean streaming) {
-        if (isBlank(message)) {
-            throw new IllegalArgumentException("Message cannot be blank");
-        }
-
-        var payload = Json.createObjectBuilder()
-            .add("model", model);
-
-        if (options.getMaxTokens() != null) {
-            payload.add("max_tokens", options.getMaxTokens());
-        }
-
-        if (!isBlank(options.getSystemPrompt())) {
-            payload.add("system", options.getSystemPrompt());
-        }
-
-        payload.add("messages", Json.createArrayBuilder()
-            .add(Json.createObjectBuilder()
-                .add("role", "user")
-                .add("content", message)));
-
-        if (streaming) {
-            if (!supportsStreaming()) {
-                throw new IllegalStateException();
-            }
-
-            payload.add("stream", true);
-        }
-
-        if (options.getTemperature() != 0.7) {
-            payload.add("temperature", options.getTemperature());
-        }
-
-        if (options.getTopP() != 1.0) {
-            payload.add("top_p", options.getTopP());
-        }
-
-        return payload.build().toString();
-    }
-
-    @Override
-    protected boolean processChatStreamEvent(Event event, Consumer<String> onToken) {
-        logger.log(FINE, event::toString);
-
-        if (event.type() == EVENT) {
-            if ("max_tokens".equals(event.value())) {
-                throw new AITokenLimitExceededException();
-            }
-
-            return !"message_stop".equals(event.value()) && !"content_block_stop".equals(event.value());
-        }
-        else if (event.type() == DATA) {
-            return tryParseEventDataJson(event.value(), logger, json -> {
-                var type = json.getString("type", null);
-
-                if ("content_block_delta".equals(type)) {
-                    var token = json.getJsonObject("delta").getString("text", "");
-
-                    if (!token.isEmpty()) { // Do not use isBlank! Whitespace can be a valid token.
-                        onToken.accept(token);
-                    }
-                }
-                else if ("error".equals(type)) {
-                    throw new AIResponseException("Error event returned", event.value());
-                }
-
-                return true;
-            });
-        }
-
-        return true;
-    }
-
-    @Override
-    protected String buildVisionPayload(byte[] image, String prompt) {
-        if (isBlank(prompt)) {
-            throw new IllegalArgumentException("Prompt cannot be blank");
-        }
-
-        var base64 = toImageBase64(image);
-        return Json.createObjectBuilder()
-            .add("model", model)
-            .add("max_tokens", 1000)
-            .add("messages", Json.createArrayBuilder()
-                .add(Json.createObjectBuilder()
-                    .add("role", "user")
-                    .add("content", Json.createArrayBuilder()
-                        .add(Json.createObjectBuilder()
-                            .add("type", "image")
-                            .add("source", Json.createObjectBuilder()
-                                .add("type", "base64")
-                                .add("media_type", guessImageMediaType(base64))
-                                .add("data", base64)))
-                        .add(Json.createObjectBuilder()
-                            .add("type", "text")
-                            .add("text", prompt)))))
-            .build()
-            .toString();
     }
 
     @Override

@@ -13,10 +13,10 @@
 package org.omnifaces.ai.service;
 
 import static java.util.Collections.emptyMap;
+import static java.util.Objects.requireNonNull;
 import static java.util.Optional.ofNullable;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.function.Predicate.not;
-import static java.util.logging.Level.WARNING;
 import static org.omnifaces.ai.AIConfig.PROPERTY_API_KEY;
 import static org.omnifaces.ai.AIConfig.PROPERTY_ENDPOINT;
 import static org.omnifaces.ai.AIConfig.PROPERTY_MODEL;
@@ -33,13 +33,13 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
-import java.util.logging.Logger;
 
 import jakarta.json.JsonObject;
 
 import org.omnifaces.ai.AIConfig;
 import org.omnifaces.ai.AIProvider;
 import org.omnifaces.ai.AIService;
+import org.omnifaces.ai.AIStrategy;
 import org.omnifaces.ai.exception.AIException;
 import org.omnifaces.ai.exception.AIResponseException;
 import org.omnifaces.ai.helper.TextHelper;
@@ -48,10 +48,6 @@ import org.omnifaces.ai.model.GenerateImageOptions;
 import org.omnifaces.ai.model.ModerationOptions;
 import org.omnifaces.ai.model.ModerationResult;
 import org.omnifaces.ai.model.Sse.Event;
-import org.omnifaces.ai.service.modality.DefaultImageAnalyzer;
-import org.omnifaces.ai.service.modality.DefaultTextAnalyzer;
-import org.omnifaces.ai.service.modality.ImageAnalyzer;
-import org.omnifaces.ai.service.modality.TextAnalyzer;
 
 /**
  * Base class for AI service implementations providing common API functionality.
@@ -81,20 +77,22 @@ public abstract class BaseAIService implements AIService {
     protected final URI endpoint;
     /** The AI chat prompt. */
     protected final String prompt;
-
-    /** The text analyzer. */
-    protected final TextAnalyzer textAnalyzer;
-    /** The image analyzer. */
-    protected final ImageAnalyzer imageAnalyzer;
+    /** The AI strategy for this service. */
+    protected final AIStrategy strategy;
 
     /**
-     * Constructs an AI service with the specified configuration.
+     * Constructs an AI service with the specified configuration and strategy.
      *
      * @param config The AI configuration containing provider, API key, model, and endpoint settings.
+     * @param strategy The AI strategy containing text handler and image handler.
+     * @throws NullPointerException when config or strategy is null.
      * @throws IllegalArgumentException if the provider in the config doesn't match this service class.
      * @throws IllegalStateException If a required configuration property is missing.
      */
-    protected BaseAIService(AIConfig config) {
+    protected BaseAIService(AIConfig config, AIStrategy strategy) {
+        requireNonNull(config, "config");
+        requireNonNull(strategy, "strategy");
+
         this.provider = config.resolveProvider();
 
         if (provider.getServiceClass() != null && !provider.getServiceClass().isInstance(this)) {
@@ -105,9 +103,7 @@ public abstract class BaseAIService implements AIService {
         this.model = ofNullable(config.model()).or(() -> ofNullable(provider.getDefaultModel())).orElseGet(() -> config.require(PROPERTY_MODEL));
         this.endpoint = URI.create(ensureTrailingSlash(ofNullable(config.endpoint()).or(() -> ofNullable(provider.getDefaultEndpoint())).orElseGet(() -> config.require(PROPERTY_ENDPOINT))));
         this.prompt = config.prompt();
-
-        this.textAnalyzer = new DefaultTextAnalyzer();
-        this.imageAnalyzer = new DefaultImageAnalyzer();
+        this.strategy = strategy;
     }
 
     @Override
@@ -135,28 +131,9 @@ public abstract class BaseAIService implements AIService {
      */
     protected abstract String getChatPath(boolean streaming);
 
-    /**
-     * Returns whether this AI service implementation supports chat streaming via SSE.
-     * The default implementation returns false.
-     * @return Whether this AI service implementation supports chat streaming via SSE.
-     */
-    protected boolean supportsStreaming() {
-        return false;
-    }
-
-    /**
-     * Builds the JSON request payload for all chat operations.
-     *
-     * @param message The user message.
-     * @param options The chat options.
-     * @param streaming Whether this is for chat streaming endpoint.
-     * @return The JSON request payload.
-     */
-    protected abstract String buildChatPayload(String message, ChatOptions options, boolean streaming);
-
     @Override
     public CompletableFuture<String> chatAsync(String message, ChatOptions options) throws AIException {
-        return asyncPostAndExtractMessageContent(getChatPath(false), buildChatPayload(message, options, false).toString());
+        return asyncPostAndExtractMessageContent(getChatPath(false), strategy.textHandler().buildChatPayload(this, message, options, false).toString());
     }
 
     @Override
@@ -167,24 +144,13 @@ public abstract class BaseAIService implements AIService {
 
         var neededForStackTrace = new Exception("Async chat streaming failed");
 
-        return asyncPostAndProcessStreamEvents(getChatPath(true), buildChatPayload(message, options, true), event -> processChatStreamEvent(event, onToken)).handle((result, exception) -> {
+        return asyncPostAndProcessStreamEvents(getChatPath(true), strategy.textHandler().buildChatPayload(this, message, options, true).toString(), event -> strategy.textHandler().processChatStreamEvent(this, event, onToken)).handle((result, exception) -> {
             if (exception == null) {
                 return result;
             }
 
             throw AIException.asyncRequestFailed(exception, neededForStackTrace);
         });
-    }
-
-    /**
-     * Processes each stream event for {@link #chatStream(String, ChatOptions, Consumer)}.
-     *
-     * @param event Stream event.
-     * @param onToken Callback receiving each stream data chunk (often one word/token/line).
-     * @return {@code true} to continue processing the stream, or {@code false} when end of stream is reached.
-     */
-    protected boolean processChatStreamEvent(Event event, Consumer<String> onToken) {
-        throw new UnsupportedOperationException("Please implement processStreamEvent(Event event, Consumer<String> onToken) method in class " + getClass().getSimpleName());
     }
 
 
@@ -197,8 +163,8 @@ public abstract class BaseAIService implements AIService {
         }
 
         var options = ChatOptions.newBuilder()
-            .systemPrompt(textAnalyzer.buildSummarizePrompt(maxWords))
-            .temperature(textAnalyzer.getDefaultCreativeTemperature())
+            .systemPrompt(strategy.textHandler().buildSummarizePrompt(maxWords))
+            .temperature(strategy.textHandler().getDefaultCreativeTemperature())
             .build();
 
         return chatAsync(text, options);
@@ -211,8 +177,8 @@ public abstract class BaseAIService implements AIService {
         }
 
         var options = ChatOptions.newBuilder()
-            .systemPrompt(textAnalyzer.buildExtractKeyPointsPrompt(maxPoints))
-            .temperature(textAnalyzer.getDefaultCreativeTemperature())
+            .systemPrompt(strategy.textHandler().buildExtractKeyPointsPrompt(maxPoints))
+            .temperature(strategy.textHandler().getDefaultCreativeTemperature())
             .build();
 
         return chatAsync(text, options).thenApply(response -> Arrays.asList(response.split("\n")).stream().map(String::strip).filter(not(TextHelper::isBlank)).toList());
@@ -232,7 +198,7 @@ public abstract class BaseAIService implements AIService {
         }
 
         var options = ChatOptions.newBuilder()
-            .systemPrompt(textAnalyzer.buildTranslatePrompt(sourceLang, targetLang))
+            .systemPrompt(strategy.textHandler().buildTranslatePrompt(sourceLang, targetLang))
             .temperature(0.1)
             .build();
 
@@ -246,7 +212,7 @@ public abstract class BaseAIService implements AIService {
         }
 
         var options = ChatOptions.newBuilder()
-            .systemPrompt(textAnalyzer.buildDetectLanguagePrompt())
+            .systemPrompt(strategy.textHandler().buildDetectLanguagePrompt())
             .temperature(0.0)
             .build();
 
@@ -273,32 +239,24 @@ public abstract class BaseAIService implements AIService {
         }
 
         var chatOptions = ChatOptions.newBuilder()
-            .systemPrompt(textAnalyzer.buildModerateContentPrompt(options))
+            .systemPrompt(strategy.textHandler().buildModerateContentPrompt(options))
             .temperature(0.1)
             .build();
 
-        return chatAsync(content, chatOptions).thenApply(response -> textAnalyzer.parseModerationResult(response, options));
+        return chatAsync(content, chatOptions).thenApply(response -> strategy.textHandler().parseModerationResult(response, options));
     }
 
 
     // Image Analysis Implementation (delegates to analyzeImage) ------------------------------------------------------
 
-    /**
-     * Builds the JSON request payload for all vision operations.
-     * @param image The image bytes.
-     * @param prompt The analysis prompt.
-     * @return The JSON request payload.
-     */
-    protected abstract String buildVisionPayload(byte[] image, String prompt);
-
     @Override
     public CompletableFuture<String> analyzeImageAsync(byte[] image, String prompt) throws AIException {
-        return asyncPostAndExtractMessageContent(getChatPath(false), buildVisionPayload(image, isBlank(prompt) ? imageAnalyzer.buildAnalyzeImagePrompt() : prompt));
+        return asyncPostAndExtractMessageContent(getChatPath(false), strategy.imageHandler().buildVisionPayload(this, image, isBlank(prompt) ? strategy.imageHandler().buildAnalyzeImagePrompt() : prompt).toString());
     }
 
     @Override
     public CompletableFuture<String> generateAltTextAsync(byte[] image) throws AIException {
-        return analyzeImageAsync(image, imageAnalyzer.buildGenerateAltTextPrompt());
+        return analyzeImageAsync(image, strategy.imageHandler().buildGenerateAltTextPrompt());
     }
 
     /**
@@ -310,19 +268,13 @@ public abstract class BaseAIService implements AIService {
         return getChatPath(false);
     }
 
-    /**
-     * Builds the JSON request payload for all generate image operations.
-     * @param prompt The image generation prompt.
-     * @param options The image generation options.
-     * @return The JSON request payload.
-     */
-    protected String buildGenerateImagePayload(String prompt, GenerateImageOptions options) {
-        throw new UnsupportedOperationException("Please implement buildGenerateImagePayload(String prompt, GenerateImageOptions options) method in class " + getClass().getSimpleName());
-    }
-
     @Override
     public CompletableFuture<byte[]> generateImageAsync(String prompt, GenerateImageOptions options) throws AIException {
-        return asyncPostAndExtractImageContent(getGenerateImagePath(), buildGenerateImagePayload(prompt, options));
+        if (isBlank(prompt)) {
+            throw new IllegalArgumentException("Prompt cannot be blank");
+        }
+
+        return asyncPostAndExtractImageContent(getGenerateImagePath(), strategy.imageHandler().buildGenerateImagePayload(this, prompt, options).toString());
     }
 
     // HTTP Helper Methods --------------------------------------------------------------------------------------------
@@ -492,28 +444,5 @@ public abstract class BaseAIService implements AIService {
      */
     protected List<String> getResponseImageContentPaths() {
         throw new UnsupportedOperationException("Please implement getResponseImageContentPaths() method in class " + getClass().getSimpleName());
-    }
-
-
-    // JSON parsing helper --------------------------------------------------------------------------------------------
-
-    /**
-     * Try to parse the given SSE event data line as JSON.
-     * @param eventData SSE event data line.
-     * @param logger The logger to emit WARNING when JSON parsing threw exception.
-     * @param processor The JSON processor.
-     * @return {@code true} to continue stream in case of exception, else the result of the given JSON processor.
-     */
-    static boolean tryParseEventDataJson(String eventData, Logger logger, Predicate<JsonObject> processor) {
-        JsonObject json;
-
-        try {
-            json = parseJson(eventData);
-        } catch (Exception e) {
-            logger.log(WARNING, e, () -> "Skipping unparseable stream event data: " + eventData);
-            return true;
-        }
-
-        return processor.test(json);
     }
 }

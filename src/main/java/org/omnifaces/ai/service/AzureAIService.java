@@ -21,6 +21,7 @@ import java.util.Set;
 import org.omnifaces.ai.AIConfig;
 import org.omnifaces.ai.AIProvider;
 import org.omnifaces.ai.AIService;
+import org.omnifaces.ai.AIStrategy;
 
 /**
  * AI service implementation using Microsoft Azure OpenAI API.
@@ -67,13 +68,25 @@ public class AzureAIService extends OpenAIService {
     private static final String RESOURCE_SUBSTITUTION = "{" + OPTION_AZURE_RESOURCE + "}";
 
     /**
-     * Constructs an Azure AI service with the specified configuration.
+     * Constructs an Azure AI service with the specified configuration and default strategy.
      *
      * @param config the AI configuration
      * @see AIConfig
      */
     public AzureAIService(AIConfig config) {
         super(config.withEndpoint(substituteResourceIfNecessary(config)));
+    }
+
+    /**
+     * Constructs an Azure AI service with the specified configuration and strategy.
+     *
+     * @param config the AI configuration
+     * @param strategy the AI strategy
+     * @see AIConfig
+     * @see AIStrategy
+     */
+    public AzureAIService(AIConfig config, AIStrategy strategy) {
+        super(config, strategy);
     }
 
     private static String substituteResourceIfNecessary(AIConfig config) {
@@ -87,12 +100,12 @@ public class AzureAIService extends OpenAIService {
     }
 
     @Override
-    protected boolean supportsOpenAIModerationCapability(Set<String> categories) {
+    public boolean supportsResponsesApi() {
         return false;
     }
 
     @Override
-    protected boolean supportsResponsesApi() {
+    protected boolean supportsOpenAIModerationCapability(Set<String> categories) {
         return false;
     }
 

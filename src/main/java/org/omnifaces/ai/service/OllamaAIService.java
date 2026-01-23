@@ -12,19 +12,16 @@
  */
 package org.omnifaces.ai.service;
 
-import static org.omnifaces.ai.helper.ImageHelper.toImageBase64;
-import static org.omnifaces.ai.helper.TextHelper.isBlank;
-
 import java.util.List;
-
-import jakarta.json.Json;
 
 import org.omnifaces.ai.AIConfig;
 import org.omnifaces.ai.AIModality;
 import org.omnifaces.ai.AIModelVersion;
 import org.omnifaces.ai.AIProvider;
 import org.omnifaces.ai.AIService;
-import org.omnifaces.ai.model.ChatOptions;
+import org.omnifaces.ai.AIStrategy;
+import org.omnifaces.ai.modality.OllamaAIImageHandler;
+import org.omnifaces.ai.modality.OllamaAITextHandler;
 
 /**
  * AI service implementation using Ollama API for local/self-hosted models.
@@ -60,13 +57,25 @@ public class OllamaAIService extends BaseAIService {
     private static final AIModelVersion LLAMA_4 = AIModelVersion.of("llama", 4);
 
     /**
-     * Constructs an Ollama service with the specified configuration.
+     * Constructs an Ollama AI service with the specified configuration and default strategy.
      *
      * @param config the AI configuration
      * @see AIConfig
      */
     public OllamaAIService(AIConfig config) {
-        super(config);
+        super(config, new AIStrategy(new OllamaAITextHandler(), new OllamaAIImageHandler()));
+    }
+
+    /**
+     * Constructs an Ollama AI service with the specified configuration and strategy.
+     *
+     * @param config the AI configuration
+     * @param strategy the AI strategy
+     * @see AIConfig
+     * @see AIStrategy
+     */
+    public OllamaAIService(AIConfig config, AIStrategy strategy) {
+        super(config, strategy);
     }
 
     @Override
@@ -86,63 +95,6 @@ public class OllamaAIService extends BaseAIService {
     @Override
     protected String getChatPath(boolean streaming) {
         return "api/chat";
-    }
-
-    @Override
-    public String buildChatPayload(String message, ChatOptions options, boolean streaming) {
-        if (isBlank(message)) {
-            throw new IllegalArgumentException("Message cannot be blank");
-        }
-
-        var messages = Json.createArrayBuilder();
-
-        if (!isBlank(options.getSystemPrompt())) {
-            messages.add(Json.createObjectBuilder()
-                .add("role", "system")
-                .add("content", options.getSystemPrompt()));
-        }
-
-        messages.add(Json.createObjectBuilder()
-            .add("role", "user")
-            .add("content", message));
-
-        var optionsBuilder = Json.createObjectBuilder()
-            .add("temperature", options.getTemperature());
-
-        if (options.getMaxTokens() != null) {
-            optionsBuilder.add("num_predict", options.getMaxTokens());
-        }
-
-        if (options.getTopP() != 1.0) {
-            optionsBuilder.add("top_p", options.getTopP());
-        }
-
-        return Json.createObjectBuilder()
-            .add("model", model)
-            .add("messages", messages)
-            .add("options", optionsBuilder)
-            .add("stream", false)
-            .build()
-            .toString();
-    }
-
-    @Override
-    protected String buildVisionPayload(byte[] image, String prompt) {
-        if (isBlank(prompt)) {
-            throw new IllegalArgumentException("Prompt cannot be blank");
-        }
-
-        return Json.createObjectBuilder()
-            .add("model", model)
-            .add("messages", Json.createArrayBuilder()
-                .add(Json.createObjectBuilder()
-                    .add("role", "user")
-                    .add("content", prompt)
-                    .add("images", Json.createArrayBuilder()
-                        .add(toImageBase64(image)))))
-            .add("stream", false)
-            .build()
-            .toString();
     }
 
     @Override

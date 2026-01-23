@@ -10,18 +10,25 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package org.omnifaces.ai.service.modality;
+package org.omnifaces.ai;
 
-import org.omnifaces.ai.AIService;
+import java.util.function.Consumer;
+
+import jakarta.json.JsonObject;
+
 import org.omnifaces.ai.exception.AIResponseException;
+import org.omnifaces.ai.modality.BaseAITextHandler;
+import org.omnifaces.ai.model.ChatOptions;
 import org.omnifaces.ai.model.ModerationOptions;
 import org.omnifaces.ai.model.ModerationResult;
+import org.omnifaces.ai.model.Sse.Event;
 
 /**
- * Contract for prompt construction and result parsing for text analysis features of an {@link AIService}.
+ * Handler for text-based AI operations including chat, streaming, text analysis, and content moderation.
  * <p>
  * Covers:
  * <ul>
+ * <li>chat payload construction and stream processing</li>
  * <li>summarization</li>
  * <li>key-point extraction</li>
  * <li>translation</li>
@@ -35,9 +42,32 @@ import org.omnifaces.ai.model.ModerationResult;
  * @author Bauke Scholtz
  * @since 1.0
  * @see AIService
- * @see DefaultTextAnalyzer
+ * @see BaseAITextHandler
  */
-public interface TextAnalyzer {
+public interface AITextHandler {
+
+    /**
+     * Builds the JSON request payload for all chat operations.
+     *
+     * @param service The visiting AI service.
+     * @param message The user message.
+     * @param options The chat options.
+     * @param streaming Whether this is for chat streaming endpoint.
+     * @return The JSON request payload.
+     */
+    JsonObject buildChatPayload(AIService service, String message, ChatOptions options, boolean streaming);
+
+    /**
+     * Processes each stream event for {@link AIService#chatStream(String, ChatOptions, Consumer)}.
+     * The default implementation throws UnsupportedOperationException.
+     * @param service The visiting AI service.
+     * @param event Stream event.
+     * @param onToken Callback receiving each stream data chunk (often one word/token/line).
+     * @return {@code true} to continue processing the stream, or {@code false} when end of stream is reached.
+     */
+    default boolean processChatStreamEvent(AIService service, Event event, Consumer<String> onToken) {
+        throw new UnsupportedOperationException("Please implement processStreamEvent(AIService service, Event event, Consumer<String> onToken) method in class " + getClass().getSimpleName());
+    }
 
     /**
      * Returns the default temperature used for creative or interpretative text analysis related operations in
@@ -56,7 +86,7 @@ public interface TextAnalyzer {
      * <li>translation</li>
      * </ul>
      * <p>
-     * The default implementation {@link DefaultTextAnalyzer} returns 0.5.
+     * The default implementation {@link BaseAITextHandler} returns 0.5.
      *
      * @return default temperature value in range 0.0-1.0 for summarization and key-point extraction.
      * @see AIService#summarize(String, int)

@@ -10,12 +10,15 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package org.omnifaces.ai.service.modality;
+package org.omnifaces.ai.modality;
 
+import java.util.logging.Logger;
+
+import org.omnifaces.ai.AIImageHandler;
 import org.omnifaces.ai.AIService;
 
 /**
- * Default implementation of {@link ImageAnalyzer} that provides general-purpose prompt templates suitable for most
+ * Base class for AI image handler implementations that provides general-purpose prompt templates suitable for most
  * current vision-capable models.
  * <p>
  * This class is intended as a fallback when no provider-specific implementation is available. It uses patterns that
@@ -35,10 +38,13 @@ import org.omnifaces.ai.AIService;
 
  * @author Bauke Scholtz
  * @since 1.0
- * @see ImageAnalyzer
+ * @see AIImageHandler
  * @see AIService
  */
-public class DefaultImageAnalyzer implements ImageAnalyzer {
+public abstract class BaseAIImageHandler implements AIImageHandler {
+
+    /** Logger for current package. */
+    protected static final Logger logger = Logger.getLogger(BaseAIImageHandler.class.getPackageName());
 
     /** Default max words per alt text sentence: {@value} */
     protected static final int DEFAULT_MAX_WORDS_PER_ALT_TEXT_SENTENCE = 30;

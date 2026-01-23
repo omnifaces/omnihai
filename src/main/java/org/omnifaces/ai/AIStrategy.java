@@ -10,23 +10,19 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package org.omnifaces.ai.service;
+package org.omnifaces.ai;
 
-import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
-import org.omnifaces.ai.AIProvider;
+import java.io.Serializable;
 
-@EnabledIfEnvironmentVariable(named = AzureAIServiceTextAnalyzerIT.API_KEY_ENV_NAME, matches = ".+")
-class AzureAIServiceTextAnalyzerIT extends BaseAIServiceTextAnalyzerIT {
-
-    protected static final String API_KEY_ENV_NAME = "AZURE_API_KEY";
-
-    @Override
-    protected AIProvider getProvider() {
-        return AIProvider.AZURE;
-    }
-
-    @Override
-    protected String getApiKeyEnvName() {
-        return API_KEY_ENV_NAME;
-    }
-}
+/**
+ * Strategy for AI services.
+ *
+ * @param textHandler The text handler.
+ * @param imageHandler The image handler
+ * @see AIService
+ * @see AITextHandler
+ * @see AIImageHandler
+ * @author Bauke Scholtz
+ * @since 1.0
+ */
+public final record AIStrategy(AITextHandler textHandler, AIImageHandler imageHandler) implements Serializable {}

@@ -10,21 +10,26 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package org.omnifaces.ai.service.modality;
+package org.omnifaces.ai.modality;
 
+import static java.util.logging.Level.WARNING;
 import static org.omnifaces.ai.helper.JsonHelper.parseJson;
 
 import java.util.TreeMap;
+import java.util.function.Predicate;
+import java.util.logging.Logger;
 
 import jakarta.json.Json;
+import jakarta.json.JsonObject;
 
 import org.omnifaces.ai.AIService;
+import org.omnifaces.ai.AITextHandler;
 import org.omnifaces.ai.exception.AIResponseException;
 import org.omnifaces.ai.model.ModerationOptions;
 import org.omnifaces.ai.model.ModerationResult;
 
 /**
- * Default implementation of {@link TextAnalyzer} that provides sensible, general-purpose prompt templates, and
+ * Base class for AI image handler implementations that provides sensible, general-purpose prompt templates, and
  * response parsing suitable for most modern large language models (LLMs).
  * <p>
  * This class is intended as a reasonable fallback / starting point when no provider-specific implementation is
@@ -45,10 +50,13 @@ import org.omnifaces.ai.model.ModerationResult;
  *
  * @author Bauke Scholtz
  * @since 1.0
- * @see TextAnalyzer
+ * @see AITextHandler
  * @see AIService
  */
-public class DefaultTextAnalyzer implements TextAnalyzer {
+public abstract class BaseAITextHandler implements AITextHandler {
+
+    /** Logger for current package. */
+    protected static final Logger logger = Logger.getLogger(BaseAITextHandler.class.getPackageName());
 
     /** Default text analysis temperature: {@value} */
     protected static final double DEFAULT_TEXT_ANALYSIS_TEMPERATURE = 0.5;
@@ -167,5 +175,27 @@ public class DefaultTextAnalyzer implements TextAnalyzer {
         }
 
         return new ModerationResult(flagged, scores);
+    }
+
+    // JSON parsing helper --------------------------------------------------------------------------------------------
+
+    /**
+     * Try to parse the given SSE event data line as JSON. Any failure to parse will log a WARNING and continue.
+     * @param eventData SSE event data line.
+     * @param processor The JSON processor.
+     * @return {@code true} to continue stream in case of exception, else the result of the given JSON processor.
+     */
+    static boolean tryParseEventDataJson(String eventData, Predicate<JsonObject> processor) {
+        JsonObject json;
+
+        try {
+            json = parseJson(eventData);
+        }
+        catch (Exception e) {
+            logger.log(WARNING, e, () -> "Skipping unparseable stream event data: " + eventData);
+            return true;
+        }
+
+        return processor.test(json);
     }
 }

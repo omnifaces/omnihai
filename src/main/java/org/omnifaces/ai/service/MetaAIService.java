@@ -18,6 +18,7 @@ import java.util.Set;
 import org.omnifaces.ai.AIConfig;
 import org.omnifaces.ai.AIProvider;
 import org.omnifaces.ai.AIService;
+import org.omnifaces.ai.AIStrategy;
 
 /**
  * AI service implementation using Meta AI API.
@@ -53,7 +54,7 @@ public class MetaAIService extends OpenAIService {
     private static final long serialVersionUID = 1L;
 
     /**
-     * Constructs a Meta AI service with the specified configuration.
+     * Constructs a Meta AI service with the specified configuration and default strategy.
      *
      * @param config the AI configuration
      * @see AIConfig
@@ -62,13 +63,25 @@ public class MetaAIService extends OpenAIService {
         super(config);
     }
 
+    /**
+     * Constructs an Meta AI service with the specified configuration and strategy.
+     *
+     * @param config the AI configuration
+     * @param strategy the AI strategy
+     * @see AIConfig
+     * @see AIStrategy
+     */
+    public MetaAIService(AIConfig config, AIStrategy strategy) {
+        super(config, strategy);
+    }
+
     @Override
-    protected boolean supportsOpenAIModerationCapability(Set<String> categories) {
+    public boolean supportsResponsesApi() {
         return false;
     }
 
     @Override
-    protected boolean supportsResponsesApi() {
+    protected boolean supportsOpenAIModerationCapability(Set<String> categories) {
         return false;
     }
 

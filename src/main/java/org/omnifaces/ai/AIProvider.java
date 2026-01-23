@@ -92,16 +92,6 @@ public enum AIProvider {
     XAI("xAI", XAIService.class, true, "grok-4-1-fast-reasoning", "https://api.x.ai/v1"),
 
     /**
-     * Meta AI: Llama Maverick, Llama Scout, Llama default, etc.
-     * <p>
-     * Defaults currently to model {@code Llama-4-Scout-17B-16E-Instruct-FP8} at endpoint {@code https://api.llama.com/v1}.
-     * @see MetaAIService
-     * @see <a href="https://llama.developer.meta.com/docs/api-keys/">Manage Meta AI API Keys</a>
-     * @see <a href="https://llama.developer.meta.com/docs/models/">Available Meta AI Models</a>
-     */
-    META("Meta AI", MetaAIService.class, true, "Llama-4-Scout-17B-16E-Instruct-FP8", "https://api.llama.com/v1"),
-
-    /**
      * Mistral AI: Mistral Large, Mistral Medium, Mistral Small, etc.
      * <p>
      * Defaults currently to model {@code mistral-medium-2508} at endpoint {@code https://api.mistral.ai/v1}.
@@ -110,6 +100,16 @@ public enum AIProvider {
      * @see <a href="https://docs.mistral.ai/getting-started/models/">Available Mistral AI Models</a>
      */
     MISTRAL("Mistral AI", MistralAIService.class, true, "mistral-medium-2508", "https://api.mistral.ai/v1"),
+
+    /**
+     * Meta AI: Llama Maverick, Llama Scout, Llama default, etc.
+     * <p>
+     * Defaults currently to model {@code Llama-4-Scout-17B-16E-Instruct-FP8} at endpoint {@code https://api.llama.com/v1}.
+     * @see MetaAIService
+     * @see <a href="https://llama.developer.meta.com/docs/api-keys/">Manage Meta AI API Keys</a>
+     * @see <a href="https://llama.developer.meta.com/docs/models/">Available Meta AI Models</a>
+     */
+    META("Meta AI", MetaAIService.class, true, "Llama-4-Scout-17B-16E-Instruct-FP8", "https://api.llama.com/v1"),
 
     /**
      * Azure OpenAI: Aggregates a broad range of AI models via a unified OpenAI-compatible API at Microsoft Azure.

@@ -22,7 +22,7 @@ import org.junit.jupiter.api.Test;
 /**
  * Base class for IT on text-analyzer-related methods of AI service.
  */
-abstract class BaseAIServiceTextAnalyzerIT extends AIServiceIT {
+abstract class BaseAIServiceTextHandlerIT extends AIServiceIT {
 
     @Test
     void chat() {

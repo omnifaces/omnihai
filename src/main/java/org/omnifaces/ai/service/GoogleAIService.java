@@ -12,28 +12,16 @@
  */
 package org.omnifaces.ai.service;
 
-import static java.util.logging.Level.FINE;
-import static org.omnifaces.ai.helper.ImageHelper.guessImageMediaType;
-import static org.omnifaces.ai.helper.ImageHelper.toImageBase64;
-import static org.omnifaces.ai.helper.JsonHelper.extractByPath;
-import static org.omnifaces.ai.helper.TextHelper.isBlank;
-import static org.omnifaces.ai.model.Sse.Event.Type.DATA;
-
 import java.net.URI;
 import java.util.List;
-import java.util.function.Consumer;
-import java.util.logging.Logger;
-
-import jakarta.json.Json;
 
 import org.omnifaces.ai.AIConfig;
 import org.omnifaces.ai.AIModality;
 import org.omnifaces.ai.AIProvider;
 import org.omnifaces.ai.AIService;
-import org.omnifaces.ai.exception.AITokenLimitExceededException;
-import org.omnifaces.ai.model.ChatOptions;
-import org.omnifaces.ai.model.GenerateImageOptions;
-import org.omnifaces.ai.model.Sse.Event;
+import org.omnifaces.ai.AIStrategy;
+import org.omnifaces.ai.modality.GoogleAIImageHandler;
+import org.omnifaces.ai.modality.GoogleAITextHandler;
 
 /**
  * AI service implementation using Google AI API.
@@ -66,16 +54,27 @@ import org.omnifaces.ai.model.Sse.Event;
 public class GoogleAIService extends BaseAIService {
 
     private static final long serialVersionUID = 1L;
-    private static final Logger logger = Logger.getLogger(AnthropicAIService.class.getPackageName());
 
     /**
-     * Constructs a Google AI service with the specified configuration.
+     * Constructs a Google AI service with the specified configuration and default strategy.
      *
      * @param config the AI configuration
      * @see AIConfig
      */
     public GoogleAIService(AIConfig config) {
-        super(config);
+        super(config, new AIStrategy(new GoogleAITextHandler(), new GoogleAIImageHandler()));
+    }
+
+    /**
+     * Constructs an Google AI service with the specified configuration and strategy.
+     *
+     * @param config the AI configuration
+     * @param strategy the AI strategy
+     * @see AIConfig
+     * @see AIStrategy
+     */
+    public GoogleAIService(AIConfig config, AIStrategy strategy) {
+        super(config, strategy);
     }
 
     @Override
@@ -94,7 +93,7 @@ public class GoogleAIService extends BaseAIService {
      * bottleneck whereby the AI doublechecks every paragraph before sending out, so it basically comes in paragraphs.
      */
     @Override
-    protected boolean supportsStreaming() {
+    public boolean supportsStreaming() {
         return true; // Not version-bound, all Google AI models support streaming since beginning.
     }
 
@@ -111,125 +110,6 @@ public class GoogleAIService extends BaseAIService {
     @Override
     protected String getChatPath(boolean streaming) {
         return streaming ? "streamGenerateContent?alt=sse" : "generateContent";
-    }
-
-    @Override
-    protected String buildChatPayload(String message, ChatOptions options, boolean streaming) {
-        if (isBlank(message)) {
-            throw new IllegalArgumentException("Message cannot be blank");
-        }
-
-        var payload = Json.createObjectBuilder();
-
-        if (!isBlank(options.getSystemPrompt())) {
-            payload.add("system_instruction", Json.createObjectBuilder()
-                .add("parts", Json.createArrayBuilder()
-                    .add(Json.createObjectBuilder()
-                        .add("text", options.getSystemPrompt()))));
-        }
-
-        payload.add("contents", Json.createArrayBuilder()
-            .add(Json.createObjectBuilder()
-                .add("role", "user")
-                .add("parts", Json.createArrayBuilder()
-                    .add(Json.createObjectBuilder()
-                        .add("text", message)))));
-
-        var generationConfig = Json.createObjectBuilder()
-            .add("temperature", options.getTemperature());
-
-        if (options.getMaxTokens() != null) {
-            generationConfig.add("maxOutputTokens", options.getMaxTokens());
-        }
-
-        if (options.getTopP() != 1.0) {
-            generationConfig.add("topP", options.getTopP());
-        }
-
-        return payload
-            .add("generationConfig", generationConfig)
-            .build()
-            .toString();
-    }
-
-    @Override
-    protected boolean processChatStreamEvent(Event event, Consumer<String> onToken) {
-        logger.log(FINE, event::toString);
-
-        if (event.type() == DATA) {
-            var messageContentPaths = getResponseMessageContentPaths();
-
-            if (messageContentPaths.isEmpty()) {
-                throw new IllegalStateException("getResponseMessageContentPaths() may not return an empty list");
-            }
-
-            return tryParseEventDataJson(event.value(), logger, json -> {
-                for (var messageContentPath : messageContentPaths) {
-                    var token = extractByPath(json, messageContentPath);
-
-                    if (token != null && !token.isEmpty()) {
-                        onToken.accept(token);
-                    }
-                }
-
-                var finishReason = extractByPath(json, "candidates[0].finishReason");
-
-                if ("STOP".equals(finishReason)) {
-                    return false;
-                }
-
-                if ("MAX_TOKENS".equals(finishReason)) {
-                    throw new AITokenLimitExceededException();
-                }
-
-                return true;
-            });
-        }
-
-        return true;
-    }
-
-    @Override
-    protected String buildVisionPayload(byte[] image, String prompt) {
-        if (isBlank(prompt)) {
-            throw new IllegalArgumentException("Prompt cannot be blank");
-        }
-
-        var base64 = toImageBase64(image);
-        return Json.createObjectBuilder()
-            .add("contents", Json.createArrayBuilder()
-                .add(Json.createObjectBuilder()
-                    .add("parts", Json.createArrayBuilder()
-                        .add(Json.createObjectBuilder()
-                            .add("inline_data", Json.createObjectBuilder()
-                                .add("mime_type", guessImageMediaType(base64))
-                                .add("data", base64)))
-                        .add(Json.createObjectBuilder()
-                            .add("text", prompt)))))
-            .build()
-            .toString();
-    }
-
-    @Override
-    protected String buildGenerateImagePayload(String prompt, GenerateImageOptions options) {
-        if (isBlank(prompt)) {
-            throw new IllegalArgumentException("Prompt cannot be blank");
-        }
-
-        var generationConfig = Json.createObjectBuilder()
-            .add("responseModalities", Json.createArrayBuilder().add("IMAGE"))
-            .add("imageConfig", Json.createObjectBuilder()
-                .add("aspectRatio", options.getAspectRatio()));
-
-        return Json.createObjectBuilder()
-            .add("contents", Json.createArrayBuilder()
-                .add(Json.createObjectBuilder()
-                    .add("parts", Json.createArrayBuilder()
-                        .add(Json.createObjectBuilder()
-                            .add("text", prompt)))))
-            .add("generationConfig", generationConfig)
-            .build()
-            .toString();
     }
 
     @Override

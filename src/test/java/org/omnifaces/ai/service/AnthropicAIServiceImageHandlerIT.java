@@ -15,14 +15,14 @@ package org.omnifaces.ai.service;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.omnifaces.ai.AIProvider;
 
-@EnabledIfEnvironmentVariable(named = HuggingFaceAIServiceTextAnalyzerIT.API_KEY_ENV_NAME, matches = ".+")
-class HuggingFaceAIServiceTextAnalyzerIT extends BaseAIServiceTextAnalyzerIT {
+@EnabledIfEnvironmentVariable(named = AnthropicAIServiceImageHandlerIT.API_KEY_ENV_NAME, matches = ".+")
+class AnthropicAIServiceImageHandlerIT extends BaseAIServiceImageHandlerIT {
 
-    protected static final String API_KEY_ENV_NAME = "HUGGINGFACE_API_KEY";
+    protected static final String API_KEY_ENV_NAME = "ANTHROPIC_API_KEY";
 
     @Override
     protected AIProvider getProvider() {
-        return AIProvider.HUGGINGFACE;
+        return AIProvider.ANTHROPIC;
     }
 
     @Override

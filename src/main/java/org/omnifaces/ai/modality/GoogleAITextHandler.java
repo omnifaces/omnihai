@@ -1,0 +1,107 @@
+/*
+ * Copyright OmniFaces
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at
+ *
+ *     https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
+ * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations under the License.
+ */
+package org.omnifaces.ai.modality;
+
+import static java.util.logging.Level.FINE;
+import static org.omnifaces.ai.helper.JsonHelper.extractByPath;
+import static org.omnifaces.ai.helper.TextHelper.isBlank;
+import static org.omnifaces.ai.model.Sse.Event.Type.DATA;
+
+import java.util.function.Consumer;
+import java.util.logging.Logger;
+
+import jakarta.json.Json;
+import jakarta.json.JsonObject;
+
+import org.omnifaces.ai.AIService;
+import org.omnifaces.ai.exception.AITokenLimitExceededException;
+import org.omnifaces.ai.model.ChatOptions;
+import org.omnifaces.ai.model.Sse.Event;
+
+/**
+ * Default text handler for Google AI service.
+ *
+ * @author Bauke Scholtz
+ * @since 1.0
+ */
+public class GoogleAITextHandler extends BaseAITextHandler {
+
+    private static final Logger logger = Logger.getLogger(GoogleAITextHandler.class.getPackageName());
+
+    @Override
+    public JsonObject buildChatPayload(AIService service, String message, ChatOptions options, boolean streaming) {
+        if (isBlank(message)) {
+            throw new IllegalArgumentException("Message cannot be blank");
+        }
+
+        var payload = Json.createObjectBuilder();
+
+        if (!isBlank(options.getSystemPrompt())) {
+            payload.add("system_instruction", Json.createObjectBuilder()
+                .add("parts", Json.createArrayBuilder()
+                    .add(Json.createObjectBuilder()
+                        .add("text", options.getSystemPrompt()))));
+        }
+
+        payload.add("contents", Json.createArrayBuilder()
+            .add(Json.createObjectBuilder()
+                .add("role", "user")
+                .add("parts", Json.createArrayBuilder()
+                    .add(Json.createObjectBuilder()
+                        .add("text", message)))));
+
+        var generationConfig = Json.createObjectBuilder()
+            .add("temperature", options.getTemperature());
+
+        if (options.getMaxTokens() != null) {
+            generationConfig.add("maxOutputTokens", options.getMaxTokens());
+        }
+
+        if (options.getTopP() != 1.0) {
+            generationConfig.add("topP", options.getTopP());
+        }
+
+        return payload
+            .add("generationConfig", generationConfig)
+            .build();
+    }
+
+    @Override
+    public boolean processChatStreamEvent(AIService service, Event event, Consumer<String> onToken) {
+        logger.log(FINE, event::toString);
+
+        if (event.type() == DATA) {
+            return tryParseEventDataJson(event.value(), json -> {
+                var token = extractByPath(json, "candidates[0].content.parts[0].text");
+
+                if (token != null && !token.isEmpty()) {
+                    onToken.accept(token);
+                }
+
+                var finishReason = extractByPath(json, "candidates[0].finishReason");
+
+                if ("STOP".equals(finishReason)) {
+                    return false;
+                }
+
+                if ("MAX_TOKENS".equals(finishReason)) {
+                    throw new AITokenLimitExceededException();
+                }
+
+                return true;
+            });
+        }
+
+        return true;
+    }
+}

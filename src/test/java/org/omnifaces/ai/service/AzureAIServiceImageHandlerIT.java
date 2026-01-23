@@ -15,14 +15,14 @@ package org.omnifaces.ai.service;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.omnifaces.ai.AIProvider;
 
-@EnabledIfEnvironmentVariable(named = XAIServiceTextAnalyzerIT.API_KEY_ENV_NAME, matches = ".+")
-class XAIServiceTextAnalyzerIT extends BaseAIServiceTextAnalyzerIT {
+@EnabledIfEnvironmentVariable(named = AzureAIServiceImageHandlerIT.API_KEY_ENV_NAME, matches = ".+")
+class AzureAIServiceImageHandlerIT extends BaseAIServiceImageHandlerIT {
 
-    protected static final String API_KEY_ENV_NAME = "XAI_API_KEY";
+    protected static final String API_KEY_ENV_NAME = "AZURE_API_KEY";
 
     @Override
     protected AIProvider getProvider() {
-        return AIProvider.XAI;
+        return AIProvider.AZURE;
     }
 
     @Override

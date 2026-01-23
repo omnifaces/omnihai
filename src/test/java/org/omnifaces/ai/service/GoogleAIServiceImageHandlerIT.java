@@ -15,14 +15,14 @@ package org.omnifaces.ai.service;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.omnifaces.ai.AIProvider;
 
-@EnabledIfEnvironmentVariable(named = AnthropicAIServiceTextAnalyzerIT.API_KEY_ENV_NAME, matches = ".+")
-class AnthropicAIServiceTextAnalyzerIT extends BaseAIServiceTextAnalyzerIT {
+@EnabledIfEnvironmentVariable(named = GoogleAIServiceImageHandlerIT.API_KEY_ENV_NAME, matches = ".+")
+class GoogleAIServiceImageHandlerIT extends BaseAIServiceImageHandlerIT {
 
-    protected static final String API_KEY_ENV_NAME = "ANTHROPIC_API_KEY";
+    protected static final String API_KEY_ENV_NAME = "GOOGLE_API_KEY";
 
     @Override
     protected AIProvider getProvider() {
-        return AIProvider.ANTHROPIC;
+        return AIProvider.GOOGLE;
     }
 
     @Override

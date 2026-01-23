@@ -19,6 +19,7 @@ import org.omnifaces.ai.AIModality;
 import org.omnifaces.ai.AIModelVersion;
 import org.omnifaces.ai.AIProvider;
 import org.omnifaces.ai.AIService;
+import org.omnifaces.ai.AIStrategy;
 
 /**
  * AI service implementation using Mistral AI API.
@@ -56,13 +57,25 @@ public class MistralAIService extends OpenAIService {
     private static final AIModelVersion MISTRAL_2402 = AIModelVersion.of("mistral", 2402);
 
     /**
-     * Constructs a Mistral AI service with the specified configuration.
+     * Constructs a Mistral AI service with the specified configuration and default strategy.
      *
      * @param config the AI configuration
      * @see AIConfig
      */
     public MistralAIService(AIConfig config) {
         super(config);
+    }
+
+    /**
+     * Constructs an Mistral AI service with the specified configuration and strategy.
+     *
+     * @param config the AI configuration
+     * @param strategy the AI strategy
+     * @see AIConfig
+     * @see AIStrategy
+     */
+    public MistralAIService(AIConfig config, AIStrategy strategy) {
+        super(config, strategy);
     }
 
     @Override
@@ -74,17 +87,17 @@ public class MistralAIService extends OpenAIService {
     }
 
     @Override
+    public boolean supportsStreaming() {
+        return getModelVersion().gte(MISTRAL_2402);
+    }
+
+    @Override
+    public boolean supportsResponsesApi() {
+        return false;
+    }
+
+    @Override
     protected boolean supportsOpenAIModerationCapability(Set<String> categories) {
         return false;
-    }
-
-    @Override
-    protected boolean supportsResponsesApi() {
-        return false;
-    }
-
-    @Override
-    protected boolean supportsStreaming() {
-        return getModelVersion().gte(MISTRAL_2402);
     }
 }

@@ -12,18 +12,16 @@
  */
 package org.omnifaces.ai.service;
 
-import static org.omnifaces.ai.helper.TextHelper.isBlank;
-
 import java.util.Set;
-
-import jakarta.json.Json;
 
 import org.omnifaces.ai.AIConfig;
 import org.omnifaces.ai.AIModality;
 import org.omnifaces.ai.AIModelVersion;
 import org.omnifaces.ai.AIProvider;
 import org.omnifaces.ai.AIService;
-import org.omnifaces.ai.model.GenerateImageOptions;
+import org.omnifaces.ai.AIStrategy;
+import org.omnifaces.ai.modality.OpenAITextHandler;
+import org.omnifaces.ai.modality.XAIImageHandler;
 
 /**
  * AI service implementation using xAI API.
@@ -61,13 +59,25 @@ public class XAIService extends OpenAIService {
     private static final AIModelVersion GROK_4 = AIModelVersion.of("grok", 4);
 
     /**
-     * Constructs an xAI service with the specified configuration.
+     * Constructs an xAI service with the specified configuration and default strategy.
      *
      * @param config the AI configuration
      * @see AIConfig
      */
     public XAIService(AIConfig config) {
-        super(config);
+        super(config, new AIStrategy(new OpenAITextHandler(), new XAIImageHandler()));
+    }
+
+    /**
+     * Constructs an xAI service with the specified configuration and strategy.
+     *
+     * @param config the AI configuration
+     * @param strategy the AI strategy
+     * @see AIConfig
+     * @see AIStrategy
+     */
+    public XAIService(AIConfig config, AIStrategy strategy) {
+        super(config, strategy);
     }
 
     @Override
@@ -83,28 +93,12 @@ public class XAIService extends OpenAIService {
     }
 
     @Override
-    protected boolean supportsOpenAIModerationCapability(Set<String> categories) {
-        return false;
-    }
-
-    @Override
-    protected boolean supportsResponsesApi() {
+    public boolean supportsResponsesApi() {
         return getModelVersion().gte(GROK_4);
     }
 
     @Override
-    protected String buildGenerateImagePayload(String prompt, GenerateImageOptions options) {
-        if (isBlank(prompt)) {
-            throw new IllegalArgumentException("Prompt cannot be blank");
-        }
-
-        return Json.createObjectBuilder()
-            .add("model", model)
-            .add("prompt", prompt)
-            .add("n", 1)
-            .add("aspect_ratio", options.getAspectRatio())
-            .add("response_format", "b64_json")
-            .build()
-            .toString();
+    protected boolean supportsOpenAIModerationCapability(Set<String> categories) {
+        return false;
     }
 }

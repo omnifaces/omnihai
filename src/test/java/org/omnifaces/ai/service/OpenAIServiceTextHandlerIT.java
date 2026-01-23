@@ -15,14 +15,14 @@ package org.omnifaces.ai.service;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.omnifaces.ai.AIProvider;
 
-@EnabledIfEnvironmentVariable(named = MistralAIServiceImageAnalyzerIT.API_KEY_ENV_NAME, matches = ".+")
-class MistralAIServiceImageAnalyzerIT extends BaseAIServiceImageAnalyzerIT {
+@EnabledIfEnvironmentVariable(named = OpenAIServiceTextHandlerIT.API_KEY_ENV_NAME, matches = ".+")
+class OpenAIServiceTextHandlerIT extends BaseAIServiceTextHandlerIT {
 
-    protected static final String API_KEY_ENV_NAME = "MISTRAL_API_KEY";
+    protected static final String API_KEY_ENV_NAME = "OPENAI_API_KEY";
 
     @Override
     protected AIProvider getProvider() {
-        return AIProvider.MISTRAL;
+        return AIProvider.OPENAI;
     }
 
     @Override

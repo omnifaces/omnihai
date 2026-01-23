@@ -10,17 +10,22 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package org.omnifaces.ai.service.modality;
+package org.omnifaces.ai;
 
-import org.omnifaces.ai.AIService;
+import jakarta.json.JsonObject;
+
+import org.omnifaces.ai.modality.BaseAIImageHandler;
+import org.omnifaces.ai.model.GenerateImageOptions;
 
 /**
- * Contract for prompt construction for image analysis / vision features of an {@link AIService}.
+ * Handler for image-based AI operations including vision analysis, alt-text generation, and image generation.
  * <p>
  * Covers:
  * <ul>
+ * <li>vision payload construction</li>
  * <li>detailed image analysis / description / VQA</li>
  * <li>alt-text generation</li>
+ * <li>image generation</li>
  * </ul>
  * <p>
  * No temperature control is used. Most vision models produce deterministic or near-deterministic output.
@@ -28,9 +33,9 @@ import org.omnifaces.ai.AIService;
  * @author Bauke Scholtz
  * @since 1.0
  * @see AIService
- * @see DefaultImageAnalyzer
+ * @see BaseAIImageHandler
  */
-public interface ImageAnalyzer {
+public interface AIImageHandler {
 
     /**
      * Builds the default system prompt to use when no custom user prompt is provided to
@@ -46,4 +51,26 @@ public interface ImageAnalyzer {
      * @return The system prompt.
      */
     String buildGenerateAltTextPrompt();
+
+    /**
+     * Builds the JSON request payload for all vision operations.
+     * @param service The involved AI service.
+     * @param image The image bytes.
+     * @param prompt The analysis prompt.
+     * @return The JSON request payload.
+     */
+    JsonObject buildVisionPayload(AIService service, byte[] image, String prompt);
+
+    /**
+     * Builds the JSON request payload for all generate image operations.
+     * The default implementation throws UnsupportedOperationException.
+     * @param service The visiting AI service.
+     * @param prompt The image generation prompt.
+     * @param options The image generation options.
+     * @return The JSON request payload.
+     */
+    default JsonObject buildGenerateImagePayload(AIService service, String prompt, GenerateImageOptions options) {
+        throw new UnsupportedOperationException("Please implement buildGenerateImagePayload(String prompt, GenerateImageOptions options) method in class " + getClass().getSimpleName());
+    }
+
 }
