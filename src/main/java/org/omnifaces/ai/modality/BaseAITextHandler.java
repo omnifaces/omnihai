@@ -180,7 +180,8 @@ public abstract class BaseAITextHandler implements AITextHandler {
     // JSON parsing helper --------------------------------------------------------------------------------------------
 
     /**
-     * Try to parse the given SSE event data line as JSON. Any failure to parse will log a WARNING and continue.
+     * Try to parse the given SSE event data as JSON and feed it to the given JSON processor. Any failure to parse will
+     * log a WARNING and continue.
      * @param eventData SSE event data line.
      * @param processor The JSON processor.
      * @return {@code true} to continue stream in case of exception, else the result of the given JSON processor.
