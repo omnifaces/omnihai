@@ -14,10 +14,14 @@ package org.omnifaces.ai.service;
 
 import static org.omnifaces.ai.helper.ImageHelper.guessImageMediaType;
 import static org.omnifaces.ai.helper.ImageHelper.toImageBase64;
+import static org.omnifaces.ai.helper.JsonHelper.extractByPath;
+import static org.omnifaces.ai.helper.JsonHelper.parseJson;
 import static org.omnifaces.ai.helper.TextHelper.isBlank;
+import static org.omnifaces.ai.model.Sse.Event.Type.DATA;
 
 import java.net.URI;
 import java.util.List;
+import java.util.function.Consumer;
 
 import jakarta.json.Json;
 
@@ -27,6 +31,7 @@ import org.omnifaces.ai.AIProvider;
 import org.omnifaces.ai.AIService;
 import org.omnifaces.ai.model.ChatOptions;
 import org.omnifaces.ai.model.GenerateImageOptions;
+import org.omnifaces.ai.model.Sse.Event;
 
 /**
  * AI service implementation using Google AI API.
@@ -82,24 +87,27 @@ public class GoogleAIService extends BaseAIService {
     }
 
     /**
-     * Technically, Google AI API supports it, but not as SSE. It only supports JSON streaming. Chunks of a whole JSON object. Useless thus.
+     * Google AI supports streaming, but it comes in big chunks. According to Gemini it's caused by "Safety Filter"
+     * bottleneck whereby the AI doublechecks every paragraph before sending out, so it basically comes in paragraphs.
      */
     @Override
     protected boolean supportsStreaming() {
-        return false;
+        return true; // Not version-bound, all Google AI models support streaming since beginning.
     }
 
     @Override
     protected URI resolveURI(String path) {
-        return super.resolveURI(String.format("models/%s:%s?key=%s", model, path, apiKey));
+        var parts = path.split("\\?", 2);
+        var query = parts.length > 1 ? ("&" + parts[1]) : "";
+        return super.resolveURI(String.format("models/%s:%s?key=%s%s", model, parts[0], apiKey, query));
     }
 
     /**
-     * Returns {@code generateContent}.
+     * Returns {@code streamGenerateContent?alt=sse} if streaming, {@code generateContent} otherwise.
      */
     @Override
     protected String getChatPath(boolean streaming) {
-        return "generateContent";
+        return streaming ? "streamGenerateContent?alt=sse" : "generateContent";
     }
 
     @Override
@@ -136,6 +144,35 @@ public class GoogleAIService extends BaseAIService {
             .add("generationConfig", generationConfig)
             .build()
             .toString();
+    }
+
+    @Override
+    protected boolean processChatStreamEvent(Event event, Consumer<String> onToken) {
+        if (event.type() == DATA) {
+            var messageContentPaths = getResponseMessageContentPaths();
+
+            if (messageContentPaths.isEmpty()) {
+                throw new IllegalStateException("getResponseMessageContentPaths() may not return an empty list");
+            }
+
+            var json = parseJson(event.value());
+
+            for (var messageContentPath : messageContentPaths) {
+                var token = extractByPath(json, messageContentPath);
+
+                if (token != null && !token.isEmpty()) {
+                    onToken.accept(token);
+                }
+            }
+
+            var finishReason = extractByPath(json, "candidates[0].finishReason");
+
+            if ("STOP".equals(finishReason)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     @Override
