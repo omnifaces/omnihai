@@ -112,29 +112,29 @@ public class OpenAIService extends BaseAIService {
     }
 
     /**
-     * Returns whether this service supports native moderation for the given categories.
+     * Returns whether this OpenAI based service supports native moderation for the given categories.
      * When {@code true}, {@link #moderateContent(String, ModerationOptions)} will use OpenAI's moderation API.
      * When {@code false}, it falls back to the chat-based moderation in {@link BaseAIService}.
      *
      * @param categories The moderation categories to check.
      * @return {@code true} if all categories are supported by OpenAI's moderation API.
      */
-    protected boolean supportsOpenAIModerationCapability(Set<String> categories) {
+    public boolean supportsOpenAIModerationCapability(Set<String> categories) {
         return categories.stream().allMatch(Category.OPENAI_SUPPORTED_CATEGORY_NAMES::contains);
     }
 
     /**
-     * Returns whether this OpenAI based service implementation supports the new /responses API as replacement for the legacy /chat/completions API.
+     * Returns whether this OpenAI based service implementation supports the {@code responses} API as replacement for the legacy {@code chat/completions} API.
      * The default implementation returns true if {@link #getModelVersion()} is at least {@code gpt-4}.
-     * @return Whether this OpenAI based service implementation supports the new /responses API as replacement for the legacy /chat/completions API.
+     * @return Whether this OpenAI based service implementation supports the {@code responses} API as replacement for the legacy {@code chat/completions} API.
      */
-    public boolean supportsResponsesApi() {
+    public boolean supportsOpenAIResponsesApi() {
         return getModelVersion().gte(GPT_4);
     }
 
     @Override
     public boolean supportsStreaming() {
-        return supportsResponsesApi();
+        return supportsOpenAIResponsesApi();
     }
 
     /**
@@ -146,11 +146,11 @@ public class OpenAIService extends BaseAIService {
     }
 
     /**
-     * If {@link #supportsResponsesApi()} then returns {@code responses} else {@code chat/completions}.
+     * If {@link #supportsOpenAIResponsesApi()} then returns {@code responses} else {@code chat/completions}.
      */
     @Override
     protected String getChatPath(boolean streaming) {
-        return supportsResponsesApi() ? "responses" : "chat/completions";
+        return supportsOpenAIResponsesApi() ? "responses" : "chat/completions";
     }
 
     /**

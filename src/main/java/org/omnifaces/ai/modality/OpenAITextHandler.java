@@ -199,6 +199,6 @@ public class OpenAITextHandler extends BaseAITextHandler {
     }
 
     private static boolean supportsResponsesApi(AIService service) {
-        return service instanceof OpenAIService openai && openai.supportsResponsesApi();
+        return service instanceof OpenAIService openai && openai.supportsOpenAIResponsesApi();
     }
 }

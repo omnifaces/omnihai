@@ -91,12 +91,12 @@ public class MistralAIService extends OpenAIService {
     }
 
     @Override
-    public boolean supportsResponsesApi() {
+    public boolean supportsOpenAIResponsesApi() {
         return false;
     }
 
     @Override
-    protected boolean supportsOpenAIModerationCapability(Set<String> categories) {
+    public boolean supportsOpenAIModerationCapability(Set<String> categories) {
         return false;
     }
 }
