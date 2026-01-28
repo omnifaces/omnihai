@@ -106,6 +106,15 @@ class AIServiceProducer {
             throw new IllegalArgumentException("The EL expression '" + stripped + "' in an @AI annotation attribute appears corrupted, it is missing the trailing '}'.");
         }
 
+        if (stripped.contains("${config:")) {
+            if (!isMicroprofileConfigAvailable()) {
+                throw new UnsupportedOperationException("You need a runtime implementation of microprofile-config-api in order for MP config resolution in @AI attributes to work."
+                    + " E.g. org.eclipse.microprofile.config:microprofile-config-api:3.1 or simply the Quarkus platform");
+            }
+
+            return MicroprofileConfigExpressionResolver.resolveConfig(stripped);
+        }
+
         if (!isELAwareBeanManagerAvailable(beanManager)) {
             throw new UnsupportedOperationException("You need a runtime implementation of jakarta.enterprise.cdi-el-api in order for EL resolution in @AI attributes to work."
                     + " E.g. org.jboss.weld.servlet:weld-servlet-shaded:6.0.0.Final or org.jboss.weld.se:weld-se-core:6.0.0.Final");
@@ -116,12 +125,21 @@ class AIServiceProducer {
                     + " E.g. org.glassfish.expressly:expressly:6.0.0");
         }
 
-        return ExpressionResolver.resolveEL(beanManager, stripped);
+        return ELExpressionResolver.resolveEL(beanManager, stripped);
     }
 
     private static boolean isJsonAvailable() {
         try {
             return Class.forName("jakarta.json.spi.JsonProvider").getMethod("provider").invoke(null) != null;
+        }
+        catch (Exception ignore) {
+            return false;
+        }
+    }
+
+    private static boolean isMicroprofileConfigAvailable() {
+        try {
+            return Class.forName("org.eclipse.microprofile.config.ConfigProvider").getMethod("getConfig").invoke(null) != null;
         }
         catch (Exception ignore) {
             return false;

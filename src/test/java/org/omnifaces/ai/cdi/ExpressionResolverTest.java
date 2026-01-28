@@ -100,20 +100,20 @@ class ExpressionResolverTest {
     @Test
     void resolveEL_evalThrows_preservesOriginalExpression() {
         var beanManager = mockBeanManager(Map.of("broken", new FailingBean()));
-        assertEquals("#{broken.value}", ExpressionResolver.resolveEL(beanManager, "#{broken.value}"));
+        assertEquals("#{broken.value}", ELExpressionResolver.resolveEL(beanManager, "#{broken.value}"));
     }
 
     @Test
     void resolveEL_mixedSuccessAndFailure_resolvesSuccessfulAndPreservesFailed() {
         var beans = Map.<String, Object>of("good", Map.of("expr", "resolved"), "bad", new FailingBean());
         var beanManager = mockBeanManager(beans);
-        assertEquals("a resolved b #{bad.value} c", ExpressionResolver.resolveEL(beanManager, "a #{good.expr} b #{bad.value} c"));
+        assertEquals("a resolved b #{bad.value} c", ELExpressionResolver.resolveEL(beanManager, "a #{good.expr} b #{bad.value} c"));
     }
 
     @Test
     void resolveEL_dollarExpressionEvalThrows_preservesOriginal() {
         var beanManager = mockBeanManager(Map.of("broken", new FailingBean()));
-        assertEquals("${broken.value}", ExpressionResolver.resolveEL(beanManager, "${broken.value}"));
+        assertEquals("${broken.value}", ELExpressionResolver.resolveEL(beanManager, "${broken.value}"));
     }
 
     // =================================================================================================================
@@ -249,7 +249,7 @@ class ExpressionResolverTest {
      */
     private static void assertResolved(String input, Map<String, ?> beans, String expectedOutput) {
         var beanManager = mockBeanManager(beans);
-        assertEquals(expectedOutput, ExpressionResolver.resolveEL(beanManager, input));
+        assertEquals(expectedOutput, ELExpressionResolver.resolveEL(beanManager, input));
     }
 
     /**
@@ -257,7 +257,7 @@ class ExpressionResolverTest {
      */
     private static void assertPassedThrough(String input) {
         var beanManager = mockBeanManager(Map.of());
-        assertEquals(input, ExpressionResolver.resolveEL(beanManager, input));
+        assertEquals(input, ELExpressionResolver.resolveEL(beanManager, input));
     }
 
     private static ELAwareBeanManager mockBeanManager(Map<String, ?> beans) {
@@ -299,7 +299,7 @@ class ExpressionResolverTest {
         @Override public Class<?> getCommonPropertyType(ELContext context, Object base) { return null; }
     }
 
-    /** Bean whose property access throws, for testing error handling in ExpressionResolver. */
+    /** Bean whose property access throws, for testing error handling in ELExpressionResolver. */
     public static class FailingBean {
         public Object getValue() {
             throw new RuntimeException("EL evaluation failed");

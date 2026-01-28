@@ -12,7 +12,7 @@
  */
 package org.omnifaces.ai.cdi;
 
-import static java.util.regex.Matcher.quoteReplacement;
+import static java.util.Optional.ofNullable;
 
 import java.util.regex.Pattern;
 
@@ -27,11 +27,11 @@ import jakarta.enterprise.inject.spi.el.ELAwareBeanManager;
  * @since 1.0
  * @see AIServiceProducer
  */
-class ExpressionResolver {
+class ELExpressionResolver extends BaseExpressionResolver {
 
     private static final Pattern EL_PATTERN = Pattern.compile("([$#]\\{)([^}]+)(})");
 
-    private ExpressionResolver() {
+    private ELExpressionResolver() {
         throw new AssertionError();
     }
 
@@ -43,25 +43,8 @@ class ExpressionResolver {
      * @return The value with EL expressions resolved.
      */
     static String resolveEL(BeanManager beanManager, String value) {
-        var matcher = EL_PATTERN.matcher(value);
-        var stringBuilder = new StringBuilder();
         var elProcessor = new ELProcessor();
         elProcessor.getELManager().addELResolver(((ELAwareBeanManager) beanManager).getELResolver());
-
-        while (matcher.find()) {
-            var expression = matcher.group(2).strip();
-
-            try {
-                var result = elProcessor.eval(expression);
-                var replacement = (result != null) ? result.toString() : "";
-                matcher.appendReplacement(stringBuilder, quoteReplacement(replacement));
-            }
-            catch (Exception e) {
-                matcher.appendReplacement(stringBuilder, quoteReplacement(matcher.group()));
-            }
-        }
-
-        matcher.appendTail(stringBuilder);
-        return stringBuilder.toString();
+        return resolve(EL_PATTERN, value, expr -> ofNullable(elProcessor.eval(expr)).map(Object::toString).orElse(""));
     }
 }
