@@ -20,6 +20,7 @@ import static org.omnifaces.ai.helper.TextHelper.isBlank;
 import static org.omnifaces.ai.model.Sse.Event.Type.DATA;
 import static org.omnifaces.ai.model.Sse.Event.Type.EVENT;
 
+import java.util.List;
 import java.util.function.Consumer;
 
 import jakarta.json.Json;
@@ -97,6 +98,11 @@ public class AnthropicAITextHandler extends BaseAITextHandler {
         }
 
         return payload.build();
+    }
+
+    @Override
+    public List<String> getChatResponseContentPaths() {
+        return List.of("content[0].text");
     }
 
     @Override

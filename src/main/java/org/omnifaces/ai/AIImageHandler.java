@@ -14,6 +14,7 @@ package org.omnifaces.ai;
 
 import jakarta.json.JsonObject;
 
+import org.omnifaces.ai.exception.AIResponseException;
 import org.omnifaces.ai.modality.BaseAIImageHandler;
 import org.omnifaces.ai.model.GenerateImageOptions;
 
@@ -61,4 +62,13 @@ public interface AIImageHandler {
         throw new UnsupportedOperationException("Please implement buildGenerateImagePayload(String prompt, GenerateImageOptions options) method in class " + getClass().getSimpleName());
     }
 
+    /**
+     * Parses image content from the API response body of generate image operation.
+     * @param responseBody The API response body, usually a JSON object with the AI response, along with some meta data.
+     * @return The extracted image content from the API response body.
+     * @throws AIResponseException If the response cannot be parsed as JSON, contains an error object, or is missing expected image content.
+     */
+    default byte[] parseImageContent(String responseBody) throws AIResponseException {
+        throw new UnsupportedOperationException("Please implement parseImageContent(String responseBody) method in class " + getClass().getSimpleName());
+    }
 }

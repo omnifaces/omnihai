@@ -19,6 +19,7 @@ import static org.omnifaces.ai.helper.JsonHelper.extractByPath;
 import static org.omnifaces.ai.helper.TextHelper.isBlank;
 import static org.omnifaces.ai.model.Sse.Event.Type.DATA;
 
+import java.util.List;
 import java.util.function.Consumer;
 import java.util.logging.Logger;
 
@@ -87,6 +88,11 @@ public class GoogleAITextHandler extends BaseAITextHandler {
         return payload
             .add("generationConfig", generationConfig)
             .build();
+    }
+
+    @Override
+    public List<String> getChatResponseContentPaths() {
+        return List.of("candidates[0].content.parts[0].text");
     }
 
     @Override

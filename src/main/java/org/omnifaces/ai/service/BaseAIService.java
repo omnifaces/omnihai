@@ -20,8 +20,6 @@ import static java.util.function.Predicate.not;
 import static org.omnifaces.ai.AIConfig.PROPERTY_API_KEY;
 import static org.omnifaces.ai.AIConfig.PROPERTY_ENDPOINT;
 import static org.omnifaces.ai.AIConfig.PROPERTY_MODEL;
-import static org.omnifaces.ai.helper.JsonHelper.extractByPath;
-import static org.omnifaces.ai.helper.JsonHelper.parseJson;
 import static org.omnifaces.ai.helper.TextHelper.isBlank;
 import static org.omnifaces.ai.helper.TextHelper.requireNonBlank;
 import static org.omnifaces.ai.model.ChatOptions.DETERMINISTIC;
@@ -29,14 +27,11 @@ import static org.omnifaces.ai.model.ChatOptions.DETERMINISTIC;
 import java.net.URI;
 import java.time.Duration;
 import java.util.Arrays;
-import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
-
-import jakarta.json.JsonObject;
 
 import org.omnifaces.ai.AIConfig;
 import org.omnifaces.ai.AIImageHandler;
@@ -296,27 +291,27 @@ public abstract class BaseAIService implements AIService {
     }
 
     /**
-     * Send POST request to API at given path with given payload along with request headers obtained from {@link #getRequestHeaders()}, and extract
-     * message content from the POST response with help of {@link #extractMessageContent(String)}.
+     * Send POST request to API at given path with given payload along with request headers obtained from {@link #getRequestHeaders()}, and parse
+     * message content from the POST response with help of {@link AITextHandler#parseChatResponse(String)}.
      * @param path API path, relative to {@link #endpoint}.
      * @param payload POST request payload, usually a JSON object with instructions.
      * @return The message content of the POST request.
      * @throws AIException if anything fails during the process.
      */
     protected CompletableFuture<String> asyncPostAndExtractMessageContent(String path, String payload) throws AIException {
-        return API_CLIENT.post(this, path, payload).thenApply(this::extractMessageContent);
+        return API_CLIENT.post(this, path, payload).thenApply(textHandler::parseChatResponse);
     }
 
     /**
-     * Send POST request to API at given path with given payload along with request headers obtained from {@link #getRequestHeaders()}, and extract
-     * image content from the POST response with help of {@link #extractImageContent(String)}.
+     * Send POST request to API at given path with given payload along with request headers obtained from {@link #getRequestHeaders()}, and parse
+     * image content from the POST response with help of {@link AIImageHandler#parseImageContent(String)}.
      * @param path API path, relative to {@link #endpoint}.
      * @param payload POST request payload, usually a JSON object with instructions.
      * @return The image content of the POST request.
      * @throws AIException if anything fails during the process.
      */
     protected CompletableFuture<byte[]> asyncPostAndExtractImageContent(String path, String payload) throws AIException {
-        return API_CLIENT.post(this, path, payload).thenApply(this::extractImageContent);
+        return API_CLIENT.post(this, path, payload).thenApply(imageHandler::parseImageContent);
     }
 
     /**
@@ -330,113 +325,5 @@ public abstract class BaseAIService implements AIService {
      */
     protected CompletableFuture<Void> asyncPostAndProcessStreamEvents(String path, String payload, Predicate<Event> eventProcessor) throws AIException {
         return API_CLIENT.stream(this, path, payload, eventProcessor);
-    }
-
-    /**
-     * Extracts message content from the API response body. Used by {@link #asyncPostAndExtractMessageContent(String, String)}.
-     * <p>
-     * The default implementation parses the response as JSON, checks for error objects at {@link #getResponseErrorMessagePaths()},
-     * and extracts message content at {@link #getResponseMessageContentPaths()}.
-     *
-     * @param responseBody The API response body, usually a JSON object with the AI response, along with some meta data.
-     * @return The extracted message content from the API response body.
-     * @throws AIResponseException If the response cannot be parsed as JSON, contains an error object, or is missing expected message content.
-     */
-    protected String extractMessageContent(String responseBody) throws AIResponseException {
-        var responseJson = parseResponseBodyAndCheckErrorMessages(responseBody);
-        var messageContentPaths = getResponseMessageContentPaths();
-
-        if (messageContentPaths.isEmpty()) {
-            throw new IllegalStateException("getResponseMessageContentPaths() may not return an empty list");
-        }
-
-        for (var messageContentPath : messageContentPaths) {
-            var messageContent = extractByPath(responseJson, messageContentPath);
-
-            if (!isBlank(messageContent)) {
-                return messageContent;
-            }
-        }
-
-        throw new AIResponseException("No message content found at paths " + messageContentPaths, responseBody);
-    }
-
-    /**
-     * Extracts image content from the API response body. Used by {@link #asyncPostAndExtractImageContent(String, String)}.
-     * <p>
-     * The default implementation parses the response as JSON, checks for error objects at {@link #getResponseErrorMessagePaths()},
-     * and extracts image content at {@link #getResponseImageContentPaths()}.
-     *
-     * @param responseBody The API response body, usually a JSON object with the AI response, along with some meta data.
-     * @return The extracted image content from the API response body.
-     * @throws AIResponseException If the response cannot be parsed as JSON, contains an error object, or is missing expected image content.
-     */
-    protected byte[] extractImageContent(String responseBody) throws AIResponseException {
-        var responseJson = parseResponseBodyAndCheckErrorMessages(responseBody);
-        var imageContentPaths = getResponseImageContentPaths();
-
-        if (imageContentPaths.isEmpty()) {
-            throw new IllegalStateException("getResponseImageContentPaths() may not return an empty list");
-        }
-
-        for (var imageContentPath : imageContentPaths) {
-            var imageContent = extractByPath(responseJson, imageContentPath);
-
-            if (!isBlank(imageContent)) {
-                try {
-                    return Base64.getDecoder().decode(imageContent);
-                }
-                catch (Exception e) {
-                    throw new AIResponseException("Cannot Base64-decode image", responseBody, e);
-                }
-            }
-        }
-
-        throw new AIResponseException("No image content found at paths " + imageContentPaths, responseBody);
-    }
-
-    private JsonObject parseResponseBodyAndCheckErrorMessages(String responseBody) throws AIResponseException {
-        var responseJson = parseJson(responseBody);
-
-        for (var errorMessagePath : getResponseErrorMessagePaths()) {
-            var errorMessage = extractByPath(responseJson, errorMessagePath);
-
-            if (!isBlank(errorMessage)) {
-                throw new AIResponseException(errorMessage, responseBody);
-            }
-        }
-
-        return responseJson;
-    }
-
-    /**
-     * Returns all possible paths to the error message in the JSON response of {@link #asyncPostAndExtractMessageContent(String, String)} and
-     * {@link #asyncPostAndExtractImageContent(String, String)}. May be empty.
-     * Used by {@link #extractMessageContent(String)} and {@link #extractImageContent(String)}.
-     * The first path that matches a value in the JSON response will be used; remaining paths are ignored.
-     * The default implementation returns {@code "error.message"} and {@code "error"}.
-     * @return all possible paths to the error message in the JSON response of {@link #asyncPostAndExtractMessageContent(String, String)} and
-     * {@link #asyncPostAndExtractImageContent(String, String)}.
-     */
-    protected List<String> getResponseErrorMessagePaths() {
-        return List.of("error.message", "error");
-    }
-
-    /**
-     * Returns all possible paths to the message content in the JSON response of {@link #asyncPostAndExtractMessageContent(String, String)}.
-     * May not be empty. Used by {@link #extractMessageContent(String)}.
-     * The first path that matches a value in the JSON response will be used; remaining paths are ignored.
-     * @return all possible paths to the message content in the JSON response of {@link #asyncPostAndExtractMessageContent(String, String)}.
-     */
-    protected abstract List<String> getResponseMessageContentPaths();
-
-    /**
-     * Returns all possible paths to the image content in the JSON response of {@link #asyncPostAndExtractImageContent(String, String)}.
-     * May not be empty. Used by {@link #extractImageContent(String)}.
-     * The first path that matches a value in the JSON response will be used; remaining paths are ignored.
-     * @return all possible paths to the image content in the JSON response of {@link #asyncPostAndExtractImageContent(String, String)}.
-     */
-    protected List<String> getResponseImageContentPaths() {
-        throw new UnsupportedOperationException("Please implement getResponseImageContentPaths() method in class " + getClass().getSimpleName());
     }
 }

@@ -12,6 +12,8 @@
  */
 package org.omnifaces.ai.modality;
 
+import java.util.List;
+
 import jakarta.json.Json;
 import jakarta.json.JsonObject;
 
@@ -38,5 +40,10 @@ public class OpenAIImageHandler extends BaseAIImageHandler {
             .add("quality", options.getQuality())
             .add("output_format", options.getOutputFormat())
             .build();
+    }
+
+    @Override
+    public List<String> getImageResponseContentPaths() {
+        return List.of("output[*].content[*].image_base64", "data[0].b64_json");
     }
 }

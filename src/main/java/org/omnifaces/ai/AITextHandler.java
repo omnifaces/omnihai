@@ -137,6 +137,15 @@ public interface AITextHandler {
     String buildModerateContentPrompt(ModerationOptions options);
 
     /**
+     * Parses message content from the API response body returned by chat operation.
+     *
+     * @param responseBody The API response body, usually a JSON object with the AI response, along with some meta data.
+     * @return The extracted message content from the API response body.
+     * @throws AIResponseException If the response cannot be parsed as JSON, contains an error object, or is missing expected message content.
+     */
+    String parseChatResponse(String responseBody) throws AIResponseException;
+
+    /**
      * Parses the moderation result from response returned by {@link AIService#moderateContent(String, ModerationOptions)} and {@link AIService#moderateContentAsync(String, ModerationOptions)}.
      *
      * @param responseBody The response from the AI model containing moderation scores.

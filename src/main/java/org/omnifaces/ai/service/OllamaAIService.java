@@ -12,8 +12,6 @@
  */
 package org.omnifaces.ai.service;
 
-import java.util.List;
-
 import org.omnifaces.ai.AIConfig;
 import org.omnifaces.ai.AIModality;
 import org.omnifaces.ai.AIModelVersion;
@@ -83,10 +81,5 @@ public class OllamaAIService extends BaseAIService {
     @Override
     protected String getChatPath(boolean streaming) {
         return "api/chat";
-    }
-
-    @Override
-    protected List<String> getResponseMessageContentPaths() {
-        return List.of("message.content", "response");
     }
 }

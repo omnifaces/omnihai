@@ -12,7 +12,6 @@
  */
 package org.omnifaces.ai.service;
 
-import java.util.List;
 import java.util.Set;
 
 import org.omnifaces.ai.AIConfig;
@@ -69,10 +68,5 @@ public class MetaAIService extends OpenAIService {
     @Override
     public boolean supportsOpenAIModerationCapability(Set<String> categories) {
         return false;
-    }
-
-    @Override
-    protected List<String> getResponseMessageContentPaths() {
-        return List.of("choices[0].completion_message.content");
     }
 }

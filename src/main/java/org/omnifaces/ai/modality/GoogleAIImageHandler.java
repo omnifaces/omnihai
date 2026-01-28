@@ -12,6 +12,8 @@
  */
 package org.omnifaces.ai.modality;
 
+import java.util.List;
+
 import jakarta.json.Json;
 import jakarta.json.JsonObject;
 
@@ -43,5 +45,10 @@ public class GoogleAIImageHandler extends BaseAIImageHandler {
                             .add("text", prompt)))))
             .add("generationConfig", generationConfig)
             .build();
+    }
+
+    @Override
+    public List<String> getImageResponseContentPaths() {
+        return List.of("candidates[0].content.parts[0].inlineData.data");
     }
 }

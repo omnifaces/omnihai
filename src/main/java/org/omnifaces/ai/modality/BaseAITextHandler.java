@@ -13,8 +13,11 @@
 package org.omnifaces.ai.modality;
 
 import static java.util.logging.Level.WARNING;
+import static org.omnifaces.ai.helper.JsonHelper.extractByPath;
 import static org.omnifaces.ai.helper.JsonHelper.parseJson;
+import static org.omnifaces.ai.helper.TextHelper.isBlank;
 
+import java.util.List;
 import java.util.TreeMap;
 import java.util.function.Predicate;
 import java.util.logging.Logger;
@@ -29,7 +32,7 @@ import org.omnifaces.ai.model.ModerationOptions;
 import org.omnifaces.ai.model.ModerationResult;
 
 /**
- * Base class for AI image handler implementations that provides sensible, general-purpose prompt templates, and
+ * Base class for AI text handler implementations that provides sensible, general-purpose prompt templates, and
  * response parsing suitable for most modern large language models (LLMs).
  * <p>
  * This class is intended as a reasonable fallback / starting point when no provider-specific implementation is
@@ -155,6 +158,47 @@ public abstract class BaseAITextHandler implements AITextHandler {
         """.formatted(String.join(", ", options.getCategories()), scoresTemplateString);
     }
 
+
+    // Response parsing -----------------------------------------------------------------------------------------------
+
+    @Override
+    public String parseChatResponse(String responseBody) throws AIResponseException {
+        var responseJson = parseResponseBodyAndCheckErrorMessages(responseBody, getChatResponseErrorMessagePaths());
+        var messageContentPaths = getChatResponseContentPaths();
+
+        if (messageContentPaths.isEmpty()) {
+            throw new IllegalStateException("getChatResponseContentPaths() may not return an empty list");
+        }
+
+        for (var messageContentPath : messageContentPaths) {
+            var messageContent = extractByPath(responseJson, messageContentPath);
+
+            if (!isBlank(messageContent)) {
+                return messageContent;
+            }
+        }
+
+        throw new AIResponseException("No message content found at paths " + messageContentPaths, responseBody);
+    }
+
+    /**
+     * Returns all possible paths to the error message in the JSON response parsed by {@link #parseChatResponse(String)}.
+     * The first path that matches a value in the JSON response will be used; remaining paths are ignored.
+     * The default implementation returns {@code error.message} and {@code error}.
+     * @return all possible paths to the error message in the JSON response.
+     */
+    public List<String> getChatResponseErrorMessagePaths() {
+        return List.of("error.message", "error");
+    }
+
+    /**
+     * Returns all possible paths to the message content in the JSON response parsed by {@link #parseChatResponse(String)}.
+     * May not be empty.
+     * The first path that matches a value in the JSON response will be used; remaining paths are ignored.
+     * @return all possible paths to the message content in the JSON response.
+     */
+    public abstract List<String> getChatResponseContentPaths();
+
     @Override
     public ModerationResult parseModerationResult(String responseBody, ModerationOptions options) throws AIResponseException {
         var responseJson = parseJson(responseBody);
@@ -177,7 +221,30 @@ public abstract class BaseAITextHandler implements AITextHandler {
         return new ModerationResult(flagged, scores);
     }
 
-    // JSON parsing helper --------------------------------------------------------------------------------------------
+
+    // JSON parsing helpers -------------------------------------------------------------------------------------------
+
+    /**
+     * Parse response body as JSON and check for error messages.
+     * @param responseBody The API response body.
+     * @param errorMessagePaths The paths to check for error messages.
+     * @return The parsed JSON object.
+     * @throws AIResponseException If the response contains an error message.
+     */
+    static JsonObject parseResponseBodyAndCheckErrorMessages(String responseBody, List<String> errorMessagePaths) throws AIResponseException {
+        var responseJson = parseJson(responseBody);
+
+        for (var errorMessagePath : errorMessagePaths) {
+            var errorMessage = extractByPath(responseJson, errorMessagePath);
+
+            if (!isBlank(errorMessage)) {
+                throw new AIResponseException(errorMessage, responseBody);
+            }
+        }
+
+        return responseJson;
+    }
+
 
     /**
      * Try to parse the given SSE event data as JSON and feed it to the given JSON processor. Any failure to parse will

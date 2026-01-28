@@ -12,14 +12,21 @@
  */
 package org.omnifaces.ai.modality;
 
+import static org.omnifaces.ai.helper.JsonHelper.extractByPath;
+import static org.omnifaces.ai.helper.TextHelper.isBlank;
+import static org.omnifaces.ai.modality.BaseAITextHandler.parseResponseBodyAndCheckErrorMessages;
+
+import java.util.Base64;
+import java.util.List;
 import java.util.logging.Logger;
 
 import org.omnifaces.ai.AIImageHandler;
 import org.omnifaces.ai.AIService;
+import org.omnifaces.ai.exception.AIResponseException;
 
 /**
- * Base class for AI image handler implementations that provides general-purpose prompt templates suitable for most
- * current vision-capable models.
+ * Base class for AI image handler implementations that provides general-purpose prompt templates, and response parsing
+ * suitable for most current vision-capable models.
  * <p>
  * This class is intended as a fallback when no provider-specific implementation is available. It uses patterns that
  * work reasonably well with GPT, Claude, Gemini, Grok, Llama and similar multimodal models.
@@ -75,5 +82,53 @@ public abstract class BaseAIImageHandler implements AIImageHandler {
             - Plain text description only.
             - No explanations, no notes, no extra text, no markdown formatting.
         """.formatted(DEFAULT_MAX_WORDS_PER_ALT_TEXT_SENTENCE);
+    }
+
+
+    // Response parsing -----------------------------------------------------------------------------------------------
+
+    @Override
+    public byte[] parseImageContent(String responseBody) throws AIResponseException {
+        var responseJson = parseResponseBodyAndCheckErrorMessages(responseBody, getImageResponseErrorMessagePaths());
+        var imageContentPaths = getImageResponseContentPaths();
+
+        if (imageContentPaths.isEmpty()) {
+            throw new IllegalStateException("getImageResponseContentPaths() may not return an empty list");
+        }
+
+        for (var imageContentPath : imageContentPaths) {
+            var imageContent = extractByPath(responseJson, imageContentPath);
+
+            if (!isBlank(imageContent)) {
+                try {
+                    return Base64.getDecoder().decode(imageContent);
+                }
+                catch (Exception e) {
+                    throw new AIResponseException("Cannot Base64-decode image", responseBody, e);
+                }
+            }
+        }
+
+        throw new AIResponseException("No image content found at paths " + imageContentPaths, responseBody);
+    }
+
+    /**
+     * Returns all possible paths to the error message in the JSON response parsed by {@link #parseImageContent(String)}.
+     * The first path that matches a value in the JSON response will be used; remaining paths are ignored.
+     * The default implementation returns {@code error.message} and {@code error}.
+     * @return all possible paths to the error message in the JSON response.
+     */
+    public List<String> getImageResponseErrorMessagePaths() {
+        return List.of("error.message", "error");
+    }
+
+    /**
+     * Returns all possible paths to the image content in the JSON response parsed by {@link #parseImageContent(String)}.
+     * May not be empty.
+     * The first path that matches a value in the JSON response will be used; remaining paths are ignored.
+     * @return all possible paths to the image content in the JSON response.
+     */
+    public List<String> getImageResponseContentPaths() {
+        throw new UnsupportedOperationException("Please implement getImageResponseContentPaths() method in class " + getClass().getSimpleName());
     }
 }

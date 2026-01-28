@@ -15,6 +15,8 @@ package org.omnifaces.ai.modality;
 import static org.omnifaces.ai.helper.ImageHelper.toImageBase64;
 import static org.omnifaces.ai.helper.TextHelper.isBlank;
 
+import java.util.List;
+
 import jakarta.json.Json;
 import jakarta.json.JsonObject;
 
@@ -74,5 +76,10 @@ public class OllamaAITextHandler extends BaseAITextHandler {
             .add("options", optionsBuilder)
             .add("stream", false)
             .build();
+    }
+
+    @Override
+    public List<String> getChatResponseContentPaths() {
+        return List.of("message.content", "response");
     }
 }

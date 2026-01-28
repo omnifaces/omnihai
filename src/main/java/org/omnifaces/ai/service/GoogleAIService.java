@@ -13,7 +13,6 @@
 package org.omnifaces.ai.service;
 
 import java.net.URI;
-import java.util.List;
 
 import org.omnifaces.ai.AIConfig;
 import org.omnifaces.ai.AIModality;
@@ -98,15 +97,5 @@ public class GoogleAIService extends BaseAIService {
     @Override
     protected String getChatPath(boolean streaming) {
         return streaming ? "streamGenerateContent?alt=sse" : "generateContent";
-    }
-
-    @Override
-    protected List<String> getResponseMessageContentPaths() {
-        return List.of("candidates[0].content.parts[0].text");
-    }
-
-    @Override
-    protected List<String> getResponseImageContentPaths() {
-        return List.of("candidates[0].content.parts[0].inlineData.data");
     }
 }

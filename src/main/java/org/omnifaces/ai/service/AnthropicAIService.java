@@ -12,7 +12,6 @@
  */
 package org.omnifaces.ai.service;
 
-import java.util.List;
 import java.util.Map;
 
 import org.omnifaces.ai.AIConfig;
@@ -90,10 +89,5 @@ public class AnthropicAIService extends BaseAIService {
     @Override
     protected String getChatPath(boolean streaming) {
         return "messages";
-    }
-
-    @Override
-    protected List<String> getResponseMessageContentPaths() {
-        return List.of("content[0].text");
     }
 }

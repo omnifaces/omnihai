@@ -16,7 +16,6 @@ import static org.omnifaces.ai.helper.JsonHelper.isEmpty;
 import static org.omnifaces.ai.helper.JsonHelper.parseJson;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -157,16 +156,6 @@ public class OpenAIService extends BaseAIService {
         else {
             return super.moderateContentAsync(content, options);
         }
-    }
-
-    @Override
-    protected List<String> getResponseMessageContentPaths() {
-        return List.of("output[*].content[*].text", "choices[0].message.content");
-    }
-
-    @Override
-    protected List<String> getResponseImageContentPaths() {
-        return List.of("output[*].content[*].image_base64", "data[0].b64_json");
     }
 
     /**
