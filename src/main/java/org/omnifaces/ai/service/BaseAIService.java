@@ -33,6 +33,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 
+import jakarta.json.JsonObject;
+
 import org.omnifaces.ai.AIConfig;
 import org.omnifaces.ai.AIImageHandler;
 import org.omnifaces.ai.AIProvider;
@@ -146,7 +148,7 @@ public abstract class BaseAIService implements AIService {
 
     @Override
     public CompletableFuture<String> chatAsync(ChatInput input, ChatOptions options) throws AIException {
-        return asyncPostAndExtractMessageContent(getChatPath(false), textHandler.buildChatPayload(this, input, options, false).toString());
+        return asyncPostAndParseChatResponse(getChatPath(false), textHandler.buildChatPayload(this, input, options, false));
     }
 
     @Override
@@ -157,7 +159,7 @@ public abstract class BaseAIService implements AIService {
 
         var neededForStackTrace = new Exception("Async chat streaming failed");
 
-        return asyncPostAndProcessStreamEvents(getChatPath(true), textHandler.buildChatPayload(this, input, options, true).toString(), event -> textHandler.processChatStreamEvent(this, event, onToken)).handle((result, exception) -> {
+        return asyncPostAndProcessStreamEvents(getChatPath(true), textHandler.buildChatPayload(this, input, options, true), event -> textHandler.processChatStreamEvent(this, event, onToken)).handle((result, exception) -> {
             if (exception == null) {
                 return result;
             }
@@ -241,7 +243,7 @@ public abstract class BaseAIService implements AIService {
     @Override
     public CompletableFuture<String> analyzeImageAsync(byte[] image, String prompt) throws AIException {
         var input = ChatInput.newBuilder().message(isBlank(prompt) ? imageHandler.buildAnalyzeImagePrompt() : prompt).images(image).build();
-        return asyncPostAndExtractMessageContent(getChatPath(false), textHandler.buildChatPayload(this, input, DETERMINISTIC, false).toString());
+        return asyncPostAndParseChatResponse(getChatPath(false), textHandler.buildChatPayload(this, input, DETERMINISTIC, false));
     }
 
     @Override
@@ -263,7 +265,7 @@ public abstract class BaseAIService implements AIService {
 
     @Override
     public CompletableFuture<byte[]> generateImageAsync(String prompt, GenerateImageOptions options) throws AIException {
-        return asyncPostAndExtractImageContent(getGenerateImagePath(), imageHandler.buildGenerateImagePayload(this, requireNonBlank(prompt, "prompt"), options).toString());
+        return asyncPostAndParseImageContent(getGenerateImagePath(), imageHandler.buildGenerateImagePayload(this, requireNonBlank(prompt, "prompt"), options));
     }
 
     // HTTP Helper Methods --------------------------------------------------------------------------------------------
@@ -273,9 +275,10 @@ public abstract class BaseAIService implements AIService {
     }
 
     /**
-     * Returns additional request headers to use at {@link #asyncPostAndExtractMessageContent(String, String)}, e.g. authorization or version headers.
+     * Returns additional request headers to use at {@link #asyncPostAndParseChatResponse(String, JsonObject)}, e.g. authorization or version headers.
+     * These headers are added on top of the default request headers: {@code User-Agent}, {@code Content-Type} and {@code Accept}.
      * The default implementation returns an empty map.
-     * @return Additional request headers to use at {@link #asyncPostAndExtractMessageContent(String, String)}.
+     * @return Additional request headers to use at {@link #asyncPostAndParseChatResponse(String, JsonObject)}.
      */
     protected Map<String, String> getRequestHeaders() {
         return emptyMap();
@@ -292,13 +295,13 @@ public abstract class BaseAIService implements AIService {
 
     /**
      * Send POST request to API at given path with given payload along with request headers obtained from {@link #getRequestHeaders()}, and parse
-     * message content from the POST response with help of {@link AITextHandler#parseChatResponse(String)}.
+     * chat response from the POST response with help of {@link AITextHandler#parseChatResponse(String)}.
      * @param path API path, relative to {@link #endpoint}.
-     * @param payload POST request payload, usually a JSON object with instructions.
+     * @param payload POST request payload.
      * @return The message content of the POST request.
      * @throws AIException if anything fails during the process.
      */
-    protected CompletableFuture<String> asyncPostAndExtractMessageContent(String path, String payload) throws AIException {
+    protected CompletableFuture<String> asyncPostAndParseChatResponse(String path, JsonObject payload) throws AIException {
         return API_CLIENT.post(this, path, payload).thenApply(textHandler::parseChatResponse);
     }
 
@@ -306,11 +309,11 @@ public abstract class BaseAIService implements AIService {
      * Send POST request to API at given path with given payload along with request headers obtained from {@link #getRequestHeaders()}, and parse
      * image content from the POST response with help of {@link AIImageHandler#parseImageContent(String)}.
      * @param path API path, relative to {@link #endpoint}.
-     * @param payload POST request payload, usually a JSON object with instructions.
+     * @param payload POST request payload.
      * @return The image content of the POST request.
      * @throws AIException if anything fails during the process.
      */
-    protected CompletableFuture<byte[]> asyncPostAndExtractImageContent(String path, String payload) throws AIException {
+    protected CompletableFuture<byte[]> asyncPostAndParseImageContent(String path, JsonObject payload) throws AIException {
         return API_CLIENT.post(this, path, payload).thenApply(imageHandler::parseImageContent);
     }
 
@@ -318,12 +321,12 @@ public abstract class BaseAIService implements AIService {
      * Send SSE request to API at given path with given payload along with request headers obtained from {@link #getRequestHeaders()}, and process
      * each reveived stream event using supplied {@code eventProcessor}.
      * @param path API path, relative to {@link #endpoint}.
-     * @param payload Initial SSE POST request payload, usually a JSON object with instructions.
+     * @param payload Initial SSE POST request payload.
      * @param eventProcessor Callback invoked for each stream event; it must return {@code true} to continue processing the stream, or {@code false} to stop processing the stream.
      * @return A future that completes when stream ends normally, is stopped by the processor, or fails exceptionally.
      * @throws AIException if anything fails during the process.
      */
-    protected CompletableFuture<Void> asyncPostAndProcessStreamEvents(String path, String payload, Predicate<Event> eventProcessor) throws AIException {
+    protected CompletableFuture<Void> asyncPostAndProcessStreamEvents(String path, JsonObject payload, Predicate<Event> eventProcessor) throws AIException {
         return API_CLIENT.stream(this, path, payload, eventProcessor);
     }
 }

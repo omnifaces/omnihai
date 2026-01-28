@@ -41,6 +41,8 @@ import java.util.function.Supplier;
 import java.util.logging.Logger;
 import java.util.stream.Stream;
 
+import jakarta.json.JsonObject;
+
 import org.omnifaces.ai.exception.AIBadRequestException;
 import org.omnifaces.ai.exception.AIException;
 import org.omnifaces.ai.exception.AIHttpException;
@@ -94,12 +96,12 @@ final class AIApiClient {
      *
      * @param service The {@link BaseAIService} to extract URI and headers from.
      * @param path the API path
-     * @param body The request body
+     * @param payload The request payload
      * @return The response body as a string
      * @throws AIHttpException if the request fails
      */
-    public CompletableFuture<String> post(BaseAIService service, String path, String body) throws AIHttpException {
-        return sendWithRetryAsync(newRequest(service, path, body, APPLICATION_JSON), 0);
+    public CompletableFuture<String> post(BaseAIService service, String path, JsonObject payload) throws AIHttpException {
+        return sendWithRetryAsync(newRequest(service, path, payload, APPLICATION_JSON), 0);
     }
 
     /**
@@ -108,18 +110,17 @@ final class AIApiClient {
      *
      * @param service The {@link BaseAIService} to extract URI and headers from.
      * @param path the API path
-     * @param body The request body
+     * @param payload The request payload
      * @param eventProcessor The stream event processor.
      * @return A future that completes when stream ends or fails.
      * @throws AIHttpException if the request fails
      */
-    public CompletableFuture<Void> stream(BaseAIService service, String path, String body, Predicate<Event> eventProcessor) throws AIHttpException {
-        var request = newRequest(service, path, body, EVENT_STREAM);
-        return streamWithRetryAsync(request, eventProcessor, 0);
+    public CompletableFuture<Void> stream(BaseAIService service, String path, JsonObject payload, Predicate<Event> eventProcessor) throws AIHttpException {
+        return streamWithRetryAsync(newRequest(service, path, payload, EVENT_STREAM), eventProcessor, 0);
     }
 
-    private HttpRequest newRequest(BaseAIService service, String path, String body, String accept) {
-        var requestBuilder = HttpRequest.newBuilder(service.resolveURI(path)).timeout(requestTimeout).POST(BodyPublishers.ofString(body));
+    private HttpRequest newRequest(BaseAIService service, String path, JsonObject payload, String accept) {
+        var requestBuilder = HttpRequest.newBuilder(service.resolveURI(path)).timeout(requestTimeout).POST(BodyPublishers.ofString(payload.toString()));
         requestBuilder.header("User-Agent", USER_AGENT);
         requestBuilder.header("Content-Type", APPLICATION_JSON);
         requestBuilder.header("Accept", accept);
