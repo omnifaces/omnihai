@@ -24,7 +24,7 @@ import jakarta.enterprise.inject.spi.el.ELAwareBeanManager;
 
 import org.junit.jupiter.api.Test;
 
-class ExpressionResolverTest {
+class ELExpressionResolverTest {
 
     // =================================================================================================================
     // Single expression resolution
