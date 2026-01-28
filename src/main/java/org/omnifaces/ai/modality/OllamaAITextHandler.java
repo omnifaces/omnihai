@@ -34,6 +34,8 @@ import org.omnifaces.ai.service.OllamaAIService;
  */
 public class OllamaAITextHandler extends BaseAITextHandler {
 
+    private static final long serialVersionUID = 1L;
+
     @Override
     public JsonObject buildChatPayload(AIService service, ChatInput input, ChatOptions options, boolean streaming) {
         var messages = Json.createArrayBuilder();

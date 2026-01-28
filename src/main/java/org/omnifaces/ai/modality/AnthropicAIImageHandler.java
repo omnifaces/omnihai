@@ -21,4 +21,6 @@ import org.omnifaces.ai.service.AnthropicAIService;
  * @since 1.0
  * @see AnthropicAIService
  */
-public class AnthropicAIImageHandler extends BaseAIImageHandler {}
+public class AnthropicAIImageHandler extends BaseAIImageHandler {
+    private static final long serialVersionUID = 1L;
+}

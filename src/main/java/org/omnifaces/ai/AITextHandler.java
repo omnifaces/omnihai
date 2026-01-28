@@ -12,6 +12,7 @@
  */
 package org.omnifaces.ai;
 
+import java.io.Serializable;
 import java.util.function.Consumer;
 
 import jakarta.json.JsonObject;
@@ -45,7 +46,7 @@ import org.omnifaces.ai.model.Sse.Event;
  * @see AIService
  * @see BaseAITextHandler
  */
-public interface AITextHandler {
+public interface AITextHandler extends Serializable {
 
     /**
      * Builds the JSON request payload for all chat operations.

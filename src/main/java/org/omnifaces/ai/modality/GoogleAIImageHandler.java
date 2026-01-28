@@ -30,6 +30,8 @@ import org.omnifaces.ai.service.GoogleAIService;
  */
 public class GoogleAIImageHandler extends BaseAIImageHandler {
 
+    private static final long serialVersionUID = 1L;
+
     @Override
     public JsonObject buildGenerateImagePayload(AIService service, String prompt, GenerateImageOptions options) {
         var generationConfig = Json.createObjectBuilder()

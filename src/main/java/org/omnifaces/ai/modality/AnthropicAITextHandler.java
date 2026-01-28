@@ -44,6 +44,8 @@ import org.omnifaces.ai.service.AnthropicAIService;
  */
 public class AnthropicAITextHandler extends BaseAITextHandler {
 
+    private static final long serialVersionUID = 1L;
+
     private static final AIModelVersion CLAUDE_3 = AIModelVersion.of("claude", 3);
 
     private static final int DEFAULT_MAX_TOKENS_CLAUDE_3_0 = 4096;

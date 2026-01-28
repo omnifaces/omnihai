@@ -28,6 +28,8 @@ import org.omnifaces.ai.service.XAIService;
  */
 public class XAIImageHandler extends OpenAIImageHandler {
 
+    private static final long serialVersionUID = 1L;
+
     @Override
     public JsonObject buildGenerateImagePayload(AIService service, String prompt, GenerateImageOptions options) {
         return Json.createObjectBuilder()

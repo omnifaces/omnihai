@@ -43,6 +43,8 @@ import org.omnifaces.ai.service.OpenAIService;
  */
 public class OpenAITextHandler extends BaseAITextHandler {
 
+    private static final long serialVersionUID = 1L;
+
     private static final AIModelVersion GPT_5 = AIModelVersion.of("gpt", 5);
 
     @Override

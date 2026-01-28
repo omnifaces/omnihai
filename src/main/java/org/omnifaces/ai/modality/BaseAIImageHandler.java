@@ -50,6 +50,8 @@ import org.omnifaces.ai.exception.AIResponseException;
  */
 public abstract class BaseAIImageHandler implements AIImageHandler {
 
+    private static final long serialVersionUID = 1L;
+
     /** Logger for current package. */
     protected static final Logger logger = Logger.getLogger(BaseAIImageHandler.class.getPackageName());
 

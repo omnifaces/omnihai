@@ -58,6 +58,8 @@ import org.omnifaces.ai.model.ModerationResult;
  */
 public abstract class BaseAITextHandler implements AITextHandler {
 
+    private static final long serialVersionUID = 1L;
+
     /** Logger for current package. */
     protected static final Logger logger = Logger.getLogger(BaseAITextHandler.class.getPackageName());
 

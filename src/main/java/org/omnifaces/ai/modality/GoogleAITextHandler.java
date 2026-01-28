@@ -42,6 +42,8 @@ import org.omnifaces.ai.service.GoogleAIService;
  */
 public class GoogleAITextHandler extends BaseAITextHandler {
 
+    private static final long serialVersionUID = 1L;
+
     private static final Logger logger = Logger.getLogger(GoogleAITextHandler.class.getPackageName());
 
     @Override

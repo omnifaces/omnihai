@@ -12,6 +12,8 @@
  */
 package org.omnifaces.ai;
 
+import java.io.Serializable;
+
 import jakarta.json.JsonObject;
 
 import org.omnifaces.ai.exception.AIResponseException;
@@ -33,7 +35,7 @@ import org.omnifaces.ai.model.GenerateImageOptions;
  * @see AIService
  * @see BaseAIImageHandler
  */
-public interface AIImageHandler {
+public interface AIImageHandler extends Serializable {
 
     /**
      * Builds the default system prompt to use when no custom user prompt is provided to

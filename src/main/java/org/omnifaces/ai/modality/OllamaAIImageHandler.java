@@ -21,4 +21,6 @@ import org.omnifaces.ai.service.OllamaAIService;
  * @since 1.0
  * @see OllamaAIService
  */
-public class OllamaAIImageHandler extends BaseAIImageHandler {}
+public class OllamaAIImageHandler extends BaseAIImageHandler {
+    private static final long serialVersionUID = 1L;
+}

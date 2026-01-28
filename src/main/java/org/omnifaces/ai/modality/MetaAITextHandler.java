@@ -25,6 +25,8 @@ import org.omnifaces.ai.service.MetaAIService;
  */
 public class MetaAITextHandler extends OpenAITextHandler {
 
+    private static final long serialVersionUID = 1L;
+
     @Override
     public List<String> getChatResponseContentPaths() {
         return List.of("choices[0].completion_message.content");
