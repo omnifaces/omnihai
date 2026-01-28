@@ -77,6 +77,11 @@ public class XAIService extends OpenAIService {
     }
 
     @Override
+    public boolean supportsStructuredOutput() {
+        return true; // Not version-bound, all xAI models support structured output since beginning.
+    }
+
+    @Override
     public boolean supportsOpenAIResponsesApi() {
         return getModelVersion().gte(GROK_4);
     }

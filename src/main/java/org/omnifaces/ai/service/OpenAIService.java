@@ -123,6 +123,11 @@ public class OpenAIService extends BaseAIService {
         return supportsOpenAIResponsesApi();
     }
 
+    @Override
+    public boolean supportsStructuredOutput() {
+        return getModelVersion().gte(GPT_4);
+    }
+
     /**
      * Returns only authorization bearer header with API key as value.
      */

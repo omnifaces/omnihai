@@ -72,12 +72,17 @@ public class OllamaAITextHandler extends BaseAITextHandler {
             optionsBuilder.add("top_p", options.getTopP());
         }
 
-        return Json.createObjectBuilder()
+        var payload = Json.createObjectBuilder()
             .add("model", service.getModelName())
             .add("messages", messages)
             .add("options", optionsBuilder)
-            .add("stream", false)
-            .build();
+            .add("stream", false);
+
+        if (options.getJsonSchema() != null) {
+            payload.add("format", options.getJsonSchema());
+        }
+
+        return payload.build();
     }
 
     @Override

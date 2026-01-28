@@ -12,6 +12,7 @@
  */
 package org.omnifaces.ai.service;
 
+import java.util.HashMap;
 import java.util.Map;
 
 import org.omnifaces.ai.AIConfig;
@@ -56,7 +57,11 @@ public class AnthropicAIService extends BaseAIService {
     private static final long serialVersionUID = 1L;
 
     private static final String ANTHROPIC_VERSION = "2023-06-01";
+    private static final String ANTHROPIC_BETA_STRUCTURED_OUTPUTS = "structured-outputs-2025-11-13";
+
     private static final AIModelVersion CLAUDE_3 = AIModelVersion.of("claude", 3);
+    private static final AIModelVersion CLAUDE_OPUS_4_1 = AIModelVersion.of("claude-opus", 4, 1);
+    private static final AIModelVersion CLAUDE_SONNET_4_5 = AIModelVersion.of("claude-sonnet", 4, 5);
 
     /**
      * Constructs an Anthropic AI service with the specified configuration.
@@ -82,8 +87,21 @@ public class AnthropicAIService extends BaseAIService {
     }
 
     @Override
+    public boolean supportsStructuredOutput() {
+        return getModelVersion().gte(CLAUDE_OPUS_4_1) || getModelVersion().gte(CLAUDE_SONNET_4_5);
+    }
+
+    @Override
     protected Map<String, String> getRequestHeaders() {
-        return Map.of("x-api-key", apiKey, "anthropic-version", ANTHROPIC_VERSION);
+        var headers = Map.of("x-api-key", apiKey, "anthropic-version", ANTHROPIC_VERSION);
+
+        if (supportsStructuredOutput()) {
+            var map = new HashMap<>(headers);
+            map.put("anthropic-beta", ANTHROPIC_BETA_STRUCTURED_OUTPUTS);
+            headers = Map.copyOf(map);
+        }
+
+        return headers;
     }
 
     @Override

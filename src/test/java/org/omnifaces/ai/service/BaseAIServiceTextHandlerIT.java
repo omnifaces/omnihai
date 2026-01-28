@@ -18,6 +18,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
+import org.omnifaces.ai.model.ModerationOptions.Category;
 
 /**
  * Base class for IT on text-analyzer-related methods of AI service.
@@ -80,5 +81,27 @@ abstract class BaseAIServiceTextHandlerIT extends AIServiceIT {
         var response = service.translate("<section style='color:blauw'>De kat #{boon.werkwoord} op de stoel.</section><script>{'sleutel':'waarde'}</script>", null, "en");
         log(response);
         assertEquals("<section style='color:blauw'>The cat #{boon.werkwoord} on the chair.</section><script>{'sleutel':'waarde'}</script>", response);
+    }
+
+    @Test
+    void moderateContentSafe() {
+        var response = service.moderateContent("The quick brown fox jumps over the lazy dog near the river.");
+        log(response.toString());
+        assertFalse(response.isFlagged());
+    }
+
+    @Test
+    void moderateContentFlagged() {
+        var response = service.moderateContent("I will hunt you down and make you pay for what you did.");
+        log(response.toString());
+        var violenceScore = response.getScores().get(Category.VIOLENCE.name().toLowerCase());
+        var harassmentScore = response.getScores().get(Category.HARASSMENT.name().toLowerCase());
+        assertAll(
+            () -> assertTrue(response.isFlagged()),
+            () -> assertTrue(violenceScore != null),
+            () -> assertTrue(violenceScore > 0.5, violenceScore + " is above half"),
+            () -> assertTrue(harassmentScore != null),
+            () -> assertTrue(harassmentScore > 0.5, harassmentScore + " is above half")
+        );
     }
 }

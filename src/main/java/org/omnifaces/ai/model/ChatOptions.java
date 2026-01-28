@@ -14,6 +14,8 @@ package org.omnifaces.ai.model;
 
 import java.io.Serializable;
 
+import jakarta.json.JsonObject;
+
 /**
  * Options for chat-based AI interactions.
  * <p>
@@ -52,12 +54,15 @@ public class ChatOptions implements Serializable {
     private final Integer maxTokens;
     /** The Top-P value. */
     private final double topP;
+    /** The JSON schema for structured output. */
+    private final JsonObject jsonSchema;
 
     private ChatOptions(Builder builder) {
         this.systemPrompt = builder.systemPrompt;
         this.temperature = builder.temperature;
         this.maxTokens = builder.maxTokens;
         this.topP = builder.topP;
+        this.jsonSchema = builder.jsonSchema;
     }
 
     /**
@@ -116,6 +121,37 @@ public class ChatOptions implements Serializable {
     }
 
     /**
+     * Gets the JSON schema for structured output. Defaults to {@code null}.
+     * <p>
+     * When set, the AI model is instructed to return a response that conforms to this JSON schema.
+     * This is useful for ensuring the model returns valid, parseable JSON in a specific format.
+     * <p>
+     * The schema should follow the JSON Schema specification. For example:
+     * <pre>
+     * {
+     *   "name": "response_schema",
+     *   "strict": true,
+     *   "schema": {
+     *     "type": "object",
+     *     "properties": {
+     *       "field": { "type": "string" }
+     *     },
+     *     "required": ["field"],
+     *     "additionalProperties": false
+     *   }
+     * }
+     * </pre>
+     * <p>
+     * Note: Not all AI providers support JSON schema enforcement. When unsupported, the schema may be ignored
+     * or the provider may fall back to prompt-based guidance.
+     *
+     * @return The JSON schema object, or {@code null} if no schema is defined.
+     */
+    public JsonObject getJsonSchema() {
+        return jsonSchema;
+    }
+
+    /**
      * Creates a new builder for constructing {@link ChatOptions} instances. For example:
      * <pre>
      * ChatOptions options = ChatOptions.newBuilder()
@@ -141,6 +177,7 @@ public class ChatOptions implements Serializable {
         private double temperature = ChatOptions.DEFAULT_TEMPERATURE;
         private Integer maxTokens = null;
         private double topP = ChatOptions.DEFAULT_TOP_P;
+        private JsonObject jsonSchema = null;
 
         private Builder() {}
 
@@ -220,6 +257,39 @@ public class ChatOptions implements Serializable {
             }
 
             this.topP = topP;
+            return this;
+        }
+
+        /**
+         * Sets the JSON schema for structured output. Defaults to {@code null}.
+         * <p>
+         * When set, the AI model is instructed to return a response that conforms to this JSON schema.
+         * This is useful for ensuring the model returns valid, parseable JSON in a specific format.
+         * <p>
+         * The schema should follow the JSON Schema specification. For example:
+         * <pre>
+         * {
+         *   "name": "response_schema",
+         *   "strict": true,
+         *   "schema": {
+         *     "type": "object",
+         *     "properties": {
+         *       "field": { "type": "string" }
+         *     },
+         *     "required": ["field"],
+         *     "additionalProperties": false
+         *   }
+         * }
+         * </pre>
+         * <p>
+         * Note: Not all AI providers support JSON schema enforcement. When unsupported, the schema may be ignored
+         * or the provider may fall back to prompt-based guidance.
+         *
+         * @param jsonSchema The JSON schema object. Can be {@code null}.
+         * @return This builder instance for chaining.
+         */
+        public Builder jsonSchema(JsonObject jsonSchema) {
+            this.jsonSchema = jsonSchema;
             return this;
         }
 

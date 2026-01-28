@@ -154,7 +154,7 @@ public abstract class BaseAIService implements AIService {
     @Override
     public CompletableFuture<Void> chatStream(ChatInput input, ChatOptions options, Consumer<String> onToken) {
         if (!supportsStreaming()) {
-            throw new UnsupportedOperationException("supportsStreaming() returned false, so ...");
+            throw new UnsupportedOperationException("service.supportsStreaming() returned false, so ...");
         }
 
         var neededForStackTrace = new Exception("Async chat streaming failed");
@@ -230,7 +230,8 @@ public abstract class BaseAIService implements AIService {
         }
 
         var chatOptions = ChatOptions.newBuilder()
-            .systemPrompt(textHandler.buildModerateContentPrompt(options))
+            .systemPrompt(textHandler.buildModerationPrompt(options))
+            .jsonSchema(textHandler.buildModerationJsonSchema(options))
             .temperature(0.1)
             .build();
 

@@ -128,15 +128,6 @@ public interface AITextHandler extends Serializable {
      */
     String buildDetectLanguagePrompt();
 
-
-    /**
-     * Builds the system prompt for {@link AIService#moderateContent(String, ModerationOptions)} and {@link AIService#moderateContentAsync(String, ModerationOptions)}.
-     *
-     * @param options Moderation options containing categories and threshold.
-     * @return The system prompt.
-     */
-    String buildModerateContentPrompt(ModerationOptions options);
-
     /**
      * Parses message content from the API response body returned by chat operation.
      *
@@ -145,6 +136,38 @@ public interface AITextHandler extends Serializable {
      * @throws AIResponseException If the response cannot be parsed as JSON, contains an error object, or is missing expected message content.
      */
     String parseChatResponse(String responseBody) throws AIResponseException;
+
+    /**
+     * Builds the system prompt for {@link AIService#moderateContent(String, ModerationOptions)} and {@link AIService#moderateContentAsync(String, ModerationOptions)}.
+     *
+     * @param options Moderation options containing categories and threshold.
+     * @return The system prompt.
+     */
+    String buildModerationPrompt(ModerationOptions options);
+
+    /**
+     * Builds the JSON schema for structured output by {@link AIService#moderateContent(String, ModerationOptions)} and {@link AIService#moderateContentAsync(String, ModerationOptions)}.
+     * <p>
+     * The returned schema enforces that the AI model returns a valid JSON object with a {@code scores} property
+     * containing numeric values (0.0-1.0) for each category specified in the moderation options.
+     * <p>
+     * Example output when used:
+     * <pre>
+     * {
+     *   "scores": {
+     *     "sexual": 0.1,
+     *     "violence": 0.0,
+     *     "hate": 0.2
+     *   }
+     * }
+     * </pre>
+     *
+     * @param options Moderation options containing categories to include in the schema.
+     * @return The JSON schema object for moderation response format.
+     * @see AIService#moderateContent(String, ModerationOptions)
+     * @see AIService#moderateContentAsync(String, ModerationOptions)
+     */
+    JsonObject buildModerationJsonSchema(ModerationOptions options);
 
     /**
      * Parses the moderation result from response returned by {@link AIService#moderateContent(String, ModerationOptions)} and {@link AIService#moderateContentAsync(String, ModerationOptions)}.

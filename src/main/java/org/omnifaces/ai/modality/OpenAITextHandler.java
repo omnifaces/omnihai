@@ -31,6 +31,7 @@ import org.omnifaces.ai.exception.AIResponseException;
 import org.omnifaces.ai.exception.AITokenLimitExceededException;
 import org.omnifaces.ai.model.ChatInput;
 import org.omnifaces.ai.model.ChatOptions;
+import org.omnifaces.ai.model.ModerationOptions;
 import org.omnifaces.ai.model.Sse.Event;
 import org.omnifaces.ai.service.OpenAIService;
 
@@ -98,7 +99,7 @@ public class OpenAITextHandler extends BaseAITextHandler {
 
         if (streaming) {
             if (!service.supportsStreaming()) {
-                throw new IllegalStateException();
+                throw new UnsupportedOperationException("service.supportsStreaming() returned false, so ...");
             }
 
             payload.add("stream", true);
@@ -112,7 +113,45 @@ public class OpenAITextHandler extends BaseAITextHandler {
             payload.add("top_p", options.getTopP());
         }
 
+        if (options.getJsonSchema() != null) {
+            if (!service.supportsStructuredOutput()) {
+                throw new UnsupportedOperationException("service.supportsStructuredOutput() returned false, so ...");
+            }
+
+            if (supportsResponsesApi) {
+                var format = Json.createObjectBuilder().add("type", "json_schema");
+                options.getJsonSchema().forEach(format::add);
+                payload.add("text", Json.createObjectBuilder().add("format", format));
+            }
+            else {
+                payload.add("response_format", Json.createObjectBuilder()
+                    .add("type", "json_schema")
+                    .add("json_schema", options.getJsonSchema()));
+            }
+        }
+
         return payload.build();
+    }
+
+    @Override
+    public JsonObject buildModerationJsonSchema(ModerationOptions options) {
+        var baseSchema = super.buildModerationJsonSchema(options);
+        var scoresSchema = baseSchema.getJsonObject("properties").getJsonObject("scores");
+
+        var strictScoresSchema = Json.createObjectBuilder(scoresSchema)
+            .add("additionalProperties", false);
+
+        var strictSchema = Json.createObjectBuilder()
+            .add("type", "object")
+            .add("properties", Json.createObjectBuilder().add("scores", strictScoresSchema))
+            .add("required", baseSchema.getJsonArray("required"))
+            .add("additionalProperties", false);
+
+        return Json.createObjectBuilder()
+            .add("name", "moderation_result")
+            .add("strict", true)
+            .add("schema", strictSchema)
+            .build();
     }
 
     @Override

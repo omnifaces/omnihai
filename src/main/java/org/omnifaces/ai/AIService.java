@@ -812,6 +812,15 @@ public interface AIService extends Serializable {
     }
 
     /**
+     * Returns whether this AI service implementation supports structured (JSON schema) outputs.
+     * The default implementation returns false.
+     * @return Whether this AI service implementation supports structured (JSON schema) outputs.
+     */
+    default boolean supportsStructuredOutput() {
+        return false;
+    }
+
+    /**
      * Checks whether the given modality is supported by this AI service, which is usually determined by
      * {@link #getModelName()} or {@link #getModelVersion()}.
      * <p>

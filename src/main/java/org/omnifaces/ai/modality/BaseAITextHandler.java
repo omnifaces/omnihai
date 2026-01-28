@@ -133,10 +133,7 @@ public abstract class BaseAITextHandler implements AITextHandler {
     }
 
     @Override
-    public String buildModerateContentPrompt(ModerationOptions options) {
-        var scores = Json.createObjectBuilder();
-        options.getCategories().forEach(category -> scores.add(category, 0.0));
-        var scoresTemplateString = Json.createObjectBuilder().add("scores", scores).build().toString();
+    public String buildModerationPrompt(ModerationOptions options) {
         return """
             You are a strict content moderation model whose only task is to evaluate safety violations.
             Categories to evaluate:
@@ -152,12 +149,29 @@ public abstract class BaseAITextHandler implements AITextHandler {
             2. For each category, decide whether it applies
             3. Assign a score using the scale above
             4. Be objective; do not over-react to fictional, humorous, historical, or artistic context unless it clearly promotes harm
-            JSON template:
-            %s
-            Output format:
-            - Return ONLY valid JSON using the JSON template with scores substituted.
-            - No explanations, no notes, no extra text, no markdown formatting.
-        """.formatted(String.join(", ", options.getCategories()), scoresTemplateString);
+        """.formatted(String.join(", ", options.getCategories()));
+    }
+
+    @Override
+    public JsonObject buildModerationJsonSchema(ModerationOptions options) {
+        var categoryProperties = Json.createObjectBuilder();
+        var requiredCategories = Json.createArrayBuilder();
+
+        for (var category : options.getCategories()) {
+            categoryProperties.add(category, Json.createObjectBuilder().add("type", "number"));
+            requiredCategories.add(category);
+        }
+
+        var scoresSchema = Json.createObjectBuilder()
+            .add("type", "object")
+            .add("properties", categoryProperties)
+            .add("required", requiredCategories);
+
+        return Json.createObjectBuilder()
+            .add("type", "object")
+            .add("properties", Json.createObjectBuilder().add("scores", scoresSchema))
+            .add("required", Json.createArrayBuilder().add("scores"))
+            .build();
     }
 
 

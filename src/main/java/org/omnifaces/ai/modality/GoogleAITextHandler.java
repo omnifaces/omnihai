@@ -87,6 +87,16 @@ public class GoogleAITextHandler extends BaseAITextHandler {
             generationConfig.add("topP", options.getTopP());
         }
 
+        if (options.getJsonSchema() != null) {
+            if (!service.supportsStructuredOutput()) {
+                throw new UnsupportedOperationException("service.supportsStructuredOutput() returned false, so ...");
+            }
+
+            generationConfig
+                .add("responseMimeType", "application/json")
+                .add("responseSchema", options.getJsonSchema());
+        }
+
         return payload
             .add("generationConfig", generationConfig)
             .build();

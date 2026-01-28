@@ -82,4 +82,14 @@ public class OllamaAIService extends BaseAIService {
     protected String getChatPath(boolean streaming) {
         return "api/chat";
     }
+
+    @Override
+    public boolean supportsStreaming() {
+        return false;
+    }
+
+    @Override
+    public boolean supportsStructuredOutput() {
+        return true;
+    }
 }

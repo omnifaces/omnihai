@@ -16,6 +16,7 @@ import java.net.URI;
 
 import org.omnifaces.ai.AIConfig;
 import org.omnifaces.ai.AIModality;
+import org.omnifaces.ai.AIModelVersion;
 import org.omnifaces.ai.AIProvider;
 import org.omnifaces.ai.AIService;
 import org.omnifaces.ai.modality.GoogleAIImageHandler;
@@ -54,6 +55,8 @@ public class GoogleAIService extends BaseAIService {
 
     private static final long serialVersionUID = 1L;
 
+    private static final AIModelVersion GEMINI_2 = AIModelVersion.of("gemini", 2);
+
     /**
      * Constructs a Google AI service with the specified configuration.
      *
@@ -82,6 +85,11 @@ public class GoogleAIService extends BaseAIService {
     @Override
     public boolean supportsStreaming() {
         return true; // Not version-bound, all Google AI models support streaming since beginning.
+    }
+
+    @Override
+    public boolean supportsStructuredOutput() {
+        return getModelVersion().gte(GEMINI_2);
     }
 
     @Override
