@@ -19,6 +19,7 @@ import org.omnifaces.ai.modality.AnthropicAIImageHandler;
 import org.omnifaces.ai.modality.AnthropicAITextHandler;
 import org.omnifaces.ai.modality.GoogleAIImageHandler;
 import org.omnifaces.ai.modality.GoogleAITextHandler;
+import org.omnifaces.ai.modality.MetaAITextHandler;
 import org.omnifaces.ai.modality.OllamaAIImageHandler;
 import org.omnifaces.ai.modality.OllamaAITextHandler;
 import org.omnifaces.ai.modality.OpenAIImageHandler;
@@ -118,7 +119,7 @@ public enum AIProvider {
      * @see <a href="https://llama.developer.meta.com/docs/api-keys/">Manage Meta AI API Keys</a>
      * @see <a href="https://llama.developer.meta.com/docs/models/">Available Meta AI Models</a>
      */
-    META("Meta AI", MetaAIService.class, true, "Llama-4-Scout-17B-16E-Instruct-FP8", "https://api.llama.com/v1", OpenAITextHandler.class, OpenAIImageHandler.class),
+    META("Meta AI", MetaAIService.class, true, "Llama-4-Scout-17B-16E-Instruct-FP8", "https://api.llama.com/v1", MetaAITextHandler.class, OpenAIImageHandler.class),
 
     /**
      * Azure OpenAI: Aggregates a broad range of AI models via a unified OpenAI-compatible API.
