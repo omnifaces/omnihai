@@ -1,5 +1,5 @@
 [![Maven](https://img.shields.io/maven-central/v/org.omnifaces/omniai)](https://search.maven.org/artifact/org.omnifaces/omniai)
-[![Javadoc](http://javadoc.io/badge/org.omnifaces/omniai.svg)](http://javadoc.io/doc/org.omnifaces/omniai) 
+[![Javadoc](https://javadoc.io/badge/org.omnifaces/omniai.svg)](https://javadoc.io/doc/org.omnifaces/omniai) 
 
 # OmniAI
 
