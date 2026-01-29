@@ -87,9 +87,7 @@ public class OpenAITextHandler extends BaseAITextHandler {
         }
 
         if (!input.getDocuments().isEmpty()) {
-            if (!service.supportsFileUpload()) {
-                throw new UnsupportedOperationException("File upload is not supported by " + service.getName());
-            }
+            checkSupportsFileUpload(service);
 
             for (var document : input.getDocuments()) {
                 var fileId = service.upload(document);
@@ -111,10 +109,7 @@ public class OpenAITextHandler extends BaseAITextHandler {
         payload.add(supportsResponsesApi ? "input" : "messages", message);
 
         if (streaming) {
-            if (!service.supportsStreaming()) {
-                throw new UnsupportedOperationException("Streaming is not supported by " + service.getName());
-            }
-
+            checkSupportsStreaming(service);
             payload.add("stream", true);
         }
 
@@ -127,9 +122,7 @@ public class OpenAITextHandler extends BaseAITextHandler {
         }
 
         if (options.getJsonSchema() != null) {
-            if (!service.supportsStructuredOutput()) {
-                throw new UnsupportedOperationException("Structured output is not supported by " + service.getName());
-            }
+            checkSupportsStructuredOutput(service);
 
             var strictSchema = Json.createObjectBuilder()
                 .add("name", "response_schema")

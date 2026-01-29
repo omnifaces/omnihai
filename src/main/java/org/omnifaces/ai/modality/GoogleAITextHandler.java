@@ -19,7 +19,6 @@ import static org.omnifaces.ai.model.Sse.Event.Type.DATA;
 
 import java.util.List;
 import java.util.function.Consumer;
-import java.util.logging.Logger;
 
 import jakarta.json.Json;
 import jakarta.json.JsonObject;
@@ -42,8 +41,6 @@ public class GoogleAITextHandler extends BaseAITextHandler {
 
     private static final long serialVersionUID = 1L;
 
-    private static final Logger logger = Logger.getLogger(GoogleAITextHandler.class.getPackageName());
-
     @Override
     public JsonObject buildChatPayload(AIService service, ChatInput input, ChatOptions options, boolean streaming) {
         var payload = Json.createObjectBuilder();
@@ -65,9 +62,7 @@ public class GoogleAITextHandler extends BaseAITextHandler {
         }
 
         if (!input.getDocuments().isEmpty()) {
-            if (!service.supportsFileUpload()) {
-                throw new UnsupportedOperationException("File upload is not supported by " + service.getName());
-            }
+            checkSupportsFileUpload(service);
 
             for (var document : input.getDocuments()) {
                 var fileId = service.upload(document);
@@ -99,10 +94,7 @@ public class GoogleAITextHandler extends BaseAITextHandler {
         }
 
         if (options.getJsonSchema() != null) {
-            if (!service.supportsStructuredOutput()) {
-                throw new UnsupportedOperationException("Structured output is not supported by " + service.getName());
-            }
-
+            checkSupportsStructuredOutput(service);
             generationConfig
                 .add("responseMimeType", "application/json")
                 .add("responseSchema", options.getJsonSchema());

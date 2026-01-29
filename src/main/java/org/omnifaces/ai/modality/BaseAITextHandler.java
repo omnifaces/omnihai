@@ -313,4 +313,40 @@ public abstract class BaseAITextHandler implements AITextHandler {
 
         return processor.test(json);
     }
+
+    /**
+     * Validates that the given service supports streaming.
+     *
+     * @param service The AI service to check.
+     * @throws UnsupportedOperationException if streaming is not supported.
+     */
+    static void checkSupportsStreaming(AIService service) {
+        if (!service.supportsStreaming()) {
+            throw new UnsupportedOperationException("Streaming is not supported by " + service.getName());
+        }
+    }
+
+    /**
+     * Validates that the given service supports file uploads.
+     *
+     * @param service The AI service to check.
+     * @throws UnsupportedOperationException if file upload is not supported.
+     */
+    static void checkSupportsFileUpload(AIService service) {
+        if (!service.supportsFileUpload()) {
+            throw new UnsupportedOperationException("File upload is not supported by " + service.getName());
+        }
+    }
+
+    /**
+     * Validates that the given service supports structured (JSON schema) output.
+     *
+     * @param service The AI service to check.
+     * @throws UnsupportedOperationException if structured output is not supported.
+     */
+    static void checkSupportsStructuredOutput(AIService service) {
+        if (!service.supportsStructuredOutput()) {
+            throw new UnsupportedOperationException("Structured output is not supported by " + service.getName());
+        }
+    }
 }

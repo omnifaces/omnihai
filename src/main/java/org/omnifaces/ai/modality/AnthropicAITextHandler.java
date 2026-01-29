@@ -72,9 +72,7 @@ public class AnthropicAITextHandler extends BaseAITextHandler {
         }
 
         if (!input.getDocuments().isEmpty()) {
-            if (!service.supportsFileUpload()) {
-                throw new UnsupportedOperationException("File upload is not supported by " + service.getName());
-            }
+            checkSupportsFileUpload(service);
 
             for (var document : input.getDocuments()) {
                 var fileId = service.upload(document);
@@ -97,10 +95,7 @@ public class AnthropicAITextHandler extends BaseAITextHandler {
                 .add("content", content)));
 
         if (streaming) {
-            if (!service.supportsStreaming()) {
-                throw new UnsupportedOperationException("Streaming is not supported by " + service.getName());
-            }
-
+            checkSupportsStreaming(service);
             payload.add("stream", true);
         }
 
@@ -113,10 +108,7 @@ public class AnthropicAITextHandler extends BaseAITextHandler {
         }
 
         if (options.getJsonSchema() != null) {
-            if (!service.supportsStructuredOutput()) {
-                throw new UnsupportedOperationException("Structured output is not supported by " + service.getName());
-            }
-
+            checkSupportsStructuredOutput(service);
             payload.add("output_format", Json.createObjectBuilder()
                 .add("type", "json_schema")
                 .add("schema", addStrictAdditionalProperties(options.getJsonSchema())));
