@@ -14,6 +14,7 @@ package org.omnifaces.ai;
 
 import java.io.Serializable;
 
+import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.json.JsonObject;
 
 import org.omnifaces.ai.exception.AIResponseException;
@@ -29,6 +30,8 @@ import org.omnifaces.ai.model.GenerateImageOptions;
  * <li>alt-text generation</li>
  * <li>image generation</li>
  * </ul>
+ * <p>
+ * The implementations must be stateless and able to be {@link ApplicationScoped}.
  *
  * @author Bauke Scholtz
  * @since 1.0
