@@ -144,8 +144,8 @@ final class AIApiClient {
     }
 
     private HttpRequest newUploadRequest(BaseAIService service, String path, Document document, String accept) {
-        var upload = MultipartBodyPublisher.of(document.fileName(), document.content());
-        return newRequest(service, path, MULTIPART_FORM_DATA + "; boundary=" + upload.boundary, accept, upload.body);
+        var multipart = MultipartBodyPublisher.of(document);
+        return newRequest(service, path, MULTIPART_FORM_DATA + "; boundary=" + multipart.boundary, accept, multipart.body);
     }
 
     private HttpRequest newRequest(BaseAIService service, String path, String contentType, String accept, BodyPublisher body) {
@@ -310,38 +310,40 @@ final class AIApiClient {
         private final BodyPublisher body;
         private final String boundary;
 
-        private MultipartBodyPublisher(String filename, byte[] data) {
+        private MultipartBodyPublisher(Document document) {
             this.boundary = "----OmniAIBoundary" + System.currentTimeMillis();
 
-            try {
-                var boundary = "----OmniAIBoundary" + System.currentTimeMillis();
-                var byteStream = new ByteArrayOutputStream();
-                writePart(byteStream, "purpose", "assistants");
-                writeFilePart(byteStream, "file", filename, "application/pdf", data);
-                byteStream.write(("--" + boundary + "--\r\n").getBytes(UTF_8));
-                body = HttpRequest.BodyPublishers.ofByteArray(byteStream.toByteArray());
+            try (var os = new ByteArrayOutputStream()) {
+                writeTextPart(os, "purpose", "assistants");
+                writeFilePart(os, "file", document.fileName(), document.mediaType(), document.content());
+                writeLine(os, "--" + boundary + "--");
+                body = HttpRequest.BodyPublishers.ofByteArray(os.toByteArray());
             }
             catch (IOException e) {
-                throw new AIException("Cannot prepare multipart/form-data request for " + filename, e);
+                throw new AIException("Cannot prepare multipart/form-data request for " + document.fileName(), e);
             }
         }
 
-        public static MultipartBodyPublisher of(String filename, byte[] data) {
-            return new MultipartBodyPublisher(filename, data);
+        public static MultipartBodyPublisher of(Document document) {
+            return new MultipartBodyPublisher(document);
         }
 
-        private void writePart(OutputStream os, String name, String value) throws IOException {
-            os.write(("--" + boundary + "\r\n").getBytes(UTF_8));
-            os.write(("Content-Disposition: form-data; name=\"" + name + "\"\r\n\r\n").getBytes(UTF_8));
-            os.write((value + "\r\n").getBytes(UTF_8));
+        private void writeTextPart(OutputStream os, String name, String value) throws IOException {
+            writeLine(os, "--" + boundary);
+            writeLine(os, "Content-Disposition: form-data; name=\"" + name + "\"\r\n");
+            writeLine(os, value);
         }
 
         private void writeFilePart(OutputStream os, String name, String filename, String contentType, byte[] data) throws IOException {
-            os.write(("--" + boundary + "\r\n").getBytes(UTF_8));
-            os.write(("Content-Disposition: form-data; name=\"" + name + "\"; filename=\"" + filename + "\"\r\n").getBytes(UTF_8));
-            os.write(("Content-Type: " + contentType + "\r\n\r\n").getBytes(UTF_8));
+            writeLine(os, "--" + boundary);
+            writeLine(os, "Content-Disposition: form-data; name=\"" + name + "\"; filename=\"" + filename + "\"");
+            writeLine(os, "Content-Type: " + contentType + "\r\n");
             os.write(data);
-            os.write("\r\n".getBytes(UTF_8));
+            writeLine(os, "");
+        }
+
+        private static void writeLine(OutputStream os, String line) throws IOException {
+            os.write((line + "\r\n").getBytes(UTF_8));
         }
     }
 }

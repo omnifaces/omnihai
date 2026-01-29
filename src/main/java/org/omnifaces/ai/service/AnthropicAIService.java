@@ -12,6 +12,7 @@
  */
 package org.omnifaces.ai.service;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -99,21 +100,22 @@ public class AnthropicAIService extends BaseAIService {
 
     @Override
     protected Map<String, String> getRequestHeaders() {
-        var headers = Map.of("x-api-key", apiKey, "anthropic-version", ANTHROPIC_VERSION);
+        var headers = new HashMap<>(Map.of("x-api-key", apiKey, "anthropic-version", ANTHROPIC_VERSION));
+        var betas = new ArrayList<String>();
 
         if (supportsFileUpload()) {
-            var map = new HashMap<>(headers);
-            map.put("anthropic-beta", ANTHROPIC_BETA_FILES_API);
-            headers = Map.copyOf(map);
+            betas.add(ANTHROPIC_BETA_FILES_API);
         }
 
         if (supportsStructuredOutput()) {
-            var map = new HashMap<>(headers);
-            map.put("anthropic-beta", ANTHROPIC_BETA_STRUCTURED_OUTPUTS);
-            headers = Map.copyOf(map);
+            betas.add(ANTHROPIC_BETA_STRUCTURED_OUTPUTS);
         }
 
-        return headers;
+        if (!betas.isEmpty()) {
+            headers.put("anthropic-beta", String.join(",", betas));
+        }
+
+        return Map.copyOf(headers);
     }
 
     @Override
