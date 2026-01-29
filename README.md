@@ -82,13 +82,13 @@ private AIService claude;
 // Use EL expressions for dynamic configuration
 @Inject
 @AI(provider = AIProvider.OPENAI,
-    apiKey = "#{initParam['com.example.OPENAI_KEY']}")
+    apiKey = "#{initParam['com.example.OPENAI_API_KEY']}")
 private AIService gpt;
 
-// With custom system prompt
+// With MicroProfile config expressions and custom system prompt
 @Inject
 @AI(provider = AIProvider.GOOGLE,
-    apiKey = "#{configBean.googleApiKey}",
+    apiKey = "${config:google.api-key}",
     prompt = "You are a helpful assistant specialized in Jakarta EE.")
 private AIService jakartaExpert;
 
@@ -324,7 +324,8 @@ private AIService trackedService;
 | Aspect | OmniAI | LangChain4J-CDI | Spring AI |
 |--------|--------|-----------------|-----------|
 | **Injection Style** | `@Inject @AI(...)` | `@Inject` + config | `@Autowired` + beans |
-| **EL Support** | ✅ `#{...}` expressions | ❌ | ❌ (SpEL different) |
+| **EL Support** | ✅ `#{...}` expressions | ❌ | ❌ (SpEL, different) |
+| **MP Config Support** | ✅ `${config:...}` | ❌ | ❌ (SpEL, different) |
 | **Zero Config** | ❌ | ❌ | ❌ |
 | **Qualifier-based** | ✅ | ❌ | ❌ |
 
