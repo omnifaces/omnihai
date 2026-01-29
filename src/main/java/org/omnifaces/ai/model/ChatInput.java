@@ -13,23 +13,23 @@
 package org.omnifaces.ai.model;
 
 import static java.util.Collections.unmodifiableList;
+import static org.omnifaces.ai.helper.DocumentHelper.encodeBase64;
+import static org.omnifaces.ai.helper.DocumentHelper.guessMediaType;
+import static org.omnifaces.ai.helper.DocumentHelper.toDataUri;
 import static org.omnifaces.ai.helper.ImageHelper.isSupportedImage;
 import static org.omnifaces.ai.helper.ImageHelper.sanitizeImage;
 import static org.omnifaces.ai.helper.ImageHelper.toImageDataUri;
 import static org.omnifaces.ai.helper.ImageHelper.toImageMediaType;
-import static org.omnifaces.ai.helper.TextHelper.encodeBase64;
 import static org.omnifaces.ai.helper.TextHelper.requireNonBlank;
 
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.omnifaces.ai.exception.AIException;
-
 /**
  * Input for chat-based AI interactions.
  * <p>
- * This class encapsulates the user input for AI chat operations, including the text message and optional images.
+ * This class encapsulates the user input for AI chat operations, including the text message and optional file attachments (images and documents).
  *
  * @author Bauke Scholtz
  * @since 1.0
@@ -40,25 +40,55 @@ public class ChatInput implements Serializable {
 
     /**
      * Represents an attached image.
-     * @param mediaType The image media type.
-     * @param content The image content.
+     *
+     * @param mediaType The image media type (e.g., "image/png").
+     * @param content The image content bytes.
      */
     public final record Image(String mediaType, byte[] content) implements Serializable {
 
         /**
+         * Returns the image content as a Base64 encoded string.
          *
-         * @return
+         * @return The Base64 encoded image content.
          */
         public String base64() {
             return encodeBase64(content);
         }
 
         /**
+         * Returns the image as a data URI.
          *
-         * @return
+         * @return The data URI string in the format {@code data:<media-type>;base64,<data>}.
          */
         public String dataUri() {
             return toImageDataUri(content);
+        }
+    }
+
+    /**
+     * Represents an attached document.
+     *
+     * @param mediaType The document media type (e.g., "application/pdf").
+     * @param content The document content bytes.
+     */
+    public final record Document(String mediaType, byte[] content) implements Serializable {
+
+        /**
+         * Returns the document content as a Base64 encoded string.
+         *
+         * @return The Base64 encoded document content.
+         */
+        public String base64() {
+            return encodeBase64(content);
+        }
+
+        /**
+         * Returns the document as a data URI.
+         *
+         * @return The data URI string in the format {@code data:<media-type>;base64,<data>}.
+         */
+        public String dataUri() {
+            return toDataUri(content);
         }
     }
 
@@ -66,10 +96,13 @@ public class ChatInput implements Serializable {
     private final String message;
     /** The images. */
     private final List<Image> images;
+    /** The documents. */
+    private final List<Document> documents;
 
     private ChatInput(Builder builder) {
         this.message = builder.message;
         this.images = unmodifiableList(builder.images);
+        this.documents = unmodifiableList(builder.documents);
     }
 
     /**
@@ -91,11 +124,20 @@ public class ChatInput implements Serializable {
     }
 
     /**
+     * Gets the list of documents associated with this input.
+     *
+     * @return An unmodifiable list of documents, or an empty list if no documents are attached.
+     */
+    public List<Document> getDocuments() {
+        return documents;
+    }
+
+    /**
      * Creates a new builder for constructing {@link ChatInput} instances. For example:
      * <pre>
      * ChatInput input = ChatInput.newBuilder()
      *     .message("What do you see in these images?")
-     *     .images(imageBytes1, imageBytes2)
+     *     .attach(image1, image2)
      *     .build();
      * </pre>
      *
@@ -113,6 +155,7 @@ public class ChatInput implements Serializable {
     public static class Builder {
         private String message;
         private List<Image> images = new ArrayList<>();
+        private List<Document> documents = new ArrayList<>();
 
         private Builder() {}
 
@@ -128,13 +171,16 @@ public class ChatInput implements Serializable {
         }
 
         /**
-         * Attaches the files for this input.
+         * Attaches files to this input.
          * <p>
-         * Each file should be provided as a byte array containing the data.
+         * Files are automatically classified based on their content:
+         * <ul>
+         *   <li>Supported image formats (JPEG, PNG, GIF, BMP, WEBP) are added as images and sanitized for AI compatibility.</li>
+         *   <li>All other files are added as documents with their media type auto-detected.</li>
+         * </ul>
          *
-         * @param files The files to attach.
+         * @param files The file content bytes to attach.
          * @return This builder instance for chaining.
-         * @throws AIException if the file's mime type is not supported.
          */
         public Builder attach(byte[]... files) {
             for (var file : files) {
@@ -143,7 +189,7 @@ public class ChatInput implements Serializable {
                     images.add(new Image(toImageMediaType(sanitized), sanitized));
                 }
                 else {
-                    throw new AIException("Unsupported file mime type.");
+                    documents.add(new Document(guessMediaType(file), file));
                 }
             }
 

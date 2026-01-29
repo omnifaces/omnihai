@@ -12,7 +12,8 @@
  */
 package org.omnifaces.ai.helper;
 
-import static org.omnifaces.ai.helper.TextHelper.encodeBase64;
+import static org.omnifaces.ai.helper.DocumentHelper.startsWith;
+import static org.omnifaces.ai.helper.DocumentHelper.toDataUri;
 
 import java.awt.Color;
 import java.awt.image.BufferedImage;
@@ -35,6 +36,7 @@ import org.omnifaces.ai.exception.AIException;
  */
 public final class ImageHelper {
 
+    // Media types.
     private static final String JPEG_MEDIA_TYPE = "image/jpeg";
     private static final String PNG_MEDIA_TYPE = "image/png";
     private static final String GIF_MEDIA_TYPE = "image/gif";
@@ -85,8 +87,8 @@ public final class ImageHelper {
     /**
      * Guesses the media type of an image based on its magic bytes.
      *
-     * @param content The image bytes.
-     * @return An {@link Optional} containing the media type if recognized, or empty if not.
+     * @param content The content bytes to check.
+     * @return An {@link Optional} containing the media type if recognized as an image, or empty if not.
      */
     public static Optional<String> guessImageMediaType(byte[] content) {
         for (var mediaType : MEDIA_TYPES.entrySet()) {
@@ -108,20 +110,6 @@ public final class ImageHelper {
         return Optional.empty();
     }
 
-    private static boolean startsWith(byte[] content, int offset, byte[] prefix) {
-        if (content.length < offset + prefix.length) {
-            return false;
-        }
-
-        for (int i = 0; i < prefix.length; i++) {
-            if (content[offset + i] != prefix[i]) {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
     /**
      * Converts the given image bytes to a data URI.
      *
@@ -130,7 +118,7 @@ public final class ImageHelper {
      * @throws AIException when image format is not supported.
      */
     public static String toImageDataUri(byte[] image) {
-        return "data:" + toImageMediaType(image) + ";base64," + encodeBase64(image);
+        return toDataUri(toImageMediaType(image), image);
     }
 
     /**
