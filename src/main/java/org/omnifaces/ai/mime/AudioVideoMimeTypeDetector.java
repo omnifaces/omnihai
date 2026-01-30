@@ -94,7 +94,7 @@ public final class AudioVideoMimeTypeDetector {
      * @param content The content bytes to check.
      * @return An {@link Optional} containing the MIME type if recognized as audio/video, or empty if not.
      */
-    public static Optional<MimeType> guessAudioVideoMediaType(byte[] content) {
+    public static Optional<MimeType> guessAudioVideoMimeType(byte[] content) {
         if (content == null || content.length < 8) {
             return Optional.empty();
         }

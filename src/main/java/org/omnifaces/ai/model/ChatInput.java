@@ -15,7 +15,7 @@ package org.omnifaces.ai.model;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.unmodifiableList;
 import static org.omnifaces.ai.helper.TextHelper.requireNonBlank;
-import static org.omnifaces.ai.mime.AudioVideoMimeTypeDetector.guessAudioVideoMediaType;
+import static org.omnifaces.ai.mime.AudioVideoMimeTypeDetector.guessAudioVideoMimeType;
 import static org.omnifaces.ai.mime.DocumentMimeTypeDetector.guessDocumentMimeType;
 import static org.omnifaces.ai.mime.ImageMimeTypeDetector.guessImageMimeType;
 import static org.omnifaces.ai.mime.ImageMimeTypeDetector.isSupportedAsImageAttachment;
@@ -169,7 +169,7 @@ public class ChatInput implements Serializable {
         public Builder attach(byte[]... files) {
             for (var content : files) {
                 var mimeType = guessImageMimeType(content)
-                        .or(() -> guessAudioVideoMediaType(content))
+                        .or(() -> guessAudioVideoMimeType(content))
                         .orElseGet(() -> guessDocumentMimeType(content));
                 var isImage = isSupportedAsImageAttachment(mimeType);
                 var processedContent = isImage ? sanitizeImageAttachment(content) : content;
