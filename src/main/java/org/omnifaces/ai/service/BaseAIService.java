@@ -217,16 +217,6 @@ public abstract class BaseAIService implements AIService {
     // Text Translation Implementation (delegates to chat) ------------------------------------------------------------
 
     @Override
-    public CompletableFuture<String> translateAsync(String text, String sourceLang, String targetLang) throws AIException {
-        var options = ChatOptions.newBuilder()
-            .systemPrompt(textHandler.buildTranslatePrompt(sourceLang, requireNonBlank(targetLang, "target language")))
-            .temperature(0.1)
-            .build();
-
-        return chatAsync(requireNonBlank(text, "text"), options);
-    }
-
-    @Override
     public CompletableFuture<String> detectLanguageAsync(String text) throws AIException {
         var options = ChatOptions.newBuilder()
             .systemPrompt(textHandler.buildDetectLanguagePrompt())
@@ -240,6 +230,29 @@ public abstract class BaseAIService implements AIService {
 
             return response.strip().toLowerCase().replaceAll("[^a-z]", "");
         });
+    }
+
+    @Override
+    public CompletableFuture<String> translateAsync(String text, String sourceLang, String targetLang) throws AIException {
+        var options = ChatOptions.newBuilder()
+            .systemPrompt(textHandler.buildTranslatePrompt(sourceLang, requireNonBlank(targetLang, "target language")))
+            .temperature(0.1)
+            .build();
+
+        return chatAsync(requireNonBlank(text, "text"), options);
+    }
+
+
+    // Text Proofreading Implementation (delegates to chat) -----------------------------------------------------------
+
+    @Override
+    public CompletableFuture<String> proofreadAsync(String text) throws AIException {
+        var options = ChatOptions.newBuilder()
+            .systemPrompt(textHandler.buildProofreadPrompt())
+            .temperature(0.1)
+            .build();
+
+        return chatAsync(requireNonBlank(text, "text"), options);
     }
 
 

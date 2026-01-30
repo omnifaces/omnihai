@@ -19,7 +19,7 @@
  * <li>{@link org.omnifaces.ai.AIProvider} - enumeration of supported AI providers (OpenAI, Anthropic, Google, etc.)</li>
  * <li>{@link org.omnifaces.ai.AIConfig} - configuration interface for API keys, endpoints, and models</li>
  * <li>{@link org.omnifaces.ai.AIStrategy} - holder for custom text and image handler configuration</li>
- * <li>{@link org.omnifaces.ai.AIService} - unified interface for AI operations (chat, summarization, translation, moderation, image analysis/generation)</li>
+ * <li>{@link org.omnifaces.ai.AIService} - unified interface for AI operations (chat, summarization, translation, proofreading, moderation, image analysis/generation)</li>
  * <li>{@link org.omnifaces.ai.AIModality} - capabilities supported by AI providers (text input/output, image input/output, etc.)</li>
  * <li>{@link org.omnifaces.ai.AITextHandler} - customization point for text-based request/response handling</li>
  * <li>{@link org.omnifaces.ai.AIImageHandler} - customization point for image-based request/response handling</li>

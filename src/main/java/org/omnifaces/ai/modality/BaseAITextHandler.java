@@ -101,6 +101,17 @@ public abstract class BaseAITextHandler implements AITextHandler {
     }
 
     @Override
+    public String buildDetectLanguagePrompt() {
+        return """
+            You are a language detection expert.
+            Determine the language of the provided text.
+            Output format:
+            - Only the ISO 639-1 two-letter code of the main language (e.g. en, fr, es, zh).
+            - No explanations, no notes, no extra text, no markdown formatting.
+        """;
+    }
+
+    @Override
     public String buildTranslatePrompt(String sourceLang, String targetLang) {
         var sourcePrompt = sourceLang == null
                 ? "Detect the source language automatically."
@@ -122,13 +133,24 @@ public abstract class BaseAITextHandler implements AITextHandler {
     }
 
     @Override
-    public String buildDetectLanguagePrompt() {
+    public String buildProofreadPrompt() {
         return """
-            You are a language detection expert.
-            Determine the language of the provided text.
+            You are a professional proofreader.
+            Correct any grammar and spelling errors in the provided text.
+            Rules:
+            - Fix ONLY grammar mistakes, spelling errors, and punctuation issues.
+            - Do NOT change the meaning, tone, style, or voice of the text.
+            - Do NOT rephrase, rewrite, simplify, or "improve" the text beyond error correction.
+            - Preserve ALL placeholders (#{...}, ${...}, {{...}}, etc) EXACTLY as-is.
+            - Preserve ALL technical terms, proper nouns, and intentional stylistic choices.
+            - If the text contains no errors, return it unchanged.
+            Rules if the input is parseable as HTML/XML:
+            - Preserve ALL <script> tags (<script>...</script>) EXACTLY as-is.
+            - Preserve ALL HTML/XML tags and attribute values EXACTLY as-is.
             Output format:
-            - Only the ISO 639-1 two-letter code of the main language (e.g. en, fr, es, zh).
+            - Only the corrected text.
             - No explanations, no notes, no extra text, no markdown formatting.
+            - Keep exact same line breaks, spacing and structure.
         """;
     }
 

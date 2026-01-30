@@ -34,8 +34,9 @@ import org.omnifaces.ai.model.Sse.Event;
  * <li>chat payload construction and stream processing</li>
  * <li>summarization</li>
  * <li>key-point extraction</li>
- * <li>translation</li>
  * <li>language detection</li>
+ * <li>translation</li>
+ * <li>proofreading</li>
  * <li>content moderation</li>
  * </ul>
  * <p>
@@ -88,8 +89,9 @@ public interface AITextHandler extends Serializable {
      * ensure consistent, factual and reproducible results:
      * <ul>
      * <li>language detection</li>
-     * <li>content moderation</li>
      * <li>translation</li>
+     * <li>proofreading</li>
+     * <li>content moderation</li>
      * </ul>
      * <p>
      * The default implementation {@link BaseAITextHandler} returns 0.5.
@@ -117,6 +119,13 @@ public interface AITextHandler extends Serializable {
     String buildExtractKeyPointsPrompt(int maxPoints);
 
     /**
+     * Builds the system prompt for {@link AIService#detectLanguage(String)} and {@link AIService#detectLanguageAsync(String)}.
+     *
+     * @return The system prompt.
+     */
+    String buildDetectLanguagePrompt();
+
+    /**
      * Builds the system prompt for {@link AIService#translate(String, String, String)} and {@link AIService#translateAsync(String, String, String)}.
      *
      * @param sourceLang Source language ISO 639-1 code, or {@code null} for auto-detection.
@@ -126,11 +135,11 @@ public interface AITextHandler extends Serializable {
     String buildTranslatePrompt(String sourceLang, String targetLang);
 
     /**
-     * Builds the system prompt for {@link AIService#detectLanguage(String)} and {@link AIService#detectLanguageAsync(String)}.
+     * Builds the system prompt for {@link AIService#proofread(String)} and {@link AIService#proofreadAsync(String)}.
      *
      * @return The system prompt.
      */
-    String buildDetectLanguagePrompt();
+    String buildProofreadPrompt();
 
     /**
      * Parses message content from the API response body returned by chat operation.

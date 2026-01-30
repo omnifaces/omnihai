@@ -33,7 +33,7 @@ import org.omnifaces.ai.model.ModerationResult;
  * Generic interface for AI service providers.
  * <p>
  * This interface provides a unified abstraction for various AI capabilities including
- * chat, summarization, translation, content moderation, image analysis, and more.
+ * chat, summarization, translation, proofreading, content moderation, image analysis, and more.
  * <p>
  * The implementations must be stateless and able to be {@link ApplicationScoped}.
  *
@@ -558,6 +558,41 @@ public interface AIService extends Serializable {
      * @throws UnsupportedOperationException if translation is not supported by the implementation.
      */
     CompletableFuture<String> translateAsync(String text, String sourceLang, String targetLang);
+
+
+    // Text Proofreading Capabilities ---------------------------------------------------------------------------------
+
+    /**
+     * Proofreads text by correcting grammar and spelling errors while preserving the original meaning, tone, and style.
+     * <p>
+     * The default implementation delegates to {@link #proofreadAsync(String)}.
+     *
+     * @param text The text to proofread.
+     * @return The proofread text with corrections applied, never {@code null}.
+     * @throws IllegalArgumentException if text is blank.
+     * @throws UnsupportedOperationException if proofreading is not supported by the implementation.
+     * @throws AIException if proofreading fails.
+     */
+    default String proofread(String text) throws AIException {
+        try {
+            return proofreadAsync(text).join();
+        }
+        catch (CompletionException e) {
+            throw AIException.asyncRequestFailed(e);
+        }
+    }
+
+    /**
+     * Asynchronously proofreads text by correcting grammar and spelling errors while preserving the original meaning, tone, and style.
+     * <p>
+     * This is the core method for proofreading.
+     *
+     * @param text The text to proofread.
+     * @return A CompletableFuture that will contain the proofread text with corrections applied, never {@code null}.
+     * @throws IllegalArgumentException if text is blank.
+     * @throws UnsupportedOperationException if proofreading is not supported by the implementation.
+     */
+    CompletableFuture<String> proofreadAsync(String text);
 
 
     // Text Moderation Capabilities -----------------------------------------------------------------------------------
