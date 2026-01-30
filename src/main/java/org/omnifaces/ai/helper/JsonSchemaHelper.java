@@ -260,94 +260,94 @@ public final class JsonSchemaHelper {
     }
 
     @SuppressWarnings({ "unchecked", "rawtypes" })
-    private static <T> T parseValue(JsonValue val, Class<T> raw, Type gen) {
-        if (val == null || val.getValueType() == JsonValue.ValueType.NULL) {
-            return (raw == Optional.class) ? (T) Optional.empty() : (T) getDefaultPrimitiveValue(raw);
+    private static <T> T parseValue(JsonValue value, Class<T> rawType, Type genericType) {
+        if (value == null || value.getValueType() == JsonValue.ValueType.NULL) {
+            return (rawType == Optional.class) ? (T) Optional.empty() : (T) getDefaultPrimitiveValue(rawType);
         }
 
-        if (raw == Optional.class) {
-            var inner = getGenericArgument(gen, 0);
-            return (T) Optional.ofNullable(parseValue(val, getRawType(inner), inner));
+        if (rawType == Optional.class) {
+            var inner = getGenericArgument(genericType, 0);
+            return (T) Optional.ofNullable(parseValue(value, getRawType(inner), inner));
         }
 
-        if (PARSERS.containsKey(raw)) {
-            return (T) PARSERS.get(raw).apply(val);
+        if (PARSERS.containsKey(rawType)) {
+            return (T) PARSERS.get(rawType).apply(value);
         }
 
-        if (raw == char.class || raw == Character.class) {
-            return (T) (Character) ((JsonString) val).getString().charAt(0);
+        if (rawType == char.class || rawType == Character.class) {
+            return (T) (Character) ((JsonString) value).getString().charAt(0);
         }
 
-        if (raw.isEnum()) {
-            return (T) Enum.valueOf((Class<Enum>) raw, ((JsonString) val).getString());
+        if (rawType.isEnum()) {
+            return (T) Enum.valueOf((Class<Enum>) rawType, ((JsonString) value).getString());
         }
 
-        if (Temporal.class.isAssignableFrom(raw)) {
-            var text = ((JsonString) val).getString();
+        if (Temporal.class.isAssignableFrom(rawType)) {
+            var text = ((JsonString) value).getString();
 
-            if (raw == Instant.class) {
+            if (rawType == Instant.class) {
                 return (T) Instant.parse(text);
             }
 
-            if (raw == LocalDate.class) {
+            if (rawType == LocalDate.class) {
                 return (T) LocalDate.parse(text);
             }
 
-            if (raw == LocalTime.class) {
+            if (rawType == LocalTime.class) {
                 return (T) LocalTime.parse(text);
             }
 
-            if (raw == LocalDateTime.class) {
+            if (rawType == LocalDateTime.class) {
                 return (T) LocalDateTime.parse(text);
             }
 
             return (T) ZonedDateTime.parse(text);
         }
 
-        if (raw.isArray()) {
-            return (T) parseArray((JsonArray) val, raw.getComponentType());
+        if (rawType.isArray()) {
+            return (T) parseArray((JsonArray) value, rawType.getComponentType());
         }
 
-        if (Collection.class.isAssignableFrom(raw)) {
-            return (T) parseCollection((JsonArray) val, raw, gen);
+        if (Collection.class.isAssignableFrom(rawType)) {
+            return (T) parseCollection((JsonArray) value, rawType, genericType);
         }
 
-        if (Map.class.isAssignableFrom(raw)) {
-            return (T) parseMap((JsonObject) val, raw, gen);
+        if (Map.class.isAssignableFrom(rawType)) {
+            return (T) parseMap((JsonObject) value, rawType, genericType);
         }
 
-        return (T) parseObject((JsonObject) val, raw);
+        return (T) parseObject((JsonObject) value, rawType);
     }
 
-    private static Object parseObject(JsonObject json, Class<?> type) {
-        var props = getProperties(type);
+    private static Object parseObject(JsonObject json, Class<?> rawType) {
+        var properties = getProperties(rawType);
         Object bean;
 
         try {
-            if (type.isRecord()) {
-                var components = type.getRecordComponents();
+            if (rawType.isRecord()) {
+                var components = rawType.getRecordComponents();
                 var args = new Object[components.length];
 
                 for (int i = 0; i < components.length; i++) {
                     args[i] = parseValue(json.get(components[i].getName()), components[i].getType(), components[i].getGenericType());
                 }
 
-                return type.getDeclaredConstructor(stream(components).map(RecordComponent::getType).toArray(Class[]::new)).newInstance(args);
+                return rawType.getDeclaredConstructor(stream(components).map(RecordComponent::getType).toArray(Class[]::new)).newInstance(args);
             }
 
-            bean = type.getDeclaredConstructor().newInstance();
+            bean = rawType.getDeclaredConstructor().newInstance();
         }
         catch (Exception e) {
-            throw new IllegalArgumentException(format(ERROR_INSTANTIATION, type.getName()), e);
+            throw new IllegalArgumentException(format(ERROR_INSTANTIATION, rawType.getName()), e);
         }
 
-        for (var prop : props) {
-            if (prop.writeMethod != null && json.containsKey(prop.name)) {
+        for (var property : properties) {
+            if (property.writeMethod != null && json.containsKey(property.name)) {
                 try {
-                    prop.writeMethod.invoke(bean, parseValue(json.get(prop.name), prop.rawType, prop.genericType));
+                    property.writeMethod.invoke(bean, parseValue(json.get(property.name), property.rawType, property.genericType));
                 }
                 catch (IllegalAccessException | InvocationTargetException e) {
-                    throw new IllegalArgumentException(format(ERROR_SET_PROPERTY, prop.name, type), e);
+                    throw new IllegalArgumentException(format(ERROR_SET_PROPERTY, property.name, rawType), e);
                 }
             }
         }
@@ -364,8 +364,8 @@ public final class JsonSchemaHelper {
 
         try {
             return stream(Introspector.getBeanInfo(clazz).getPropertyDescriptors())
-                    .filter(d -> d.getReadMethod() != null && !"class".equals(d.getName()))
-                    .map(d -> new Property(d.getName(), d.getPropertyType(), d.getReadMethod().getGenericReturnType(), d.getWriteMethod()))
+                    .filter(descriptor -> descriptor.getReadMethod() != null && !"class".equals(descriptor.getName()))
+                    .map(descriptor -> new Property(descriptor.getName(), descriptor.getPropertyType(), descriptor.getReadMethod().getGenericReturnType(), descriptor.getWriteMethod()))
                     .toList();
         }
         catch (Exception e) {
@@ -373,33 +373,33 @@ public final class JsonSchemaHelper {
         }
     }
 
-    private static Type getGenericArgument(Type type, int index) {
-        if (type instanceof ParameterizedType p && p.getActualTypeArguments().length > index) {
-            return p.getActualTypeArguments()[index];
+    private static Type getGenericArgument(Type genericType, int index) {
+        if (genericType instanceof ParameterizedType type && type.getActualTypeArguments().length > index) {
+            return type.getActualTypeArguments()[index];
         }
 
         return Object.class;
     }
 
-    private static Class<?> getRawType(Type type) {
-        if (type instanceof Class<?> clazz) {
+    private static Class<?> getRawType(Type genericType) {
+        if (genericType instanceof Class<?> clazz) {
             return clazz;
         }
 
-        if (type instanceof GenericArrayType genericArray) {
+        if (genericType instanceof GenericArrayType genericArray) {
             return Array.newInstance(getRawType(genericArray.getGenericComponentType()), 0).getClass();
         }
 
         return Object.class;
     }
 
-    private static Object getDefaultPrimitiveValue(Class<?> type) {
-        if (type == boolean.class) {
+    private static Object getDefaultPrimitiveValue(Class<?> rawType) {
+        if (rawType == boolean.class) {
             return false;
         }
 
-        if (type.isPrimitive()) {
-            return (type == char.class) ? '\0' : 0;
+        if (rawType.isPrimitive()) {
+            return (rawType == char.class) ? '\0' : 0;
         }
 
         return null;
@@ -415,17 +415,17 @@ public final class JsonSchemaHelper {
         return array;
     }
 
-    private static Collection<?> parseCollection(JsonArray json, Class<?> raw, Type gen) {
-        var col = Set.class.isAssignableFrom(raw) ? (raw == TreeSet.class ? new TreeSet<>() : new LinkedHashSet<>()) : new ArrayList<>();
-        var itemType = getGenericArgument(gen, 0);
-        json.stream().forEach(item -> col.add(parseValue(item, getRawType(itemType), itemType)));
-        return col;
+    private static Collection<?> parseCollection(JsonArray json, Class<?> rawType, Type genericType) {
+        var collection = Set.class.isAssignableFrom(rawType) ? (rawType == TreeSet.class ? new TreeSet<>() : new LinkedHashSet<>()) : new ArrayList<>();
+        var itemType = getGenericArgument(genericType, 0);
+        json.stream().forEach(item -> collection.add(parseValue(item, getRawType(itemType), itemType)));
+        return collection;
     }
 
-    private static Map<?, ?> parseMap(JsonObject json, Class<?> raw, Type gen) {
-        var map = (raw == TreeMap.class) ? new TreeMap<>() : new LinkedHashMap<>();
-        var valType = getGenericArgument(gen, 1);
-        json.entrySet().stream().forEach(entry -> map.put(entry.getKey(), parseValue(entry.getValue(), getRawType(valType), valType)));
+    private static Map<?, ?> parseMap(JsonObject json, Class<?> rawType, Type genericType) {
+        var map = (rawType == TreeMap.class) ? new TreeMap<>() : new LinkedHashMap<>();
+        var valueType = getGenericArgument(genericType, 1);
+        json.entrySet().stream().forEach(entry -> map.put(entry.getKey(), parseValue(entry.getValue(), getRawType(valueType), valueType)));
         return map;
     }
 }
