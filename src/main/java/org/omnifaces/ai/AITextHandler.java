@@ -13,12 +13,14 @@
 package org.omnifaces.ai;
 
 import java.io.Serializable;
+import java.util.Map;
 import java.util.function.Consumer;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.json.JsonObject;
 
 import org.omnifaces.ai.exception.AIResponseException;
+import org.omnifaces.ai.helper.JsonSchemaHelper;
 import org.omnifaces.ai.modality.BaseAITextHandler;
 import org.omnifaces.ai.model.ChatInput;
 import org.omnifaces.ai.model.ChatOptions;
@@ -170,28 +172,25 @@ public interface AITextHandler extends Serializable {
     String buildModerationPrompt(ModerationOptions options);
 
     /**
-     * Builds the JSON schema for structured output by {@link AIService#moderateContent(String, ModerationOptions)} and {@link AIService#moderateContentAsync(String, ModerationOptions)}.
+     * Internal record representing the expected JSON structure for moderation responses.
+     * Used by {@link #MODERATION_RESPONSE_SCHEMA}.
+     */
+    record ModerationResponse(Map<String, Double> scores) {}
+
+    /**
+     * Pre-built JSON schema for moderation responses.
      * <p>
-     * The returned schema enforces that the AI model returns a valid JSON object with a {@code scores} property
-     * containing numeric values (0.0-1.0) for each category specified in the moderation options.
-     * <p>
-     * Example output when used:
+     * Expects a JSON object with a "scores" property containing category names mapped to numeric scores (0.0 to 1.0).
      * <pre>
      * {
      *   "scores": {
-     *     "sexual": 0.1,
-     *     "violence": 0.0,
-     *     "hate": 0.2
+     *     "hate": 0.1,
+     *     "violence": 0.05
      *   }
      * }
      * </pre>
-     *
-     * @param options Moderation options containing categories to include in the schema.
-     * @return The JSON schema object for moderation response format.
-     * @see AIService#moderateContent(String, ModerationOptions)
-     * @see AIService#moderateContentAsync(String, ModerationOptions)
      */
-    JsonObject buildModerationJsonSchema(ModerationOptions options);
+    JsonObject MODERATION_RESPONSE_SCHEMA = JsonSchemaHelper.buildJsonSchema(ModerationResponse.class);
 
     /**
      * Parses the moderation result from response returned by {@link AIService#moderateContent(String, ModerationOptions)} and {@link AIService#moderateContentAsync(String, ModerationOptions)}.

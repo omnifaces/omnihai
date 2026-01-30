@@ -12,8 +12,14 @@
  */
 
 /**
- * Internal utility classes for text and JSON operations.
+ * Utility classes for text, JSON, and JSON Schema operations.
  * <p>
- * This package is not part of the public API and may change without notice.
+ * Key classes:
+ * <ul>
+ * <li>{@link org.omnifaces.ai.helper.JsonSchemaHelper} - Generates JSON schemas from Java records and beans for
+ *     structured AI outputs. Supports primitives, collections, maps, enums, nested types, and {@code Optional}.</li>
+ * <li>{@link org.omnifaces.ai.helper.JsonHelper} - JSON parsing and path-based value extraction utilities.</li>
+ * <li>{@link org.omnifaces.ai.helper.TextHelper} - Text validation and manipulation utilities.</li>
+ * </ul>
  */
 package org.omnifaces.ai.helper;

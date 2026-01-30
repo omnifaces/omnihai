@@ -17,9 +17,11 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
+import org.omnifaces.ai.AITextHandler;
 
 class JsonSchemaHelperTest {
 
@@ -157,6 +159,27 @@ class JsonSchemaHelperTest {
         assertEquals("string", properties.getJsonObject("pros").getJsonObject("items").getString("type"));
         assertEquals("array", properties.getJsonObject("cons").getString("type"));
         assertEquals("string", properties.getJsonObject("cons").getJsonObject("items").getString("type"));
+    }
+
+    record WithMap(Map<String, Double> scores) {}
+
+    @Test
+    void buildJsonSchema_withMap() {
+        var schema = JsonSchemaHelper.buildJsonSchema(WithMap.class);
+        var scoresSchema = schema.getJsonObject("properties").getJsonObject("scores");
+
+        assertEquals("object", scoresSchema.getString("type"));
+        assertEquals("number", scoresSchema.getJsonObject("additionalProperties").getString("type"));
+    }
+
+    @Test
+    void moderationResponseSchema() {
+        var schema = AITextHandler.MODERATION_RESPONSE_SCHEMA;
+
+        assertEquals("object", schema.getString("type"));
+        var scoresSchema = schema.getJsonObject("properties").getJsonObject("scores");
+        assertEquals("object", scoresSchema.getString("type"));
+        assertEquals("number", scoresSchema.getJsonObject("additionalProperties").getString("type"));
     }
 
     // =================================================================================================================

@@ -44,6 +44,7 @@ import jakarta.json.JsonObjectBuilder;
  * <li>Primitive types and their wrappers</li>
  * <li>Strings, enums, and common numeric types</li>
  * <li>Collections and arrays</li>
+ * <li>Maps (with {@code additionalProperties} for value type)</li>
  * <li>Nested complex types (recursive)</li>
  * <li>{@link Optional} fields (excluded from "required")</li>
  * </ul>
@@ -183,7 +184,7 @@ public final class JsonSchemaHelper {
         }
 
         if (Map.class.isAssignableFrom(rawType)) {
-            return Json.createObjectBuilder().add("type", "object");
+            return buildMapSchema(genericType, visited);
         }
 
         var nestedSchema = buildObjectSchema(rawType, visited);
@@ -225,6 +226,22 @@ public final class JsonSchemaHelper {
         return Json.createObjectBuilder()
             .add("type", "array")
             .add("items", Json.createObjectBuilder().add("type", "object"));
+    }
+
+    private static JsonObjectBuilder buildMapSchema(Type genericType, Set<Class<?>> visited) {
+        if (genericType instanceof ParameterizedType parameterized) {
+            var typeArgs = parameterized.getActualTypeArguments();
+
+            if (typeArgs.length > 1) {
+                var valueType = typeArgs[1];
+                var valueRawType = valueType instanceof Class<?> c ? c : Object.class;
+                return Json.createObjectBuilder()
+                    .add("type", "object")
+                    .add("additionalProperties", buildTypeSchema(valueType, valueRawType, visited));
+            }
+        }
+
+        return Json.createObjectBuilder().add("type", "object");
     }
 
     private static boolean isOptional(Class<?> type) {

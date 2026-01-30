@@ -20,6 +20,7 @@ import static java.util.function.Predicate.not;
 import static org.omnifaces.ai.AIConfig.PROPERTY_API_KEY;
 import static org.omnifaces.ai.AIConfig.PROPERTY_ENDPOINT;
 import static org.omnifaces.ai.AIConfig.PROPERTY_MODEL;
+import static org.omnifaces.ai.AITextHandler.MODERATION_RESPONSE_SCHEMA;
 import static org.omnifaces.ai.helper.TextHelper.isBlank;
 import static org.omnifaces.ai.helper.TextHelper.requireNonBlank;
 import static org.omnifaces.ai.model.ChatOptions.DETERMINISTIC;
@@ -267,7 +268,7 @@ public abstract class BaseAIService implements AIService {
 
         var chatOptions = ChatOptions.newBuilder()
             .systemPrompt(textHandler.buildModerationPrompt(options))
-            .jsonSchema(textHandler.buildModerationJsonSchema(options))
+            .jsonSchema(MODERATION_RESPONSE_SCHEMA)
             .temperature(DETERMINISTIC_TEMPERATURE)
             .build();
 

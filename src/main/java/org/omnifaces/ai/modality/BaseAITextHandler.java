@@ -22,7 +22,6 @@ import java.util.TreeMap;
 import java.util.function.Predicate;
 import java.util.logging.Logger;
 
-import jakarta.json.Json;
 import jakarta.json.JsonObject;
 
 import org.omnifaces.ai.AIService;
@@ -172,28 +171,6 @@ public abstract class BaseAITextHandler implements AITextHandler {
             3. Assign a score using the scale above
             4. Be objective; do not over-react to fictional, humorous, historical, or artistic context unless it clearly promotes harm
         """.formatted(String.join(", ", options.getCategories()));
-    }
-
-    @Override
-    public JsonObject buildModerationJsonSchema(ModerationOptions options) {
-        var categoryProperties = Json.createObjectBuilder();
-        var requiredCategories = Json.createArrayBuilder();
-
-        for (var category : options.getCategories()) {
-            categoryProperties.add(category, Json.createObjectBuilder().add("type", "number"));
-            requiredCategories.add(category);
-        }
-
-        var scoresSchema = Json.createObjectBuilder()
-            .add("type", "object")
-            .add("properties", categoryProperties)
-            .add("required", requiredCategories);
-
-        return Json.createObjectBuilder()
-            .add("type", "object")
-            .add("properties", Json.createObjectBuilder().add("scores", scoresSchema))
-            .add("required", Json.createArrayBuilder().add("scores"))
-            .build();
     }
 
 
