@@ -41,7 +41,7 @@ import org.omnifaces.ai.model.Sse.Event;
  * </ul>
  * <p>
  * Creative / interpretive tasks use a configurable temperature ({@link #getDefaultCreativeTemperature()});
- * classification tasks use low fixed temperature.
+ * classification tasks use low fixed temperature of {@link ChatOptions#DETERMINISTIC_TEMPERATURE}.
  * <p>
  * The implementations must be stateless and able to be {@link ApplicationScoped}.
  *
@@ -85,8 +85,8 @@ public interface AITextHandler extends Serializable {
      * <li>key-point extraction</li>
      * </ul>
      * <p>
-     * Deterministic / classification-style operations use by design a fixed low temperature (typically 0.0-0.1) to
-     * ensure consistent, factual and reproducible results:
+     * Deterministic / classification-style operations use by design a fixed low temperature of
+     * {@link ChatOptions#DETERMINISTIC_TEMPERATURE} to ensure consistent, factual and reproducible results:
      * <ul>
      * <li>language detection</li>
      * <li>translation</li>

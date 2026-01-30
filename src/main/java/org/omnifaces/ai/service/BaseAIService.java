@@ -23,6 +23,7 @@ import static org.omnifaces.ai.AIConfig.PROPERTY_MODEL;
 import static org.omnifaces.ai.helper.TextHelper.isBlank;
 import static org.omnifaces.ai.helper.TextHelper.requireNonBlank;
 import static org.omnifaces.ai.model.ChatOptions.DETERMINISTIC;
+import static org.omnifaces.ai.model.ChatOptions.DETERMINISTIC_TEMPERATURE;
 
 import java.net.URI;
 import java.time.Duration;
@@ -220,7 +221,7 @@ public abstract class BaseAIService implements AIService {
     public CompletableFuture<String> detectLanguageAsync(String text) throws AIException {
         var options = ChatOptions.newBuilder()
             .systemPrompt(textHandler.buildDetectLanguagePrompt())
-            .temperature(0.0)
+            .temperature(DETERMINISTIC_TEMPERATURE)
             .build();
 
         return chatAsync(requireNonBlank(text, "text"), options).thenApply(response -> {
@@ -236,7 +237,7 @@ public abstract class BaseAIService implements AIService {
     public CompletableFuture<String> translateAsync(String text, String sourceLang, String targetLang) throws AIException {
         var options = ChatOptions.newBuilder()
             .systemPrompt(textHandler.buildTranslatePrompt(sourceLang, requireNonBlank(targetLang, "target language")))
-            .temperature(0.1)
+            .temperature(DETERMINISTIC_TEMPERATURE)
             .build();
 
         return chatAsync(requireNonBlank(text, "text"), options);
@@ -249,7 +250,7 @@ public abstract class BaseAIService implements AIService {
     public CompletableFuture<String> proofreadAsync(String text) throws AIException {
         var options = ChatOptions.newBuilder()
             .systemPrompt(textHandler.buildProofreadPrompt())
-            .temperature(0.1)
+            .temperature(DETERMINISTIC_TEMPERATURE)
             .build();
 
         return chatAsync(requireNonBlank(text, "text"), options);
@@ -267,7 +268,7 @@ public abstract class BaseAIService implements AIService {
         var chatOptions = ChatOptions.newBuilder()
             .systemPrompt(textHandler.buildModerationPrompt(options))
             .jsonSchema(textHandler.buildModerationJsonSchema(options))
-            .temperature(0.1)
+            .temperature(DETERMINISTIC_TEMPERATURE)
             .build();
 
         return chatAsync(requireNonBlank(content, "content"), chatOptions).thenApply(response -> textHandler.parseModerationResult(response, options));

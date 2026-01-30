@@ -35,6 +35,9 @@ public class ChatOptions implements Serializable {
     /** Creative temperature: {@value}. */
     public static final double CREATIVE_TEMPERATURE = 1.2;
 
+    /** Deterministic temperature: {@value}. */
+    public static final double DETERMINISTIC_TEMPERATURE = 0.0;
+
     /** Default Top-P: {@value}. */
     public static final double DEFAULT_TOP_P = 1.0;
 
@@ -45,7 +48,7 @@ public class ChatOptions implements Serializable {
     public static final ChatOptions CREATIVE = ChatOptions.newBuilder().temperature(CREATIVE_TEMPERATURE).build();
 
     /** Deterministic chat with zero temperature. */
-    public static final ChatOptions DETERMINISTIC = ChatOptions.newBuilder().temperature(0.0).build();
+    public static final ChatOptions DETERMINISTIC = ChatOptions.newBuilder().temperature(DETERMINISTIC_TEMPERATURE).build();
 
     /** The system prompt. */
     private final String systemPrompt;
