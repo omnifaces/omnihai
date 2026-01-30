@@ -16,6 +16,10 @@
  * <p>
  * AI API endpoints require a valid MIME type header when uploading file attachments. File extensions cannot be relied
  * upon for MIME type detection as they may be missing, incorrect, or intentionally spoofed. Magic byte detection
- * provides reliable content-based identification without additional dependencies/features.
+ * provides reliable content-based identification without additional dependencies.
+ * <p>
+ * OmniAI uses {@code byte[]} for file content rather than {@link java.io.File}, {@link java.nio.file.Path}, or
+ * {@link java.io.InputStream} because not all environments support filesystem access (e.g., serverless, read-only
+ * containers) and streams risk resource leaks if not properly closed.
  */
 package org.omnifaces.ai.mime;
