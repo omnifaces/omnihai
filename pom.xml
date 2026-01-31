@@ -266,6 +266,13 @@
                     <links>
                         <link>https://jakarta.ee/specifications/platform/${jakartaee.version}/apidocs/</link>
                     </links>
+                    <tags>
+                        <tag>
+                            <name>implNote</name>
+                            <placement>a</placement>
+                            <head>Implementation Note:</head>
+                        </tag>
+                    </tags>
                 </configuration>
                 <executions>
                     <execution>

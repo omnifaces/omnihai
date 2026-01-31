@@ -94,7 +94,6 @@ public interface AITextHandler extends Serializable {
      * <li>proofreading</li>
      * <li>content moderation</li>
      * </ul>
-     * <p>
      * @implNote The default implementation {@link BaseAITextHandler} returns 0.5.
      * @return default temperature value in range 0.0-1.0 for summarization and key-point extraction.
      * @see AIService#summarize(String, int)
