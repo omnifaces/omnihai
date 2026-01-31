@@ -217,7 +217,7 @@ public abstract class BaseAITextHandler implements AITextHandler {
     /**
      * Returns all possible paths to the error message in the JSON response parsed by {@link #parseChatResponse(String)} or {@link #parseFileResponse(String)}.
      * The first path that matches a value in the JSON response will be used; remaining paths are ignored.
-     * The default implementation returns {@code error.message} and {@code error}.
+     * @implNote The default implementation returns {@code error.message} and {@code error}.
      * @return all possible paths to the error message in the JSON response.
      */
     public List<String> getTextResponseErrorMessagePaths() {
@@ -236,7 +236,7 @@ public abstract class BaseAITextHandler implements AITextHandler {
      * Returns all possible paths to the file ID in the JSON response parsed by {@link #parseFileResponse(String)}.
      * May not be empty.
      * The first path that matches a value in the JSON response will be used; remaining paths are ignored.
-     * The default implementation returns {@code id}.
+     * @implNote The default implementation returns {@code id}.
      * @return all possible paths to the message content in the JSON response.
      */
     public List<String> getFileResponseIdPaths() {

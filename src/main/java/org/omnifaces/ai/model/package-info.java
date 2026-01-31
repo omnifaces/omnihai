@@ -21,6 +21,7 @@
  * <li>{@link org.omnifaces.ai.model.ModerationOptions} - content moderation configuration</li>
  * <li>{@link org.omnifaces.ai.model.ModerationResult} - content moderation results</li>
  * <li>{@link org.omnifaces.ai.model.GenerateImageOptions} - image generation configuration</li>
+ * <li>{@link org.omnifaces.ai.model.Sse.Event} - SSE event for streaming responses</li>
  * </ul>
  */
 package org.omnifaces.ai.model;

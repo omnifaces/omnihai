@@ -315,7 +315,7 @@ public abstract class BaseAIService implements AIService {
 
     /**
      * Returns the path of the image generation endpoint. E.g. {@code images/generations}.
-     * The default implementation delegates to {@link #getChatPath(boolean)}
+     * @implNote The default implementation delegates to {@link #getChatPath(boolean)}
      * @return the path of the image generation endpoint.
      */
     protected String getGenerateImagePath() {
@@ -336,7 +336,7 @@ public abstract class BaseAIService implements AIService {
     /**
      * Returns additional request headers to use at {@link #asyncPostAndParseChatResponse(String, JsonObject)}, e.g. authorization or version headers.
      * These headers are added on top of the default request headers: {@code User-Agent}, {@code Content-Type} and {@code Accept}.
-     * The default implementation returns an empty map.
+     * @implNote The default implementation returns an empty map.
      * @return Additional request headers to use at {@link #asyncPostAndParseChatResponse(String, JsonObject)}.
      */
     protected Map<String, String> getRequestHeaders() {

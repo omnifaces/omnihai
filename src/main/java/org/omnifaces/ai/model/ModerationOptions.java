@@ -182,7 +182,7 @@ public class ModerationOptions implements Serializable {
             for (var category : categories) {
                 requireNonNull(category, "category");
 
-                if (!category.matches("\\w+")) {
+                if (!category.matches("[a-zA-Z-]+")) {
                     throw new IllegalArgumentException(category + " may only contain alphabetic characters or hyphens");
                 }
 

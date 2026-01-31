@@ -16,6 +16,8 @@ import java.io.Serializable;
 
 import jakarta.json.JsonObject;
 
+import org.omnifaces.ai.helper.JsonSchemaHelper;
+
 /**
  * Options for chat-based AI interactions.
  * <p>
@@ -83,6 +85,8 @@ public class ChatOptions implements Serializable {
     /**
      * Gets the JSON schema for structured output. Defaults to {@code null}.
      * <p>
+     * You can use {@link JsonSchemaHelper#buildJsonSchema(Class)} to create one for your record or bean class.
+     * <p>
      * When set, the AI model is instructed to return a response that conforms to this JSON schema.
      * This is useful for ensuring the model returns valid, parseable JSON in a specific format.
      * <p>
@@ -98,9 +102,10 @@ public class ChatOptions implements Serializable {
      * }
      * </pre>
      * <p>
+     * You can use {@link JsonSchemaHelper#fromJson(String, Class)} to parse the response into your record or bean class.
+     * <p>
      * Note: Not all AI providers support JSON schema enforcement. When unsupported, the AI service implementation
-     * may throw {@link UnsupportedOperationException} during chat payload construction. Some providers may require
-     * additional wrapper fields (e.g., {@code name}, {@code strict}).
+     * may throw {@link UnsupportedOperationException} during chat payload construction.
      *
      * @return The JSON schema object, or {@code null} if no schema is defined.
      */
@@ -206,6 +211,8 @@ public class ChatOptions implements Serializable {
         /**
          * Sets the JSON schema for structured output. Defaults to {@code null}.
          * <p>
+         * You can use {@link JsonSchemaHelper#buildJsonSchema(Class)} to create one for your record or bean class.
+         * <p>
          * When set, the AI model is instructed to return a response that conforms to this JSON schema.
          * This is useful for ensuring the model returns valid, parseable JSON in a specific format.
          * <p>
@@ -221,9 +228,10 @@ public class ChatOptions implements Serializable {
          * }
          * </pre>
          * <p>
+         * You can use {@link JsonSchemaHelper#fromJson(String, Class)} to parse the response into your record or bean class.
+         * <p>
          * Note: Not all AI providers support JSON schema enforcement. When unsupported, the AI service implementation
-         * may throw {@link UnsupportedOperationException} during chat payload construction. Some providers may require
-         * additional wrapper fields (e.g., {@code name}, {@code strict}).
+         * may throw {@link UnsupportedOperationException} during chat payload construction.
          *
          * @param jsonSchema The JSON schema object. Can be {@code null}.
          * @return This builder instance for chaining.

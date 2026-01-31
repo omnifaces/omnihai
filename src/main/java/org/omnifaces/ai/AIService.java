@@ -60,8 +60,7 @@ public interface AIService extends Serializable {
      * }
      * </pre>
      * <p>
-     * The default implementation delegates to {@link #chatAsync(String)}.
-     *
+     * @implNote The default implementation delegates to {@link #chatAsync(String)}.
      * @param message The user's message to send to the AI.
      * @return The AI's response, never {@code null}.
      * @throws IllegalArgumentException if message is blank.
@@ -93,8 +92,7 @@ public interface AIService extends Serializable {
      * }
      * </pre>
      * <p>
-     * The default implementation delegates to {@link #chatAsync(ChatInput)}.
-     *
+     * @implNote The default implementation delegates to {@link #chatAsync(ChatInput)}.
      * @param input The user's input containing message and optional images.
      * @return The AI's response, never {@code null}.
      * @throws IllegalArgumentException if input message is blank.
@@ -124,8 +122,7 @@ public interface AIService extends Serializable {
      * }
      * </pre>
      * <p>
-     * The default implementation delegates to {@link #chatAsync(String, ChatOptions)}.
-     *
+     * @implNote The default implementation delegates to {@link #chatAsync(String, ChatOptions)}.
      * @param message The user's message to send to the AI.
      * @param options Chat options (system prompt, temperature, max tokens, etc.).
      * @return The AI's response, never {@code null}.
@@ -160,8 +157,7 @@ public interface AIService extends Serializable {
      * }
      * </pre>
      * <p>
-     * The default implementation delegates to {@link #chatAsync(ChatInput, ChatOptions)}.
-     *
+     * @implNote The default implementation delegates to {@link #chatAsync(ChatInput, ChatOptions)}.
      * @param input The user's input containing message and optional images.
      * @param options Chat options (system prompt, temperature, max tokens, etc.).
      * @return The AI's response, never {@code null}.
@@ -190,8 +186,7 @@ public interface AIService extends Serializable {
      * });
      * </pre>
      * <p>
-     * The default implementation delegates to {@link #chatAsync(ChatInput)}.
-     *
+     * @implNote The default implementation delegates to {@link #chatAsync(ChatInput)}.
      * @param message The user's message to send to the AI.
      * @return A CompletableFuture that will contain the AI's response, never {@code null}.
      * @throws IllegalArgumentException if message is blank.
@@ -217,8 +212,7 @@ public interface AIService extends Serializable {
      * });
      * </pre>
      * <p>
-     * The default implementation delegates to {@link #chatAsync(ChatInput, ChatOptions)}.
-     *
+     * @implNote The default implementation delegates to {@link #chatAsync(ChatInput, ChatOptions)}.
      * @param input The user's input containing message and optional images.
      * @return A CompletableFuture that will contain the AI's response, never {@code null}.
      * @throws IllegalArgumentException if input message is blank.
@@ -242,8 +236,7 @@ public interface AIService extends Serializable {
      * });
      * </pre>
      * <p>
-     * The default implementation delegates to {@link #chatAsync(ChatInput, ChatOptions)}.
-     *
+     * @implNote The default implementation delegates to {@link #chatAsync(ChatInput, ChatOptions)}.
      * @param message The user's message to send to the AI.
      * @param options Chat options (system prompt, temperature, max tokens, etc.).
      * @return A CompletableFuture that will contain the AI's response, never {@code null}.
@@ -296,8 +289,7 @@ public interface AIService extends Serializable {
      * });
      * </pre>
      * <p>
-     * The default implementation delegates to {@link #chatStream(ChatInput, Consumer)}.
-     *
+     * @implNote The default implementation delegates to {@link #chatStream(ChatInput, Consumer)}.
      * @param message The user's message to send to the AI.
      * @param onToken The token consumer, this will be invoked for every chat response token in the stream.
      * @return An empty CompletableFuture which only completes when the end of stream is reached, never {@code null}.
@@ -327,8 +319,7 @@ public interface AIService extends Serializable {
      * });
      * </pre>
      * <p>
-     * The default implementation delegates to {@link #chatStream(ChatInput, ChatOptions, Consumer)}.
-     *
+     * @implNote The default implementation delegates to {@link #chatStream(ChatInput, ChatOptions, Consumer)}.
      * @param input The user's input containing message and optional images.
      * @param onToken The token consumer, this will be invoked for every chat response token in the stream.
      * @return An empty CompletableFuture which only completes when the end of stream is reached, never {@code null}.
@@ -356,8 +347,7 @@ public interface AIService extends Serializable {
      * });
      * </pre>
      * <p>
-     * The default implementation delegates to {@link #chatStream(ChatInput, ChatOptions, Consumer)}.
-     *
+     * @implNote The default implementation delegates to {@link #chatStream(ChatInput, ChatOptions, Consumer)}.
      * @param message The user's message to send to the AI.
      * @param options Chat options (system prompt, temperature, max tokens, etc.).
      * @param onToken The token consumer, this will be invoked for every chat response token in the stream.
@@ -423,8 +413,7 @@ public interface AIService extends Serializable {
     /**
      * Summarizes text to given maximum word count.
      * <p>
-     * The default implementation delegates to {@link #summarizeAsync(String, int)}.
-     *
+     * @implNote The default implementation delegates to {@link #summarizeAsync(String, int)}.
      * @param text The text to summarize.
      * @param maxWords Maximum number of words in the summary.
      * @return The summarized text, never {@code null}.
@@ -457,8 +446,7 @@ public interface AIService extends Serializable {
     /**
      * Extracts key points from text as a list.
      * <p>
-     * The default implementation delegates to {@link #extractKeyPointsAsync(String, int)}.
-     *
+     * @implNote The default implementation delegates to {@link #extractKeyPointsAsync(String, int)}.
      * @param text The text to extract key points from.
      * @param maxPoints Maximum number of key points to extract.
      * @return List of key points, never {@code null}.
@@ -494,8 +482,7 @@ public interface AIService extends Serializable {
     /**
      * Detects the language of the given text.
      * <p>
-     * The default implementation delegates to {@link #detectLanguageAsync(String)}.
-     *
+     * @implNote The default implementation delegates to {@link #detectLanguageAsync(String)}.
      * @param text The text to analyze.
      * @return The detected language code (ISO 639-1), never {@code null}.
      * @throws IllegalArgumentException if text is blank.
@@ -526,8 +513,7 @@ public interface AIService extends Serializable {
     /**
      * Translates text from source language to target language while preserving any markup and placeholders.
      * <p>
-     * The default implementation delegates to {@link #translateAsync(String, String, String)}.
-     *
+     * @implNote The default implementation delegates to {@link #translateAsync(String, String, String)}.
      * @param text The text to translate.
      * @param sourceLang Source language code (ISO 639-1), or {@code null} for auto-detection.
      * @param targetLang Target language code (ISO 639-1).
@@ -565,8 +551,7 @@ public interface AIService extends Serializable {
     /**
      * Proofreads text by correcting grammar and spelling errors while preserving the original meaning, tone, and style.
      * <p>
-     * The default implementation delegates to {@link #proofreadAsync(String)}.
-     *
+     * @implNote The default implementation delegates to {@link #proofreadAsync(String)}.
      * @param text The text to proofread.
      * @return The proofread text with corrections applied, never {@code null}.
      * @throws IllegalArgumentException if text is blank.
@@ -600,8 +585,7 @@ public interface AIService extends Serializable {
     /**
      * Moderates content with default options.
      * <p>
-     * The default implementation delegates to {@link #moderateContentAsync(String)}.
-     *
+     * @implNote The default implementation delegates to {@link #moderateContentAsync(String)}.
      * @param content The content to moderate.
      * @return Moderation result with detected violations, never {@code null}.
      * @throws IllegalArgumentException if content is blank.
@@ -620,8 +604,7 @@ public interface AIService extends Serializable {
     /**
      * Asynchronously moderates content with default options.
      * <p>
-     * The default implementation delegates to {@link #moderateContentAsync(String)} with {@link ModerationOptions#DEFAULT}.
-     *
+     * @implNote The default implementation delegates to {@link #moderateContentAsync(String)} with {@link ModerationOptions#DEFAULT}.
      * @param content The content to moderate.
      * @return A CompletableFuture that will contain the moderation result with detected violations, never {@code null}.
      * @throws IllegalArgumentException if content is blank.
@@ -634,8 +617,7 @@ public interface AIService extends Serializable {
     /**
      * Moderates content to detect violations per {@link Category}.
      * <p>
-     * The default implementation delegates to {@link #moderateContentAsync(String, ModerationOptions)}.
-     *
+     * @implNote The default implementation delegates to {@link #moderateContentAsync(String, ModerationOptions)}.
      * @param content The content to moderate.
      * @param options Moderation options (categories to check, threshold, etc.).
      * @return Moderation result with detected violations, never {@code null}.
@@ -673,8 +655,7 @@ public interface AIService extends Serializable {
      * <p>
      * Useful for generating alt text for accessibility, extracting information from images, or describing visual content.
      * <p>
-     * The default implementation delegates to {@link #analyzeImageAsync(byte[], String)}.
-     *
+     * @implNote The default implementation delegates to {@link #analyzeImageAsync(byte[], String)}.
      * @param image The image bytes to analyze.
      * @param prompt The prompt describing what to focus on (e.g., "describe the product", "what's the main subject"),
      * or {@code null} for a general description.
@@ -711,8 +692,7 @@ public interface AIService extends Serializable {
     /**
      * Generates alt text for an image suitable for accessibility purposes.
      * <p>
-     * The default implementation delegates to {@link #generateAltTextAsync(byte[])}.
-     *
+     * @implNote The default implementation delegates to {@link #generateAltTextAsync(byte[])}.
      * @param image The image bytes to analyze.
      * @return Alt text description, never {@code null}.
      * @throws UnsupportedOperationException if image analysis is not supported by the implementation.
@@ -744,8 +724,7 @@ public interface AIService extends Serializable {
     /**
      * Generates an image based on a text prompt with default options.
      * <p>
-     * The default implementation delegates to {@link #generateImageAsync(String)}.
-     *
+     * @implNote The default implementation delegates to {@link #generateImageAsync(String)}.
      * @param prompt The text prompt describing the image to generate.
      * @return Generated image bytes, never {@code null}.
      * @throws IllegalArgumentException if prompt is blank.
@@ -766,8 +745,7 @@ public interface AIService extends Serializable {
     /**
      * Asynchronously generates an image based on a text prompt with default options.
      * <p>
-     * The default implementation delegates to {@link #generateImageAsync(String, GenerateImageOptions)} with {@link GenerateImageOptions#DEFAULT}.
-     *
+     * @implNote The default implementation delegates to {@link #generateImageAsync(String, GenerateImageOptions)} with {@link GenerateImageOptions#DEFAULT}.
      * @param prompt The text prompt describing the image to generate.
      * @return A CompletableFuture that will contain the generated image bytes, never {@code null}.
      * @throws IllegalArgumentException if prompt is blank.
@@ -780,8 +758,7 @@ public interface AIService extends Serializable {
     /**
      * Generates an image based on a text prompt.
      * <p>
-     * The default implementation delegates to {@link #generateImageAsync(String, GenerateImageOptions)}.
-     *
+     * @implNote The default implementation delegates to {@link #generateImageAsync(String, GenerateImageOptions)}.
      * @param prompt The text prompt describing the image to generate.
      * @param options Image generation options (size, quality, style, etc.).
      * @return Generated image bytes, never {@code null}.
@@ -854,7 +831,7 @@ public interface AIService extends Serializable {
 
     /**
      * Returns whether this AI service implementation supports chat streaming via SSE.
-     * The default implementation returns false.
+     * @implNote The default implementation returns false.
      * @return Whether this AI service implementation supports chat streaming via SSE.
      */
     default boolean supportsStreaming() {
@@ -863,7 +840,7 @@ public interface AIService extends Serializable {
 
     /**
      * Returns whether this AI service implementation supports file uploads for chat attachments.
-     * The default implementation returns false.
+     * @implNote The default implementation returns false.
      * @return Whether this AI service implementation supports file uploads for chat attachments.
      */
     default boolean supportsFileUpload() {
@@ -872,7 +849,7 @@ public interface AIService extends Serializable {
 
     /**
      * Returns whether this AI service implementation supports structured (JSON schema) outputs.
-     * The default implementation returns false.
+     * @implNote The default implementation returns false.
      * @return Whether this AI service implementation supports structured (JSON schema) outputs.
      */
     default boolean supportsStructuredOutput() {

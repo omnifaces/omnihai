@@ -68,7 +68,7 @@ public enum AIProvider {
      * Defaults currently to model {@code gpt-5-mini} at endpoint {@code https://api.openai.com/v1}.
      * @see OpenAIService
      * @see <a href="https://platform.openai.com/api-keys">Manage OpenAI API Keys</a>
-     * @see <a href="https://platform.openai.com/docs/models">Available OpenAI models</a>
+     * @see <a href="https://platform.openai.com/docs/models">Available OpenAI Models</a>
      */
     OPENAI("OpenAI", OpenAIService.class, true, "gpt-5-mini", "https://api.openai.com/v1", OpenAITextHandler.class, OpenAIImageHandler.class),
 

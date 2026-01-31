@@ -67,7 +67,7 @@ public interface AITextHandler extends Serializable {
 
     /**
      * Processes each stream event for {@link AIService#chatStream(String, ChatOptions, Consumer)}.
-     * The default implementation throws UnsupportedOperationException.
+     * @implNote The default implementation throws UnsupportedOperationException.
      * @param service The visiting AI service.
      * @param event Stream event.
      * @param onToken Callback receiving each stream data chunk (often one word/token/line).
@@ -95,8 +95,7 @@ public interface AITextHandler extends Serializable {
      * <li>content moderation</li>
      * </ul>
      * <p>
-     * The default implementation {@link BaseAITextHandler} returns 0.5.
-     *
+     * @implNote The default implementation {@link BaseAITextHandler} returns 0.5.
      * @return default temperature value in range 0.0-1.0 for summarization and key-point extraction.
      * @see AIService#summarize(String, int)
      * @see AIService#extractKeyPoints(String, int)
@@ -153,7 +152,7 @@ public interface AITextHandler extends Serializable {
 
     /**
      * Parses file ID from the API response body of file upload operation.
-     * The default implementation throws UnsupportedOperationException.
+     * @implNote The default implementation throws UnsupportedOperationException.
      * @param responseBody The API response body, usually a JSON object with the file ID.
      * @return The extracted file ID from the API response body.
      * @throws AIResponseException If the response cannot be parsed as JSON, contains an error object, or is missing expected file ID.

@@ -61,7 +61,7 @@ public final class JsonHelper {
             return isBlank(string.getString());
         }
         else {
-            throw new UnsupportedOperationException("Not implemented yet, just add a new else-if block here");
+            throw new UnsupportedOperationException("Unsupported type " + value.getClass());
         }
     }
 
@@ -168,7 +168,8 @@ public final class JsonHelper {
 
         if ("*".equals(indexPart)) {
             collector.addAll(array);
-        } else {
+        }
+        else {
             int index = Integer.parseInt(indexPart);
 
             if (index < array.size()) {
@@ -187,8 +188,7 @@ public final class JsonHelper {
      * @return A new JSON schema with {@code additionalProperties: false} added to all object schemas.
      */
     public static JsonObject addStrictAdditionalProperties(JsonObject schema) {
-        var builder = Json.createObjectBuilder(schema)
-            .add("additionalProperties", false);
+        var builder = Json.createObjectBuilder(schema).add("additionalProperties", false);
 
         if (schema.containsKey("properties")) {
             var props = Json.createObjectBuilder();

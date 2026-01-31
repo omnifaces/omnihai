@@ -354,11 +354,11 @@ private AIService trackedService;
 | OpenAI | ✅ | ✅ | ✅ |
 | Anthropic | ✅ | ✅ | ✅ |
 | Google AI | ✅ | ✅ | ✅ |
-| xAI (Grok) | ✅ | ❌ | ❌ |
+| xAI (Grok) | ✅ | ❌ (via OpenAI) | ❌ (via OpenAI) |
 | Mistral | ✅ | ✅ | ✅ |
-| Meta AI | ✅ | ❌ | ❌ |
+| Meta AI | ✅ | ❌ (via OpenAI) | ❌ (via OpenAI) |
 | Azure OpenAI | ✅ | ✅ | ✅ |
-| OpenRouter | ✅ | ❌ | ❌ |
+| OpenRouter | ✅ | ❌ (via OpenAI) | ❌ (via OpenAI) |
 | Hugging Face | ✅ | ✅ | ✅ |
 | Ollama | ✅ | ✅ | ✅ |
 | AWS Bedrock | ❌ | ✅ | ✅ |

@@ -57,7 +57,7 @@ public interface AIImageHandler extends Serializable {
 
     /**
      * Builds the JSON request payload for all generate image operations.
-     * The default implementation throws UnsupportedOperationException.
+     * @implNote The default implementation throws UnsupportedOperationException.
      * @param service The visiting AI service.
      * @param prompt The image generation prompt.
      * @param options The image generation options.
@@ -69,7 +69,7 @@ public interface AIImageHandler extends Serializable {
 
     /**
      * Parses image content from the API response body of generate image operation.
-     * The default implementation throws UnsupportedOperationException.
+     * @implNote The default implementation throws UnsupportedOperationException.
      * @param responseBody The API response body, usually a JSON object with the AI response, along with some meta data.
      * @return The extracted image content from the API response body.
      * @throws AIResponseException If the response cannot be parsed as JSON, contains an error object, or is missing expected image content.

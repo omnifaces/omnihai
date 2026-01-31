@@ -112,7 +112,7 @@ public class OpenAIService extends BaseAIService {
 
     /**
      * Returns whether this OpenAI based service implementation supports the {@code responses} API as replacement for the legacy {@code chat/completions} API.
-     * The default implementation returns true if {@link #getModelVersion()} is at least {@code gpt-4}.
+     * @implNote The default implementation returns true if {@link #getModelVersion()} is at least {@code gpt-4}.
      * @return Whether this OpenAI based service implementation supports the {@code responses} API as replacement for the legacy {@code chat/completions} API.
      */
     public boolean supportsOpenAIResponsesApi() {
