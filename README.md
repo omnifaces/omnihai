@@ -3,16 +3,16 @@
 
 # OmniHai
 
-A unified Java AI utility library for Jakarta EE applications.
+A unified Java AI utility library for Jakarta EE or MicroProfile applications.
 
 ## Overview
 
 OmniHai provides a single, consistent API to interact with multiple AI providers. It achieves that by interacting with their REST API endpoints directly.
 
-## Requirements
+## Minimum Requirements
 
-- Java 17+
-- Jakarta EE 11 (JSON-P required, CDI optional, EL optional, MP Config optional)
+- Java 17
+- Jakarta EE 10 or MicroProfile 7 (JSON-P required, CDI optional, EL optional, MP Config optional)
 
 ## Installation
 
@@ -24,7 +24,7 @@ OmniHai provides a single, consistent API to interact with multiple AI providers
 </dependency>
 ```
 
-On non-Jakarta EE containers / non-MicroProfile runtimes such as Tomcat, you'll need to add JSON-P and optionally CDI dependencies:
+On non-Jakarta EE / non-MicroProfile runtimes such as Tomcat, you'll need to manually add JSON-P and optionally CDI dependencies:
 
 ```xml
 <!-- JSON-P implementation (required) -->
@@ -41,7 +41,7 @@ On non-Jakarta EE containers / non-MicroProfile runtimes such as Tomcat, you'll 
     <version>6.0.4.Final</version>
 </dependency>
 
-<!-- MicroProfile Config implementation (optional, for ${config:...} resolution in @AI attributes) -->
+<!-- MP Config implementation (optional, for ${config:...} resolution in @AI attributes) -->
 <dependency>
     <groupId>smallrye.config</groupId>
     <artifactId>smallrye-config</artifactId>
@@ -49,7 +49,7 @@ On non-Jakarta EE containers / non-MicroProfile runtimes such as Tomcat, you'll 
 </dependency>
 ```
 
-You can also use it on Java SE, you'll still need the JSON-P implementation, but you cannot use the CDI annotation.
+You can technically also use it on plain Java SE, you'll still need the JSON-P implementation, but you cannot use the CDI annotation.
 
 ## Supported Providers
 
@@ -194,7 +194,7 @@ String responseJson = service.chat("Analyze this review: " + reviewText,
 ProductReview review = JsonSchemaHelper.fromJson(responseJson, ProductReview.class);
 ```
 
-The `JsonSchemaHelper` generates JSON schemas from Java records and beans. It supports primitive types, strings, enums, collections, arrays, nested types, and `Optional` fields (which are excluded from `"required"`).
+The `JsonSchemaHelper` generates JSON schemas from Java records and beans. It supports primitive types, strings, enums, temporals, collections, arrays, nested types, and `Optional` fields (which are excluded from `"required"`).
 
 ### Text Analysis
 
@@ -320,9 +320,9 @@ private AIService trackedService;
 
 | Aspect | OmniHai | LangChain4J | Spring AI | Jakarta Agentic |
 |--------|--------|-------------|-----------|-----------------|
-| **Target Runtime** | Jakarta EE | Any Java | Spring | Jakarta EE |
+| **Target Runtime** | Jakarta EE / MicroProfile | Any Java | Spring | Jakarta EE |
 | **Philosophy** | Minimal, focused utility | Comprehensive toolkit | Spring integration | Standard specification |
-| **Dependencies** | JSON-P only (CDI/EL optional) | Multiple modules | Spring framework | TBD (in development) |
+| **Dependencies** | JSON-P only (CDI/EL/MP-config optional) | Multiple modules | Spring framework | TBD (in development) |
 | **Learning Curve** | Low | Medium-High | Medium (if Spring-familiar) | TBD |
 
 ### Feature Comparison
@@ -368,10 +368,9 @@ private AIService trackedService;
 | Aspect | OmniHai | LangChain4J-CDI | Spring AI |
 |--------|--------|-----------------|-----------|
 | **Injection Style** | `@Inject @AI(...)` | `@Inject` + config | `@Autowired` + beans |
+| **Qualifier-based** | ✅ | ❌ | ❌ |
 | **EL Support** | ✅ `#{...}`, `${...}` | ❌ | ❌ (SpEL, different) |
 | **MP Config Support** | ✅ `${config:...}` | ❌ | ❌ (SpEL, different) |
-| **Zero Config** | ❌ | ❌ | ❌ |
-| **Qualifier-based** | ✅ | ❌ | ❌ |
 
 ### Where OmniHai Shines
 
@@ -400,9 +399,9 @@ No tools, embeddings, RAG, memory, or agents. This isn't a gap - it's a design c
 OmniHai fills a different niche. For apps that need:
 
 - Multi-provider chat with easy switching
-- Text analysis (summarize, translate, moderate)
+- Text analysis (summarize, translate, proofread, moderate)
 - Minimal dependencies
-- Pure Jakarta EE / CDI
+- Pure Jakarta EE / MicroProfile
 
 ...without needing RAG pipelines, agent frameworks, or vector stores, OmniHai is arguably the better choice. Less to learn, less to break, fewer dependencies.
 
@@ -414,7 +413,8 @@ Yes, significantly:
 - OmniHai JAR: ~150 KB vs LangChain4J: ~5-10 MB (*per* AI provider!) — at least 35x smaller
 - 69 source files, ~9,500 lines of code (~4,000 actual code, rest is javadocs/comments)
 - Zero runtime dependencies — uses JDK's native `java.net.http.HttpClient` directly
-- Only optional provided dependencies: Jakarta JSON-P, CDI, and EL APIs (which Jakarta EE servers already have)
+- Only one required dependency: Jakarta JSON-P (which Jakarta EE and MicroProfile runtimes already have)
+- Other dependencies are optional: CDI, EL and/or MP Config APIs (which Jakarta EE resp. MicroProfile runtimes already have)
 
 ### Is it faster?
 
@@ -423,12 +423,12 @@ Likely yes for startup and per-request overhead:
 - Minimal reflection — only used once during service instantiation, not per-request
 - No abstraction layers around HTTP — direct `java.net.http.HttpClient` usage
 - Simple interface dispatch, no dynamic proxies
-- Services are stateless and cached via ConcurrentHashMap
+- Services are stateless and cached via `ConcurrentHashMap`
 
 ### Does it produce less GC garbage?
 
 The design strongly suggests yes:
-- No intermediate JSON object materialization — uses path extraction directly on JsonObject
+- No intermediate JSON object materialization — uses path extraction directly on `JsonObject`
 - Conservative allocation patterns — no framework overhead creating wrapper objects
 - Native `java.net.http.HttpClient` — has better GC characteristics than third-party HTTP libraries
 - Simple POJOs and builders — no reflection-based bean creation at runtime
@@ -437,8 +437,8 @@ The design strongly suggests yes:
 ### When to Choose Each
 
 **Choose OmniHai when:**
-- You need a lightweight, focused solution for Jakarta EE
-- Your use case is straightforward chat, translation, summarization, or moderation
+- You need a lightweight, focused solution for Jakarta EE or MicroProfile
+- Your use case is straightforward chat, translation, summarization, proofreading, or moderation
 - You want minimal dependencies and a small footprint
 - You prefer simplicity over feature completeness
 
@@ -462,7 +462,7 @@ The design strongly suggests yes:
 
 As said, OmniHai is "a sharp chef's knife — does a few things very well" rather than being a full framework.
 
-Bottom line: If you need a lightweight utility for AI chat/text operations in Jakarta EE without framework overhead, OmniHai is dramatically smaller and should be faster with less GC pressure. If you need RAG or agent pipelines, LangChain4J's / Spring AI's larger footprint comes with those capabilities.
+Bottom line: If you need a lightweight utility for AI chat/text operations in Jakarta EE or MicroProfile without framework overhead, OmniHai is dramatically smaller and should be faster with less GC pressure. If you need RAG or agent pipelines, LangChain4J's / Spring AI's larger footprint comes with those capabilities.
 
 ## License
 
