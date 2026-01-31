@@ -26,6 +26,8 @@ import java.util.TreeSet;
  *
  * @author Bauke Scholtz
  * @since 1.0
+ * @see org.omnifaces.ai.AIService#moderateContent(String, ModerationOptions)
+ * @see ModerationResult
  */
 public class ModerationOptions implements Serializable {
 

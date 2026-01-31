@@ -34,6 +34,8 @@ import org.omnifaces.ai.mime.MimeType;
  *
  * @author Bauke Scholtz
  * @since 1.0
+ * @see org.omnifaces.ai.AIService#chat(ChatInput, ChatOptions)
+ * @see ChatOptions
  */
 public class ChatInput implements Serializable {
 

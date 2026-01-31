@@ -26,6 +26,8 @@ import org.omnifaces.ai.helper.JsonSchemaHelper;
  *
  * @author Bauke Scholtz
  * @since 1.0
+ * @see org.omnifaces.ai.AIService#chat(String, ChatOptions)
+ * @see ChatInput
  */
 public class ChatOptions implements Serializable {
 

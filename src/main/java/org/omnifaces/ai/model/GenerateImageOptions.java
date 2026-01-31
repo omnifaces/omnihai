@@ -26,6 +26,7 @@ import java.util.regex.Pattern;
  *
  * @author Bauke Scholtz
  * @since 1.0
+ * @see org.omnifaces.ai.AIService#generateImage(String, GenerateImageOptions)
  */
 public class GenerateImageOptions implements Serializable {
 

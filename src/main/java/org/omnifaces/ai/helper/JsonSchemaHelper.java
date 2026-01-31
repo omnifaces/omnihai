@@ -93,6 +93,7 @@ import jakarta.json.JsonValue;
  *
  * @author Bauke Scholtz
  * @since 1.0
+ * @see org.omnifaces.ai.model.ChatOptions#getJsonSchema()
  */
 public final class JsonSchemaHelper {
 

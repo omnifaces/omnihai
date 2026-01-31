@@ -23,6 +23,8 @@ import java.util.stream.Collectors;
  *
  * @author Bauke Scholtz
  * @since 1.0
+ * @see org.omnifaces.ai.AIService#moderateContent(String, ModerationOptions)
+ * @see ModerationOptions
  */
 public class ModerationResult implements Serializable {
 
