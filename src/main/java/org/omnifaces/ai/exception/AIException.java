@@ -17,7 +17,7 @@ import java.util.concurrent.CompletionException;
 /**
  * Base exception for all AI service-related errors.
  * <p>
- * This is the root of the OmniAI exception hierarchy:
+ * This is the root of the OmniHai exception hierarchy:
  * <ul>
  * <li>{@link AIHttpException} - HTTP-level errors (4xx/5xx status codes)
  * <li>{@link AIResponseException} - Response content errors (parsing, missing content)

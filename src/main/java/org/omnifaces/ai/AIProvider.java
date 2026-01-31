@@ -187,7 +187,7 @@ public enum AIProvider {
      * {@link AIConfig#withStrategy(AIStrategy)} or {@link AI#textHandler()} and {@link AI#imageHandler()},
      * since this provider has no default handlers.
      * <p>
-     * If you have a great one, feel free to submit it to OmniAI so it ends up as a new enum entry here :)
+     * If you have a great one, feel free to submit it to OmniHai so it ends up as a new enum entry here :)
      */
     CUSTOM(null, null, false, null, null, null, null);
 

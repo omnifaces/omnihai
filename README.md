@@ -1,13 +1,13 @@
-[![Maven](https://img.shields.io/maven-central/v/org.omnifaces/omniai)](https://search.maven.org/artifact/org.omnifaces/omniai)
-[![Javadoc](https://javadoc.io/badge/org.omnifaces/omniai.svg)](https://javadoc.io/doc/org.omnifaces/omniai) 
+[![Maven](https://img.shields.io/maven-central/v/org.omnifaces/omnihai)](https://search.maven.org/artifact/org.omnifaces/omnihai)
+[![Javadoc](https://javadoc.io/badge/org.omnifaces/omnihai.svg)](https://javadoc.io/doc/org.omnifaces/omnihai) 
 
-# OmniAI
+# OmniHai
 
 A unified Java AI utility library for Jakarta EE applications.
 
 ## Overview
 
-OmniAI provides a single, consistent API to interact with multiple AI providers. It achieves that by interacting with their REST API endpoints directly.
+OmniHai provides a single, consistent API to interact with multiple AI providers. It achieves that by interacting with their REST API endpoints directly.
 
 ## Requirements
 
@@ -19,7 +19,7 @@ OmniAI provides a single, consistent API to interact with multiple AI providers.
 ```xml
 <dependency>
     <groupId>org.omnifaces</groupId>
-    <artifactId>omniai</artifactId>
+    <artifactId>omnihai</artifactId>
     <version>1.0-M3</version>
 </dependency>
 ```
@@ -109,7 +109,7 @@ private AIService imageGenerator;
 
 ### Multi-Provider Aggregation
 
-Need diverse perspectives? OmniAI makes it easy to query multiple providers and combine their responses:
+Need diverse perspectives? OmniHai makes it easy to query multiple providers and combine their responses:
 
 ```java
 @Inject @AI(apiKey = "#{config.openaiApiKey}")
@@ -314,11 +314,11 @@ AIService service = AIConfig.of("your-api-key").withStrategy(strategy).createSer
 private AIService trackedService;
 ```
 
-## OmniAI vs LangChain4J vs Spring AI vs Jakarta Agentic
+## OmniHai vs LangChain4J vs Spring AI vs Jakarta Agentic
 
 ### Philosophy
 
-| Aspect | OmniAI | LangChain4J | Spring AI | Jakarta Agentic |
+| Aspect | OmniHai | LangChain4J | Spring AI | Jakarta Agentic |
 |--------|--------|-------------|-----------|-----------------|
 | **Target Runtime** | Jakarta EE | Any Java | Spring | Jakarta EE |
 | **Philosophy** | Minimal, focused utility | Comprehensive toolkit | Spring integration | Standard specification |
@@ -327,7 +327,7 @@ private AIService trackedService;
 
 ### Feature Comparison
 
-| Feature | OmniAI | LangChain4J | Spring AI | Jakarta Agentic |
+| Feature | OmniHai | LangChain4J | Spring AI | Jakarta Agentic |
 |---------|--------|-------------|-----------|-----------------|
 | **Chat/Completion** | ✅ | ✅ | ✅ | ✅ (planned) |
 | **Streaming** | ✅ | ✅ | ✅ | TBD |
@@ -349,7 +349,7 @@ private AIService trackedService;
 
 ### Provider Support
 
-| Provider | OmniAI | LangChain4J | Spring AI |
+| Provider | OmniHai | LangChain4J | Spring AI |
 |----------|--------|-------------|-----------|
 | OpenAI | ✅ | ✅ | ✅ |
 | Anthropic | ✅ | ✅ | ✅ |
@@ -365,7 +365,7 @@ private AIService trackedService;
 
 ### CDI Integration
 
-| Aspect | OmniAI | LangChain4J-CDI | Spring AI |
+| Aspect | OmniHai | LangChain4J-CDI | Spring AI |
 |--------|--------|-----------------|-----------|
 | **Injection Style** | `@Inject @AI(...)` | `@Inject` + config | `@Autowired` + beans |
 | **EL Support** | ✅ `#{...}`, `${...}` | ❌ | ❌ (SpEL, different) |
@@ -373,7 +373,7 @@ private AIService trackedService;
 | **Zero Config** | ❌ | ❌ | ❌ |
 | **Qualifier-based** | ✅ | ❌ | ❌ |
 
-### Where OmniAI Shines
+### Where OmniHai Shines
 
 - Ultra-lightweight - No external HTTP library, just [`java.net.http.HttpClient`](https://docs.oracle.com/en/java/javase/21/docs/api/java.net.http/java/net/http/HttpClient.html). Minimal deps.
 - Built-in text utilities - Summarization, translation, proofreading, key point extraction, moderation as first-class features (not "build your own prompt")
@@ -384,9 +384,9 @@ private AIService trackedService;
 - 10 providers out of the box - Including Ollama for local/offline
 - Clean exception hierarchy - Specific exceptions per HTTP status
 
-### Where OmniAI is Intentionally Simpler
+### Where OmniHai is Intentionally Simpler
 
-No tools, embeddings, RAG, memory, or agents. This isn't a gap - it's a design choice. OmniAI is a utility library, not a framework.
+No tools, embeddings, RAG, memory, or agents. This isn't a gap - it's a design choice. OmniHai is a utility library, not a framework.
 
 ### Positioning
 
@@ -395,23 +395,23 @@ No tools, embeddings, RAG, memory, or agents. This isn't a gap - it's a design c
 | **LangChain4J** | Full kitchen with every appliance |
 | **Spring AI** | Full kitchen, Spring-branded appliances |
 | **Jakarta Agentic** | Kitchen building code (specification) |
-| **OmniAI** | Sharp chef's knife - does a few things very well |
+| **OmniHai** | Sharp chef's knife - does a few things very well |
 
-OmniAI fills a different niche. For apps that need:
+OmniHai fills a different niche. For apps that need:
 
 - Multi-provider chat with easy switching
 - Text analysis (summarize, translate, moderate)
 - Minimal dependencies
 - Pure Jakarta EE / CDI
 
-...without needing RAG pipelines, agent frameworks, or vector stores, OmniAI is arguably the better choice. Less to learn, less to break, fewer dependencies.
+...without needing RAG pipelines, agent frameworks, or vector stores, OmniHai is arguably the better choice. Less to learn, less to break, fewer dependencies.
 
-If Jakarta Agentic matures, OmniAI could potentially be a lightweight implementation of parts of that spec, or remain a complementary "just the essentials" alternative.
+If Jakarta Agentic matures, OmniHai could potentially be a lightweight implementation of parts of that spec, or remain a complementary "just the essentials" alternative.
 
-### Is OmniAI smaller than e.g. LangChain4J?
+### Is OmniHai smaller than e.g. LangChain4J?
 
 Yes, significantly:
-- OmniAI JAR: ~150 KB vs LangChain4J: ~5-10 MB (*per* AI provider!) — at least 35x smaller
+- OmniHai JAR: ~150 KB vs LangChain4J: ~5-10 MB (*per* AI provider!) — at least 35x smaller
 - 69 source files, ~9,500 lines of code (~4,000 actual code, rest is javadocs/comments)
 - Zero runtime dependencies — uses JDK's native `java.net.http.HttpClient` directly
 - Only optional provided dependencies: Jakarta JSON-P, CDI, and EL APIs (which Jakarta EE servers already have)
@@ -436,7 +436,7 @@ The design strongly suggests yes:
 
 ### When to Choose Each
 
-**Choose OmniAI when:**
+**Choose OmniHai when:**
 - You need a lightweight, focused solution for Jakarta EE
 - Your use case is straightforward chat, translation, summarization, or moderation
 - You want minimal dependencies and a small footprint
@@ -460,9 +460,9 @@ The design strongly suggests yes:
 - You're building agentic workflows
 - You can wait for the specification to mature
 
-As said, OmniAI is "a sharp chef's knife — does a few things very well" rather than being a full framework.
+As said, OmniHai is "a sharp chef's knife — does a few things very well" rather than being a full framework.
 
-Bottom line: If you need a lightweight utility for AI chat/text operations in Jakarta EE without framework overhead, OmniAI is dramatically smaller and should be faster with less GC pressure. If you need RAG or agent pipelines, LangChain4J's / Spring AI's larger footprint comes with those capabilities.
+Bottom line: If you need a lightweight utility for AI chat/text operations in Jakarta EE without framework overhead, OmniHai is dramatically smaller and should be faster with less GC pressure. If you need RAG or agent pipelines, LangChain4J's / Spring AI's larger footprint comes with those capabilities.
 
 ## License
 
@@ -471,7 +471,7 @@ Bottom line: If you need a lightweight utility for AI chat/text operations in Ja
 ## Links
 
 - [OmniFaces](https://omnifaces.org)
-- [GitHub](https://github.com/omnifaces/omniai)
+- [GitHub](https://github.com/omnifaces/omnihai)
 - [Blog post: One API, any AI](https://balusc.omnifaces.org/2026/01/one-api-any-ai.html)
 - [Blog post: Real-time AI, your way](https://balusc.omnifaces.org/2026/01/real-time-ai-your-way.html)
 

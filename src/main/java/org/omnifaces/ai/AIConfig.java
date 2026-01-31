@@ -135,7 +135,7 @@ public final record AIConfig(String provider, String apiKey, String model, Strin
     }
 
     /**
-     * Creates a full property key by prepending the OmniAI property prefix.
+     * Creates a full property key by prepending the OmniHai property prefix.
      *
      * @param suffix The property name suffix (e.g., "AZURE_RESOURCE").
      * @return The full property key (e.g., "org.omnifaces.ai.AZURE_RESOURCE").
@@ -145,10 +145,10 @@ public final record AIConfig(String provider, String apiKey, String model, Strin
     }
 
     /**
-     * Checks whether the given key is an OmniAI configuration property key.
+     * Checks whether the given key is an OmniHai configuration property key.
      *
      * @param key The property key to check.
-     * @return {@code true} if the key starts with the OmniAI property prefix.
+     * @return {@code true} if the key starts with the OmniHai property prefix.
      */
     public static boolean acceptsPropertyKey(String key) {
         return key.startsWith(PROPERTY_PREFIX);

@@ -7,13 +7,13 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>org.omnifaces</groupId>
-    <artifactId>omniai</artifactId>
+    <artifactId>omnihai</artifactId>
     <version>1.0-SNAPSHOT</version>
     <packaging>jar</packaging>
 
-    <name>OmniAI</name>
+    <name>OmniHai</name>
     <description>AI utility library</description>
-    <url>https://github.com/omnifaces/omniai</url>
+    <url>https://github.com/omnifaces/omnihai</url>
     <organization>
         <name>OmniFaces</name>
         <url>https://omnifaces.org</url>
@@ -37,9 +37,9 @@
     </licenses>
 
     <scm>
-        <url>https://github.com/omnifaces/omniai</url>
-        <connection>scm:git:git://github.com/omnifaces/omniai.git</connection>
-        <developerConnection>scm:git:git@github.com:omnifaces/omniai.git</developerConnection>
+        <url>https://github.com/omnifaces/omnihai</url>
+        <connection>scm:git:git://github.com/omnifaces/omnihai.git</connection>
+        <developerConnection>scm:git:git@github.com:omnifaces/omnihai.git</developerConnection>
     </scm>
 
     <distributionManagement>
@@ -262,7 +262,7 @@
                     <splitindex>true</splitindex>
                     <show>package</show>
                     <doclint>all</doclint>
-                    <doctitle>OmniAI API documentation</doctitle>
+                    <doctitle>OmniHai API documentation</doctitle>
                     <links>
                         <link>https://jakarta.ee/specifications/platform/${jakartaee.version}/apidocs/</link>
                     </links>

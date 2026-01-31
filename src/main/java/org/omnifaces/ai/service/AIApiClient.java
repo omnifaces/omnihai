@@ -71,7 +71,7 @@ final class AIApiClient {
     private static final String MULTIPART_FORM_DATA = "multipart/form-data";
 
     /** The User-Agent header: {@value} */
-    public static final String USER_AGENT = "OmniAI 1.0 (https://github.com/omnifaces/omniai)";
+    public static final String USER_AGENT = "OmniHai 1.0 (https://github.com/omnifaces/omnihai)";
     /** Default max retries: {@value} */
     public static final int MAX_RETRIES = 3;
     /** Initial retry backoff time: {@value}ms (increases exponentially on every retry) */
@@ -311,7 +311,7 @@ final class AIApiClient {
         private final String boundary;
 
         private MultipartBodyPublisher(Attachment attachment) {
-            this.boundary = "----OmniAIBoundary" + System.currentTimeMillis();
+            this.boundary = "----OmniHaiBoundary" + System.currentTimeMillis();
 
             try (var os = new ByteArrayOutputStream()) {
                 writeTextPart(os, "purpose", "assistants");
