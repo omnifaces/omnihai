@@ -72,11 +72,11 @@ public class ModerationResult implements Serializable {
     /**
      * Gets the score for a specific category.
      *
-     * @param category The category
-     * @return The score, or 0.0 if category not checked
+     * @param category The category (may be {@code null}).
+     * @return The score, or 0.0 if category is {@code null} or was not checked.
      */
     public double getScore(String category) {
-        return scores.getOrDefault(category, 0.0);
+        return category == null ? 0.0 : scores.getOrDefault(category, 0.0);
     }
 
     /**

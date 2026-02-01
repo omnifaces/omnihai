@@ -12,6 +12,11 @@
  */
 package org.omnifaces.ai.model;
 
+import static org.omnifaces.ai.helper.JsonHelper.parseJson;
+
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.io.Serializable;
 
 import jakarta.json.JsonObject;
@@ -57,7 +62,7 @@ public class ChatOptions implements Serializable {
     /** The system prompt. */
     private final String systemPrompt;
     /** The JSON schema for structured output. */
-    private final JsonObject jsonSchema;
+    private transient JsonObject jsonSchema;
     /** The sampling temperature. */
     private final double temperature;
     /** The maximum number of tokens. */
@@ -71,6 +76,30 @@ public class ChatOptions implements Serializable {
         this.temperature = builder.temperature;
         this.maxTokens = builder.maxTokens;
         this.topP = builder.topP;
+    }
+
+    /**
+     * Custom serialization to handle non-serializable {@link JsonObject}.
+     * @param output The object output stream.
+     * @throws IOException If an I/O error occurs.
+     */
+    private void writeObject(ObjectOutputStream output) throws IOException {
+        output.defaultWriteObject();
+        output.writeObject(jsonSchema != null ? jsonSchema.toString() : null);
+    }
+
+    /**
+     * Custom deserialization to restore {@link JsonObject} from its string representation.
+     * @param input The object input stream.
+     * @throws IOException If an I/O error occurs.
+     * @throws ClassNotFoundException If the class of a serialized object cannot be found.
+     */
+    private void readObject(ObjectInputStream input) throws IOException, ClassNotFoundException {
+        input.defaultReadObject();
+        var jsonSchemaString = (String) input.readObject();
+        if (jsonSchemaString != null) {
+            jsonSchema = parseJson(jsonSchemaString);
+        }
     }
 
     /**
