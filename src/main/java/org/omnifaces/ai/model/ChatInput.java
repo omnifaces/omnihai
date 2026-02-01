@@ -13,16 +13,22 @@
 package org.omnifaces.ai.model;
 
 import static java.util.Collections.emptyList;
+import static java.util.Collections.emptyMap;
 import static java.util.Collections.unmodifiableList;
+import static java.util.Objects.requireNonNull;
+import static java.util.stream.Collectors.toUnmodifiableMap;
 import static org.omnifaces.ai.helper.ImageHelper.isSupportedAsImageAttachment;
 import static org.omnifaces.ai.helper.ImageHelper.sanitizeImageAttachment;
+import static org.omnifaces.ai.helper.TextHelper.isBlank;
 import static org.omnifaces.ai.helper.TextHelper.requireNonBlank;
 import static org.omnifaces.ai.mime.MimeType.guessMimeType;
 
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.omnifaces.ai.helper.ImageHelper;
 import org.omnifaces.ai.mime.MimeType;
@@ -46,9 +52,26 @@ public class ChatInput implements Serializable {
      * @param content The content bytes.
      * @param mimeType The mime type.
      * @param fileName The file name.
-     * @param purpose The attachment purpose. This will eventually be included as "purpose" field in the upload request.
+     * @param metadata Additional provider-specific metadata to use in upload request.
      */
-    public final record Attachment(byte[] content, MimeType mimeType, String fileName, String purpose) implements Serializable {
+    public final record Attachment(byte[] content, MimeType mimeType, String fileName, Map<String, String> metadata) implements Serializable {
+
+        /**
+         * Validates and normalizes the record components by stripping whitespace and filtering blank properties.
+         *
+         * @param content The content bytes.
+         * @param mimeType The mime type.
+         * @param fileName The file name.
+         * @param metadata Additional provider-specific metadata to use in upload request.
+         */
+        public Attachment {
+            content = requireNonNull(content, "content");
+            mimeType = requireNonNull(mimeType, "mimeType");
+            fileName = requireNonBlank(fileName, "fileName");
+            metadata = metadata == null ? emptyMap() : metadata.entrySet().stream()
+                    .filter(e -> !isBlank(e.getKey()) && !isBlank(e.getValue()))
+                    .collect(toUnmodifiableMap(e -> e.getKey().strip(), e -> e.getValue().strip()));
+        }
 
         /**
          * Converts this attachment to a Base64 encoded string.
@@ -67,13 +90,16 @@ public class ChatInput implements Serializable {
         }
 
         /**
-         * Returns a copy of this attachment with the specified purpose.
+         * Returns a copy of this attachment with the specified additional metadata.
          *
-         * @param purpose The attachment purpose.
-         * @return A new attachment instance with the updated purpose.
+         * @param name Name of additional provider-specific metadata to use in upload request.
+         * @param value Value of additional provider-specific metadata to use in upload request.
+         * @return A new attachment instance with the specified additional metadata.
          */
-        public Attachment withPurpose(String purpose) {
-            return new Attachment(content, mimeType, fileName, purpose);
+        public Attachment withMetadata(String name, String value) {
+            var newHeaders = new HashMap<>(metadata);
+            newHeaders.put(requireNonBlank(name, "name").strip(), requireNonBlank(value, "value").strip());
+            return new Attachment(content, mimeType, fileName, metadata);
         }
     }
 

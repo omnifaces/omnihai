@@ -315,8 +315,8 @@ final class AIHttpClient {
             this.boundary = "----OmniHaiBoundary" + System.currentTimeMillis();
 
             try (var os = new ByteArrayOutputStream()) {
-                if (attachment.purpose() != null) {
-                    writeTextPart(os, "purpose", attachment.purpose());
+                for (var header : attachment.metadata().entrySet()) {
+                    writeTextPart(os, header.getKey(), header.getValue());
                 }
                 writeFilePart(os, "file", attachment.fileName(), attachment.mimeType().value(), attachment.content());
                 writeLine(os, "--" + boundary + "--");
