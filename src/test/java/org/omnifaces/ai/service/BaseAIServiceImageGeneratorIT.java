@@ -13,7 +13,6 @@
 package org.omnifaces.ai.service;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.omnifaces.ai.mime.ImageMimeTypeDetector.guessImageMimeType;
 
 import java.io.ByteArrayInputStream;
 import java.nio.file.Files;
@@ -35,10 +34,10 @@ abstract class BaseAIServiceImageGeneratorIT extends AIServiceIT {
     void generateImage() throws Exception {
         var response = service.generateImage("Willemstad, Curacao");
         assertTrue(response.length > 0, "Image response should not be empty");
-        var mimeType = guessImageMimeType(response).map(MimeType::value).orElse("image/png");
+        var mimeType = MimeType.guessMimeType(response);
         var targetDir = Path.of(System.getProperty("user.dir"), "target", "image-generator-test-results");
         targetDir.toFile().mkdirs();
-        var tempFilePath = Files.createTempFile(targetDir, getClass().getSimpleName() + "-", "." + mimeType.split("/", 2)[1]);
+        var tempFilePath = Files.createTempFile(targetDir, getClass().getSimpleName() + "-", "." + mimeType.extension());
         Files.write(tempFilePath, response);
         log("saved in " + tempFilePath.toString());
 

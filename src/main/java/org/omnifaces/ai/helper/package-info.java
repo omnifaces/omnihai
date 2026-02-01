@@ -12,7 +12,7 @@
  */
 
 /**
- * Utility classes for text, JSON, and JSON Schema operations.
+ * Utility classes for text, JSON, JSON Schema, and image operations.
  * <p>
  * Key classes:
  * <ul>
@@ -20,6 +20,8 @@
  *     structured AI outputs. Supports primitives, collections, maps, enums, nested types, and {@code Optional}.</li>
  * <li>{@link org.omnifaces.ai.helper.JsonHelper} - JSON parsing and path-based value extraction utilities.</li>
  * <li>{@link org.omnifaces.ai.helper.TextHelper} - Text validation and manipulation utilities.</li>
+ * <li>{@link org.omnifaces.ai.helper.ImageHelper} - Image sanitization for AI model compatibility (alpha channel
+ *     removal, format conversion).</li>
  * </ul>
  */
 package org.omnifaces.ai.helper;

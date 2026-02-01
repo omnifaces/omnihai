@@ -22,7 +22,7 @@ import java.util.Optional;
  * @author Bauke Scholtz
  * @since 1.0
  */
-public final class AudioVideoMimeTypeDetector {
+final class AudioVideoMimeTypeDetector {
 
     private static final byte[] MKV_MAGIC = {0x1A, 'E', (byte)0xDF, (byte)0xA3};
     /** The RIFF magic (to be shared with {@link ImageMimeTypeDetector}). */
@@ -94,7 +94,7 @@ public final class AudioVideoMimeTypeDetector {
      * @param content The content bytes to check.
      * @return An {@link Optional} containing the MIME type if recognized as audio/video, or empty if not.
      */
-    public static Optional<MimeType> guessAudioVideoMimeType(byte[] content) {
+    static Optional<MimeType> guessAudioVideoMimeType(byte[] content) {
         if (content == null || content.length < 8) {
             return Optional.empty();
         }

@@ -51,7 +51,7 @@ public class OllamaAITextHandler extends BaseAITextHandler {
             var images = Json.createArrayBuilder();
 
             for (var image : input.getImages()) {
-                images.add(image.base64());
+                images.add(image.toBase64());
             }
 
             message.add("images", images);

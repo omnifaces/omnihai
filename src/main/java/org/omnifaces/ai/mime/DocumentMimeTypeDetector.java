@@ -29,7 +29,7 @@ import java.util.zip.ZipInputStream;
  * @author Bauke Scholtz
  * @since 1.0
  */
-public final class DocumentMimeTypeDetector {
+final class DocumentMimeTypeDetector {
 
     private enum DocumentMimeType implements MimeType {
         PDF("application/pdf", "pdf"),
@@ -79,7 +79,7 @@ public final class DocumentMimeTypeDetector {
      * @param content The content bytes to check.
      * @return The guessed mime type, never {@code null}.
      */
-    public static MimeType guessDocumentMimeType(byte[] content) {
+    static MimeType guessDocumentMimeType(byte[] content) {
         if (content == null || content.length == 0) {
             return DocumentMimeType.BINARY;
         }

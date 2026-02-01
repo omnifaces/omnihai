@@ -72,7 +72,7 @@ public class OpenRouterAITextHandler extends OpenAITextHandler {
                 .add("type", "file")
                 .add("file", Json.createObjectBuilder()
                     .add("filename", file.fileName())
-                    .add("file_data", file.dataUri())));
+                    .add("file_data", file.toDataUri())));
         }
 
         originalContent.forEach(content::add);

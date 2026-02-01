@@ -58,7 +58,7 @@ public class GoogleAITextHandler extends BaseAITextHandler {
             parts.add(Json.createObjectBuilder()
                 .add("inline_data", Json.createObjectBuilder()
                     .add("mime_type", image.mimeType().value())
-                    .add("data", image.base64())));
+                    .add("data", image.toBase64())));
         }
 
         if (!input.getFiles().isEmpty()) {

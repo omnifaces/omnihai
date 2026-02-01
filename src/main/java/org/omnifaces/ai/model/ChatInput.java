@@ -14,17 +14,17 @@ package org.omnifaces.ai.model;
 
 import static java.util.Collections.emptyList;
 import static java.util.Collections.unmodifiableList;
+import static org.omnifaces.ai.helper.ImageHelper.isSupportedAsImageAttachment;
+import static org.omnifaces.ai.helper.ImageHelper.sanitizeImageAttachment;
 import static org.omnifaces.ai.helper.TextHelper.requireNonBlank;
-import static org.omnifaces.ai.mime.AudioVideoMimeTypeDetector.guessAudioVideoMimeType;
-import static org.omnifaces.ai.mime.DocumentMimeTypeDetector.guessDocumentMimeType;
-import static org.omnifaces.ai.mime.ImageMimeTypeDetector.guessImageMimeType;
-import static org.omnifaces.ai.mime.ImageMimeTypeDetector.isSupportedAsImageAttachment;
-import static org.omnifaces.ai.mime.ImageMimeTypeDetector.sanitizeImageAttachment;
+import static org.omnifaces.ai.mime.MimeType.guessMimeType;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 
+import org.omnifaces.ai.helper.ImageHelper;
 import org.omnifaces.ai.mime.MimeType;
 
 /**
@@ -50,19 +50,19 @@ public class ChatInput implements Serializable {
     public final record Attachment(byte[] content, MimeType mimeType, String fileName) implements Serializable {
 
         /**
-         * Returns the content as a Base64 encoded string.
+         * Converts this attachment to a Base64 encoded string.
          * @return The Base64 encoded content.
          */
-        public String base64() {
-            return mimeType.toBase64(content);
+        public String toBase64() {
+            return Base64.getEncoder().encodeToString(content);
         }
 
         /**
-         * Returns the content as a data URI.
+         * Converts this attachment to a data URI.
          * @return The data URI string in the format {@code data:<media-type>;base64,<data>}.
          */
-        public String dataUri() {
-            return mimeType.toDataUri(content);
+        public String toDataUri() {
+            return "data:" + mimeType.value() + ";base64," + toBase64();
         }
     }
 
@@ -162,17 +162,17 @@ public class ChatInput implements Serializable {
          * <p>
          * Files are automatically classified based on their content:
          * <ul>
-         *   <li>Supported image formats (JPEG, PNG, GIF, BMP, WEBP) are added as images and sanitized for AI compatibility.</li>
-         *   <li>All other files are added as files with their mime type auto-detected.</li>
+         *   <li>Supported image formats (JPEG, PNG, GIF, BMP, WEBP, SVG) are added as images and sanitized for AI compatibility.</li>
+         *   <li>All other files are added as files with their MIME type auto-detected.</li>
          * </ul>
          * @param files The file content bytes to attach.
          * @return This builder instance for chaining.
+         * @see ImageHelper#isSupportedAsImageAttachment(MimeType)
+         * @see ImageHelper#sanitizeImageAttachment(byte[])
          */
         public Builder attach(byte[]... files) {
             for (var content : files) {
-                var mimeType = guessImageMimeType(content)
-                        .or(() -> guessAudioVideoMimeType(content))
-                        .orElseGet(() -> guessDocumentMimeType(content));
+                var mimeType = guessMimeType(content);
                 var isImage = isSupportedAsImageAttachment(mimeType);
                 var processedContent = isImage ? sanitizeImageAttachment(content) : content;
                 var prefix = isImage ? "image" : "file";

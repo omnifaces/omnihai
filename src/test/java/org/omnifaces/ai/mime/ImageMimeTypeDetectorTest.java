@@ -15,11 +15,9 @@ package org.omnifaces.ai.mime;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
-import org.omnifaces.ai.exception.AIException;
 
 class ImageMimeTypeDetectorTest {
 
@@ -32,7 +30,7 @@ class ImageMimeTypeDetectorTest {
         var content = new byte[]{(byte)0xFF, (byte)0xD8, (byte)0xFF, (byte)0xE0, 0, 0, 0, 0};
         var result = ImageMimeTypeDetector.guessImageMimeType(content);
         assertTrue(result.isPresent());
-        assertEquals("jpeg", result.get().extension());
+        assertEquals("jpg", result.get().extension());
     }
 
     @Test
@@ -191,101 +189,5 @@ class ImageMimeTypeDetectorTest {
         var content = new byte[]{0, 0, 0, 0, 'f', 't', 'y', 'p', 'X', 'X', 'X', 'X', 0, 0, 0, 0};
         var result = ImageMimeTypeDetector.guessImageMimeType(content);
         assertFalse(result.isPresent());
-    }
-
-    // =================================================================================================================
-    // Test isSupportedAsImageAttachment
-    // =================================================================================================================
-
-    @Test
-    void isSupportedAsImageAttachment_jpeg_shouldBeTrue() {
-        var content = new byte[]{(byte)0xFF, (byte)0xD8, (byte)0xFF, (byte)0xE0, 0, 0, 0, 0};
-        var mimeType = ImageMimeTypeDetector.guessImageMimeType(content).orElseThrow();
-        assertTrue(ImageMimeTypeDetector.isSupportedAsImageAttachment(mimeType));
-    }
-
-    @Test
-    void isSupportedAsImageAttachment_png_shouldBeTrue() {
-        var content = new byte[]{(byte)0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A};
-        var mimeType = ImageMimeTypeDetector.guessImageMimeType(content).orElseThrow();
-        assertTrue(ImageMimeTypeDetector.isSupportedAsImageAttachment(mimeType));
-    }
-
-    @Test
-    void isSupportedAsImageAttachment_gif_shouldBeTrue() {
-        var content = new byte[]{'G', 'I', 'F', '8', '9', 'a', 0, 0};
-        var mimeType = ImageMimeTypeDetector.guessImageMimeType(content).orElseThrow();
-        assertTrue(ImageMimeTypeDetector.isSupportedAsImageAttachment(mimeType));
-    }
-
-    @Test
-    void isSupportedAsImageAttachment_bmp_shouldBeTrue() {
-        var content = new byte[]{'B', 'M', 0, 0, 0, 0, 0, 0};
-        var mimeType = ImageMimeTypeDetector.guessImageMimeType(content).orElseThrow();
-        assertTrue(ImageMimeTypeDetector.isSupportedAsImageAttachment(mimeType));
-    }
-
-    @Test
-    void isSupportedAsImageAttachment_webp_shouldBeTrue() {
-        var content = new byte[]{'R', 'I', 'F', 'F', 0, 0, 0, 0, 'W', 'E', 'B', 'P'};
-        var mimeType = ImageMimeTypeDetector.guessImageMimeType(content).orElseThrow();
-        assertTrue(ImageMimeTypeDetector.isSupportedAsImageAttachment(mimeType));
-    }
-
-    @Test
-    void isSupportedAsImageAttachment_svg_shouldBeTrue() {
-        var content = "<svg xmlns=\"http://www.w3.org/2000/svg\"></svg>".getBytes(UTF_8);
-        var mimeType = ImageMimeTypeDetector.guessImageMimeType(content).orElseThrow();
-        assertTrue(ImageMimeTypeDetector.isSupportedAsImageAttachment(mimeType));
-    }
-
-    @Test
-    void isSupportedAsImageAttachment_ico_shouldBeFalse() {
-        var content = new byte[]{0x00, 0x00, 0x01, 0x00, 0, 0, 0, 0};
-        var mimeType = ImageMimeTypeDetector.guessImageMimeType(content).orElseThrow();
-        assertFalse(ImageMimeTypeDetector.isSupportedAsImageAttachment(mimeType));
-    }
-
-    @Test
-    void isSupportedAsImageAttachment_heic_shouldBeFalse() {
-        var content = new byte[]{0, 0, 0, 0, 'f', 't', 'y', 'p', 'h', 'e', 'i', 'c', 0, 0, 0, 0};
-        var mimeType = ImageMimeTypeDetector.guessImageMimeType(content).orElseThrow();
-        assertFalse(ImageMimeTypeDetector.isSupportedAsImageAttachment(mimeType));
-    }
-
-    @Test
-    void isSupportedAsImageAttachment_tiff_shouldBeFalse() {
-        var content = new byte[]{'I', 'I', '*', 0, 0, 0, 0, 0};
-        var mimeType = ImageMimeTypeDetector.guessImageMimeType(content).orElseThrow();
-        assertFalse(ImageMimeTypeDetector.isSupportedAsImageAttachment(mimeType));
-    }
-
-    @Test
-    void isSupportedAsImageAttachment_nonImageMimeType_shouldBeFalse() {
-        var content = new byte[]{'%', 'P', 'D', 'F', '-', '1', '.', '4'};
-        var mimeType = DocumentMimeTypeDetector.guessDocumentMimeType(content);
-        assertFalse(ImageMimeTypeDetector.isSupportedAsImageAttachment(mimeType));
-    }
-
-    // =================================================================================================================
-    // Test sanitizeImageAttachment
-    // =================================================================================================================
-
-    @Test
-    void sanitizeImageAttachment_unsupportedFormat_shouldThrow() {
-        var content = new byte[]{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07};
-        assertThrows(AIException.class, () -> ImageMimeTypeDetector.sanitizeImageAttachment(content));
-    }
-
-    @Test
-    void sanitizeImageAttachment_ico_shouldThrow() {
-        var content = new byte[]{0x00, 0x00, 0x01, 0x00, 0, 0, 0, 0};
-        assertThrows(AIException.class, () -> ImageMimeTypeDetector.sanitizeImageAttachment(content));
-    }
-
-    @Test
-    void sanitizeImageAttachment_heic_shouldThrow() {
-        var content = new byte[]{0, 0, 0, 0, 'f', 't', 'y', 'p', 'h', 'e', 'i', 'c', 0, 0, 0, 0};
-        assertThrows(AIException.class, () -> ImageMimeTypeDetector.sanitizeImageAttachment(content));
     }
 }

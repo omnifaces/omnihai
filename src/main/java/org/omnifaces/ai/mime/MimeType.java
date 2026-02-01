@@ -12,7 +12,9 @@
  */
 package org.omnifaces.ai.mime;
 
-import java.util.Base64;
+import static org.omnifaces.ai.mime.AudioVideoMimeTypeDetector.guessAudioVideoMimeType;
+import static org.omnifaces.ai.mime.DocumentMimeTypeDetector.guessDocumentMimeType;
+import static org.omnifaces.ai.mime.ImageMimeTypeDetector.guessImageMimeType;
 
 /**
  * Represents a MIME type with its associated file extension.
@@ -35,20 +37,15 @@ public interface MimeType {
     String extension();
 
     /**
-     * Converts the given content to a Base64 string.
-     * @param content The content to be encoded.
-     * @return The Base64 encoded string.
+     * Guesses the MIME type of the given content based on magic bytes.
+     * <p>
+     * Detection order: images first, then audio/video, then documents. Falls back to {@code application/octet-stream}
+     * for unrecognized binary content or {@code text/plain} for unrecognized text content.
+     *
+     * @param content The content bytes to analyze.
+     * @return The detected MIME type, never {@code null}.
      */
-    default String toBase64(byte[] content) {
-        return Base64.getEncoder().encodeToString(content);
-    }
-
-    /**
-     * Converts the given content to a data URI.
-     * @param content The content bytes.
-     * @return The data URI string in the format {@code data:<mime-type>;base64,<data>}.
-     */
-    default String toDataUri(byte[] content) {
-        return "data:" + value() + ";base64," + toBase64(content);
+    static MimeType guessMimeType(byte[] content) {
+        return guessImageMimeType(content).or(() -> guessAudioVideoMimeType(content)).orElseGet(() -> guessDocumentMimeType(content));
     }
 }

@@ -77,10 +77,10 @@ public class OpenAITextHandler extends BaseAITextHandler {
             var img = Json.createObjectBuilder().add("type", supportsResponsesApi ? "input_image" : "image_url");
 
             if (supportsResponsesApi) {
-                img.add("image_url", image.dataUri());
+                img.add("image_url", image.toDataUri());
             }
             else {
-                img.add("image_url", Json.createObjectBuilder().add("url", image.dataUri()));
+                img.add("image_url", Json.createObjectBuilder().add("url", image.toDataUri()));
             }
 
             content.add(img);
