@@ -47,6 +47,7 @@ import java.util.stream.Stream;
 
 import jakarta.json.JsonObject;
 
+import org.omnifaces.ai.OmniHai;
 import org.omnifaces.ai.exception.AIBadRequestException;
 import org.omnifaces.ai.exception.AIException;
 import org.omnifaces.ai.exception.AIHttpException;
@@ -70,8 +71,6 @@ final class AIHttpClient {
     private static final String EVENT_STREAM = "text/event-stream";
     private static final String MULTIPART_FORM_DATA = "multipart/form-data";
 
-    /** The User-Agent header: {@value} */
-    public static final String USER_AGENT = "OmniHai 1.0 (https://github.com/omnifaces/omnihai)";
     /** Default max retries: {@value} */
     public static final int MAX_RETRIES = 3;
     /** Initial retry backoff time: {@value}ms (increases exponentially on every retry) */
@@ -79,10 +78,12 @@ final class AIHttpClient {
 
     private final HttpClient client;
     private final Duration requestTimeout;
+    private final String userAgent;
 
     private AIHttpClient(HttpClient client, Duration requestTimeout) {
         this.client = client;
         this.requestTimeout = requestTimeout;
+        this.userAgent = OmniHai.userAgent();
     }
 
     /**
@@ -150,7 +151,7 @@ final class AIHttpClient {
 
     private HttpRequest newRequest(BaseAIService service, String path, String contentType, String accept, BodyPublisher body) {
         var builder = HttpRequest.newBuilder(service.resolveURI(path)).timeout(requestTimeout).POST(body);
-        builder.header("User-Agent", USER_AGENT);
+        builder.header("User-Agent", userAgent);
         builder.header("Content-Type", contentType);
         builder.header("Accept", accept);
         service.getRequestHeaders().forEach(builder::header);
