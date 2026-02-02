@@ -1,6 +1,8 @@
 [![Maven](https://img.shields.io/maven-central/v/org.omnifaces/omnihai)](https://search.maven.org/artifact/org.omnifaces/omnihai)
 [![Javadoc](https://javadoc.io/badge/org.omnifaces/omnihai.svg)](https://javadoc.io/doc/org.omnifaces/omnihai) 
 
+![logo](logo-96x96.png)
+
 # OmniHai
 
 A unified Java AI utility library for Jakarta EE or MicroProfile applications.
