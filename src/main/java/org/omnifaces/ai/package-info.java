@@ -24,6 +24,8 @@
  * <li>{@link org.omnifaces.ai.AITextHandler} - customization point for text-based request/response handling</li>
  * <li>{@link org.omnifaces.ai.AIImageHandler} - customization point for image-based request/response handling</li>
  * </ul>
+ * <p>
+ * This package also contains {@link org.omnifaces.ai.OmniHai} for access to application properties (name, version, user agent).
  *
  * @see org.omnifaces.ai.cdi
  * @see org.omnifaces.ai.service
