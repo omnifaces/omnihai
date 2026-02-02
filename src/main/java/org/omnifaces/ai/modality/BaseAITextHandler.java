@@ -13,9 +13,9 @@
 package org.omnifaces.ai.modality;
 
 import static java.util.logging.Level.WARNING;
-import static org.omnifaces.ai.helper.JsonHelper.extractByPath;
+import static org.omnifaces.ai.helper.JsonHelper.findFirstNonBlankByPath;
+import static org.omnifaces.ai.helper.JsonHelper.parseAndCheckErrors;
 import static org.omnifaces.ai.helper.JsonHelper.parseJson;
-import static org.omnifaces.ai.helper.TextHelper.isBlank;
 
 import java.util.List;
 import java.util.function.Predicate;
@@ -176,42 +176,26 @@ public abstract class BaseAITextHandler implements AITextHandler {
 
     @Override
     public String parseChatResponse(String responseBody) throws AIResponseException {
-        var responseJson = parseResponseBodyAndCheckErrorMessages(responseBody, getTextResponseErrorMessagePaths());
+        var responseJson = parseAndCheckErrors(responseBody, getTextResponseErrorMessagePaths());
         var messageContentPaths = getChatResponseContentPaths();
 
         if (messageContentPaths.isEmpty()) {
             throw new IllegalStateException("getChatResponseContentPaths() may not return an empty list");
         }
 
-        for (var messageContentPath : messageContentPaths) {
-            var messageContent = extractByPath(responseJson, messageContentPath);
-
-            if (!isBlank(messageContent)) {
-                return messageContent;
-            }
-        }
-
-        throw new AIResponseException("No message content found at paths " + messageContentPaths, responseBody);
+        return findFirstNonBlankByPath(responseJson, messageContentPaths).orElseThrow(() -> new AIResponseException("No message content found at paths " + messageContentPaths, responseBody));
     }
 
     @Override
     public String parseFileResponse(String responseBody) throws AIResponseException {
-        var responseJson = parseResponseBodyAndCheckErrorMessages(responseBody, getTextResponseErrorMessagePaths());
+        var responseJson = parseAndCheckErrors(responseBody, getTextResponseErrorMessagePaths());
         var fileIdPaths = getFileResponseIdPaths();
 
         if (fileIdPaths.isEmpty()) {
             throw new IllegalStateException("getFileResponseIdPaths() may not return an empty list");
         }
 
-        for (var fileIdPath : fileIdPaths) {
-            var fileId = extractByPath(responseJson, fileIdPath);
-
-            if (!isBlank(fileId)) {
-                return fileId;
-            }
-        }
-
-        throw new AIResponseException("No file ID found at paths " + fileIdPaths, responseBody);
+        return findFirstNonBlankByPath(responseJson, fileIdPaths).orElseThrow(() -> new AIResponseException("No file ID found at paths " + fileIdPaths, responseBody));
     }
 
     /**
@@ -244,29 +228,7 @@ public abstract class BaseAITextHandler implements AITextHandler {
     }
 
 
-    // JSON parsing helpers -------------------------------------------------------------------------------------------
-
-    /**
-     * Parse response body as JSON and check for error messages.
-     * @param responseBody The API response body.
-     * @param errorMessagePaths The paths to check for error messages.
-     * @return The parsed JSON object.
-     * @throws AIResponseException If the response contains an error message.
-     */
-    static JsonObject parseResponseBodyAndCheckErrorMessages(String responseBody, List<String> errorMessagePaths) throws AIResponseException {
-        var responseJson = parseJson(responseBody);
-
-        for (var errorMessagePath : errorMessagePaths) {
-            var errorMessage = extractByPath(responseJson, errorMessagePath);
-
-            if (!isBlank(errorMessage)) {
-                throw new AIResponseException(errorMessage, responseBody);
-            }
-        }
-
-        return responseJson;
-    }
-
+    // Streaming helpers -----------------------------------------------------------------------------------------------
 
     /**
      * Try to parse the given SSE event data as JSON and feed it to the given JSON processor. Any failure to parse will

@@ -248,18 +248,17 @@ final class AIHttpClient {
             var id = line.substring(3).strip();
             return new Event(Type.ID, id);
         }
-        else if (line.startsWith("event:")) {
+        if (line.startsWith("event:")) {
             var event = line.substring(6).strip();
             return new Event(Type.EVENT, event);
         }
-        else if (line.startsWith("data:")) {
+        if (line.startsWith("data:")) {
             var data = line.substring(5).strip();
             return new Event(Type.DATA, data);
         }
-        else {
-            logger.log(FINE, () -> "Ignoring unknown SSE line: " + line);
-            return null;
-        }
+
+        logger.log(FINE, () -> "Ignoring unknown SSE line: " + line);
+        return null;
     }
 
     private static <R> CompletableFuture<R> withRetry(Supplier<CompletableFuture<R>> action, int attempt) {

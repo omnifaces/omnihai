@@ -14,7 +14,7 @@ package org.omnifaces.ai.modality;
 
 import static java.util.logging.Level.FINE;
 import static org.omnifaces.ai.helper.JsonHelper.addStrictAdditionalProperties;
-import static org.omnifaces.ai.helper.JsonHelper.extractByPath;
+import static org.omnifaces.ai.helper.JsonHelper.findByPath;
 import static org.omnifaces.ai.helper.TextHelper.isBlank;
 import static org.omnifaces.ai.model.Sse.Event.Type.DATA;
 import static org.omnifaces.ai.model.Sse.Event.Type.EVENT;
@@ -214,17 +214,8 @@ public class OpenAITextHandler extends BaseAITextHandler {
             else if (event.value().contains("chat.completion.chunk")) { // Cheap pre-filter before expensive parse.
                 return tryParseEventDataJson(event.value(), json -> {
                     if ("chat.completion.chunk".equals(json.getString("object", null))) {
-                        var token = extractByPath(json, "choices[0].delta.content");
-
-                        if (token != null && !token.isEmpty()) { // Do not use isBlank! Whitespace can be a valid token.
-                            onToken.accept(token);
-                        }
-
-                        var finishReason = extractByPath(json, "choices[0].finish_reason");
-
-                        if ("length".equals(finishReason)) {
-                            throw new AITokenLimitExceededException();
-                        }
+                        findByPath(json, "choices[0].delta.content").ifPresent(onToken);
+                        findByPath(json, "choices[0].finish_reason").filter("length"::equals).ifPresent(__ -> { throw new AITokenLimitExceededException(); });
                     }
 
                     return true;

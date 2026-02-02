@@ -13,7 +13,7 @@
 package org.omnifaces.ai.modality;
 
 import static java.util.logging.Level.FINE;
-import static org.omnifaces.ai.helper.JsonHelper.extractByPath;
+import static org.omnifaces.ai.helper.JsonHelper.findByPath;
 import static org.omnifaces.ai.helper.TextHelper.isBlank;
 import static org.omnifaces.ai.model.Sse.Event.Type.DATA;
 
@@ -121,22 +121,14 @@ public class GoogleAITextHandler extends BaseAITextHandler {
 
         if (event.type() == DATA) {
             return tryParseEventDataJson(event.value(), json -> {
-                var token = extractByPath(json, "candidates[0].content.parts[0].text");
+                findByPath(json, "candidates[0].content.parts[0].text").ifPresent(onToken);
+                var finishReason = findByPath(json, "candidates[0].finishReason");
 
-                if (token != null && !token.isEmpty()) {
-                    onToken.accept(token);
-                }
-
-                var finishReason = extractByPath(json, "candidates[0].finishReason");
-
-                if ("STOP".equals(finishReason)) {
+                if (finishReason.filter("STOP"::equals).isPresent()) {
                     return false;
                 }
 
-                if ("MAX_TOKENS".equals(finishReason)) {
-                    throw new AITokenLimitExceededException();
-                }
-
+                finishReason.filter("MAX_TOKENS"::equals).ifPresent(__ -> { throw new AITokenLimitExceededException(); });
                 return true;
             });
         }

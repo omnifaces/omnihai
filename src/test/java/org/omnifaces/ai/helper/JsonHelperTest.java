@@ -14,9 +14,10 @@ package org.omnifaces.ai.helper;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.util.List;
 
 import jakarta.json.Json;
 import jakarta.json.JsonValue;
@@ -115,42 +116,42 @@ class JsonHelperTest {
     }
 
     // =================================================================================================================
-    // extractByPath tests
+    // findByPath tests
     // =================================================================================================================
 
     @Test
-    void extractByPath_simplePath() {
+    void findByPath_simplePath() {
         var json = Json.createObjectBuilder()
                 .add("message", "hello")
                 .build();
 
-        assertEquals("hello", JsonHelper.extractByPath(json, "message"));
+        assertEquals("hello", JsonHelper.findByPath(json, "message").orElseThrow());
     }
 
     @Test
-    void extractByPath_nestedPath() {
+    void findByPath_nestedPath() {
         var json = Json.createObjectBuilder()
                 .add("response", Json.createObjectBuilder()
                         .add("content", "nested value"))
                 .build();
 
-        assertEquals("nested value", JsonHelper.extractByPath(json, "response.content"));
+        assertEquals("nested value", JsonHelper.findByPath(json, "response.content").orElseThrow());
     }
 
     @Test
-    void extractByPath_arrayIndex() {
+    void findByPath_arrayIndex() {
         var json = Json.createObjectBuilder()
                 .add("choices", Json.createArrayBuilder()
                         .add(Json.createObjectBuilder().add("text", "first"))
                         .add(Json.createObjectBuilder().add("text", "second")))
                 .build();
 
-        assertEquals("first", JsonHelper.extractByPath(json, "choices[0].text"));
-        assertEquals("second", JsonHelper.extractByPath(json, "choices[1].text"));
+        assertEquals("first", JsonHelper.findByPath(json, "choices[0].text").orElseThrow());
+        assertEquals("second", JsonHelper.findByPath(json, "choices[1].text").orElseThrow());
     }
 
     @Test
-    void extractByPath_wildcardArray() {
+    void findByPath_wildcardArray() {
         var json = Json.createObjectBuilder()
                 .add("items", Json.createArrayBuilder()
                         .add(Json.createObjectBuilder().add("value", "one"))
@@ -158,32 +159,134 @@ class JsonHelperTest {
                 .build();
 
         // Returns first match
-        assertEquals("one", JsonHelper.extractByPath(json, "items[*].value"));
+        assertEquals("one", JsonHelper.findByPath(json, "items[*].value").orElseThrow());
     }
 
     @Test
-    void extractByPath_missingPath_returnsNull() {
+    void findByPath_missingPath_returnsEmpty() {
         var json = Json.createObjectBuilder().add("key", "value").build();
 
-        assertNull(JsonHelper.extractByPath(json, "nonexistent"));
-        assertNull(JsonHelper.extractByPath(json, "key.nested"));
+        assertTrue(JsonHelper.findByPath(json, "nonexistent").isEmpty());
+        assertTrue(JsonHelper.findByPath(json, "key.nested").isEmpty());
     }
 
     @Test
-    void extractByPath_nullInputs_returnsNull() {
+    void findByPath_nullInputs_returnsEmpty() {
         var json = Json.createObjectBuilder().add("key", "value").build();
 
-        assertNull(JsonHelper.extractByPath(null, "key"));
-        assertNull(JsonHelper.extractByPath(json, null));
+        assertTrue(JsonHelper.findByPath(null, "key").isEmpty());
+        assertTrue(JsonHelper.findByPath(json, null).isEmpty());
     }
 
     @Test
-    void extractByPath_arrayIndexOutOfBounds_returnsNull() {
+    void findByPath_arrayIndexOutOfBounds_returnsEmpty() {
         var json = Json.createObjectBuilder()
                 .add("items", Json.createArrayBuilder().add("only"))
                 .build();
 
-        assertNull(JsonHelper.extractByPath(json, "items[5]"));
+        assertTrue(JsonHelper.findByPath(json, "items[5]").isEmpty());
+    }
+
+    @Test
+    void findByPath_whitespaceOnly_returnsWhitespace() {
+        var json = Json.createObjectBuilder()
+                .add("token", "   ")
+                .build();
+
+        // findByPath allows whitespace because it can be significant (e.g., streaming tokens)
+        assertEquals("   ", JsonHelper.findByPath(json, "token").orElseThrow());
+    }
+
+    // =================================================================================================================
+    // findFirstNonBlankByPath tests
+    // =================================================================================================================
+
+    @Test
+    void findFirstNonBlankByPath_returnsFirstMatch() {
+        var json = Json.createObjectBuilder()
+                .add("primary", "first")
+                .add("fallback", "second")
+                .build();
+
+        assertEquals("first", JsonHelper.findFirstNonBlankByPath(json, List.of("primary", "fallback")).orElseThrow());
+    }
+
+    @Test
+    void findFirstNonBlankByPath_skipsEmptyValues() {
+        var json = Json.createObjectBuilder()
+                .add("empty", "")
+                .add("valid", "found")
+                .build();
+
+        assertEquals("found", JsonHelper.findFirstNonBlankByPath(json, List.of("empty", "valid")).orElseThrow());
+    }
+
+    @Test
+    void findFirstNonBlankByPath_skipsWhitespaceOnlyValues() {
+        var json = Json.createObjectBuilder()
+                .add("whitespace", "   ")
+                .add("valid", "found")
+                .build();
+
+        // findFirstNonBlankByPath skips whitespace-only because it's looking for meaningful content
+        assertEquals("found", JsonHelper.findFirstNonBlankByPath(json, List.of("whitespace", "valid")).orElseThrow());
+    }
+
+    @Test
+    void findFirstNonBlankByPath_returnsFallback() {
+        var json = Json.createObjectBuilder()
+                .add("fallback", "value")
+                .build();
+
+        assertEquals("value", JsonHelper.findFirstNonBlankByPath(json, List.of("missing", "fallback")).orElseThrow());
+    }
+
+    @Test
+    void findFirstNonBlankByPath_allMissing_returnsEmpty() {
+        var json = Json.createObjectBuilder()
+                .add("other", "value")
+                .build();
+
+        assertTrue(JsonHelper.findFirstNonBlankByPath(json, List.of("missing1", "missing2")).isEmpty());
+    }
+
+    // =================================================================================================================
+    // parseAndCheckErrors tests
+    // =================================================================================================================
+
+    @Test
+    void parseAndCheckErrors_noError_returnsJson() {
+        var responseBody = "{\"result\":\"success\"}";
+
+        var result = JsonHelper.parseAndCheckErrors(responseBody, List.of("error.message", "error"));
+
+        assertEquals("success", result.getString("result"));
+    }
+
+    @Test
+    void parseAndCheckErrors_errorAtFirstPath_throwsException() {
+        var responseBody = "{\"error\":{\"message\":\"Something went wrong\"}}";
+
+        var exception = assertThrows(AIResponseException.class,
+                () -> JsonHelper.parseAndCheckErrors(responseBody, List.of("error.message", "error")));
+
+        assertTrue(exception.getMessage().contains("Something went wrong"));
+    }
+
+    @Test
+    void parseAndCheckErrors_errorAtSecondPath_throwsException() {
+        var responseBody = "{\"error\":\"Simple error\"}";
+
+        var exception = assertThrows(AIResponseException.class,
+                () -> JsonHelper.parseAndCheckErrors(responseBody, List.of("error.message", "error")));
+
+        assertTrue(exception.getMessage().contains("Simple error"));
+    }
+
+    @Test
+    void parseAndCheckErrors_invalidJson_throwsException() {
+        assertThrows(AIResponseException.class,
+                () -> JsonHelper.parseAndCheckErrors("not json", List.of("error")));
     }
 
     // =================================================================================================================

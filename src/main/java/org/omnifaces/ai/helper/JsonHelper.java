@@ -13,11 +13,13 @@
 package org.omnifaces.ai.helper;
 
 import static java.util.Collections.emptyList;
+import static java.util.function.Predicate.not;
 import static org.omnifaces.ai.helper.TextHelper.isBlank;
 
 import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import jakarta.json.Json;
 import jakarta.json.JsonArray;
@@ -51,18 +53,16 @@ public final class JsonHelper {
         if (value == null) {
             return true;
         }
-        else if (value instanceof JsonObject object) {
+        if (value instanceof JsonObject object) {
             return object.isEmpty();
         }
-        else if (value instanceof JsonArray array) {
+        if (value instanceof JsonArray array) {
             return array.isEmpty();
         }
-        else if (value instanceof JsonString string) {
+        if (value instanceof JsonString string) {
             return isBlank(string.getString());
         }
-        else {
-            throw new UnsupportedOperationException("Unsupported type " + value.getClass());
-        }
+        throw new UnsupportedOperationException("Unsupported type " + value.getClass());
     }
 
     /**
@@ -86,21 +86,61 @@ public final class JsonHelper {
     }
 
     /**
-     * Extracts the first non-blank string value from a JSON object found at the given dot-separated path.
+     * Parses the response body as JSON and checks for error messages at the specified paths.
+     * <p>
+     * If an error message is found at any of the paths, an {@link AIResponseException} is thrown.
+     *
+     * @param responseBody The API response body to parse.
+     * @param errorMessagePaths Paths to check for error messages (e.g., {@code "error.message"}, {@code "error"}).
+     * @return The parsed JSON object if no errors were found.
+     * @throws AIResponseException If parsing fails or an error message is found.
+     */
+    public static JsonObject parseAndCheckErrors(String responseBody, List<String> errorMessagePaths) throws AIResponseException {
+        var responseJson = parseJson(responseBody);
+        findFirstNonBlankByPath(responseJson, errorMessagePaths).ifPresent(errorMessage -> {
+            throw new AIResponseException(errorMessage, responseBody);
+        });
+        return responseJson;
+    }
+
+    /**
+     * Finds the first non-empty string value from a JSON object found at the given dot-separated path.
      * <p>
      * Supports array indexing with bracket notation, e.g. {@code "choices[0].message.content"}.
      * Also supports wildcard array indexes, e.g. {@code "output[*].content[*].text"}.
      *
      * @param root JSON root value (usually a {@link JsonObject})
      * @param path dot-separated path, may contain {@code [index]} or {@code [*]} segments
-     * @return first non-blank stripped string value, or {@code null} if no value was found
+     * @return an {@link Optional} containing the first non-empty string value, or empty if not found
      */
-    public static String extractByPath(JsonObject root, String path) {
-        var values = extractAllByPath(root, path);
-        return values.isEmpty() ? null : values.get(0);
+    public static Optional<String> findByPath(JsonObject root, String path) {
+        var values = findAllByPath(root, path);
+        return values.isEmpty() ? Optional.empty() : Optional.of(values.get(0));
     }
 
-    private static List<String> extractAllByPath(JsonValue root, String path) {
+    /**
+     * Finds the first non-blank string value from a JSON object by trying multiple paths in order.
+     * <p>
+     * This is useful when different API versions or providers return data at different paths.
+     *
+     * @param root JSON root object to search.
+     * @param paths list of dot-separated paths to try, in order of preference.
+     * @return an {@link Optional} containing the first non-blank value found, or empty if no path matches.
+     * @see #findByPath(JsonObject, String)
+     */
+    public static Optional<String> findFirstNonBlankByPath(JsonObject root, List<String> paths) {
+        for (var path : paths) {
+            var value = findByPath(root, path).map(String::strip);
+
+            if (value.filter(not(String::isEmpty)).isPresent()) {
+                return value;
+            }
+        }
+
+        return Optional.empty();
+    }
+
+    private static List<String> findAllByPath(JsonValue root, String path) {
         if (root == null || path == null) {
             return emptyList();
         }

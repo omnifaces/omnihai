@@ -12,9 +12,8 @@
  */
 package org.omnifaces.ai.modality;
 
-import static org.omnifaces.ai.helper.JsonHelper.extractByPath;
-import static org.omnifaces.ai.helper.TextHelper.isBlank;
-import static org.omnifaces.ai.modality.BaseAITextHandler.parseResponseBodyAndCheckErrorMessages;
+import static org.omnifaces.ai.helper.JsonHelper.findFirstNonBlankByPath;
+import static org.omnifaces.ai.helper.JsonHelper.parseAndCheckErrors;
 
 import java.util.Base64;
 import java.util.List;
@@ -91,27 +90,21 @@ public abstract class BaseAIImageHandler implements AIImageHandler {
 
     @Override
     public byte[] parseImageContent(String responseBody) throws AIResponseException {
-        var responseJson = parseResponseBodyAndCheckErrorMessages(responseBody, getImageResponseErrorMessagePaths());
+        var responseJson = parseAndCheckErrors(responseBody, getImageResponseErrorMessagePaths());
         var imageContentPaths = getImageResponseContentPaths();
 
         if (imageContentPaths.isEmpty()) {
             throw new IllegalStateException("getImageResponseContentPaths() may not return an empty list");
         }
 
-        for (var imageContentPath : imageContentPaths) {
-            var imageContent = extractByPath(responseJson, imageContentPath);
+        var imageContent = findFirstNonBlankByPath(responseJson, imageContentPaths).orElseThrow(() -> new AIResponseException("No image content found at paths " + imageContentPaths, responseBody));
 
-            if (!isBlank(imageContent)) {
-                try {
-                    return Base64.getDecoder().decode(imageContent);
-                }
-                catch (Exception e) {
-                    throw new AIResponseException("Cannot Base64-decode image", responseBody, e);
-                }
-            }
+        try {
+            return Base64.getDecoder().decode(imageContent);
         }
-
-        throw new AIResponseException("No image content found at paths " + imageContentPaths, responseBody);
+        catch (Exception e) {
+            throw new AIResponseException("Cannot Base64-decode image", responseBody, e);
+        }
     }
 
     /**
