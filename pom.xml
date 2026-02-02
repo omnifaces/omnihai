@@ -269,7 +269,6 @@
                     <javadocExecutable>${java.home}/bin/javadoc</javadocExecutable>
                     <notimestamp>true</notimestamp>
                     <splitindex>true</splitindex>
-                    <show>package</show>
                     <doclint>all</doclint>
                     <doctitle>OmniHai API documentation</doctitle>
                     <links>
