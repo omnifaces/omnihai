@@ -176,11 +176,14 @@ service.chatStream(message, options, token -> {
 With file attachments:
 ```java
 byte[] document = Files.readAllBytes(Path.of("report.pdf"));
-String response = service.chat("Summarize this document", document);
-
-// With multiple attachments
 byte[] image = Files.readAllBytes(Path.of("chart.png"));
-String response = service.chat("Compare these files", document, image);
+
+ChatInput input = ChatInput.newBuilder()
+    .message("Compare these files")
+    .attach(document, image)
+    .build();
+
+String response = service.chat(input);
 ```
 
 Multi-turn conversation with memory:
