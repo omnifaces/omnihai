@@ -411,7 +411,7 @@ If Jakarta Agentic matures, OmniHai could potentially be a lightweight implement
 
 Yes, significantly:
 - OmniHai JAR: ~150 KB vs LangChain4J: ~5-10 MB (*per* AI provider!) — at least 35x smaller
-- 71 source files, ~9,500 lines of code (\~4,000 actual code, rest is javadocs/comments)
+- 69 source files, ~9,500 lines of code (\~4,000 actual code, rest is javadocs/comments)
 - Zero external runtime dependencies — uses JDK's native `java.net.http.HttpClient` directly without any SDKs
 - Only one required dependency: Jakarta JSON-P (which Jakarta EE and MicroProfile runtimes already have)
 - Other dependencies are optional: CDI, EL and/or MP Config APIs (which Jakarta EE resp. MicroProfile runtimes already have)
