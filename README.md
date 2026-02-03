@@ -139,22 +139,28 @@ This pattern is useful for reducing bias, cross-validating answers, or getting a
 
 ### Chat
 
+Synchronous:
 ```java
-// Synchronous
 String response = service.chat("Hello!");
+```
 
-// Asynchronous
+Asynchronous:
+```java
 CompletableFuture<String> future = service.chatAsync("Hello!");
+```
 
-// With options
+With options:
+```java
 String response = service.chat("Explain microservices",
     ChatOptions.newBuilder()
         .systemPrompt("You are a helpful software architect.")
         .temperature(0.5)
         .maxTokens(500)
         .build());
+```
 
-// Streaming
+Streaming:
+```java
 service.chatStream(message, options, token -> {
     // handle partial response
     System.out.print(token);
@@ -165,16 +171,20 @@ service.chatStream(message, options, token -> {
     // handle completion
     System.out.println("\n\n");
 });
+```
 
-// With file attachments
+With file attachments:
+```java
 byte[] document = Files.readAllBytes(Path.of("report.pdf"));
 String response = service.chat("Summarize this document", document);
 
 // With multiple attachments
 byte[] image = Files.readAllBytes(Path.of("chart.png"));
 String response = service.chat("Compare these files", document, image);
+```
 
-// Multi-turn conversation with memory
+Multi-turn conversation with memory:
+```java
 ChatOptions options = ChatOptions.newBuilder()
     .systemPrompt("You are a helpful assistant.")
     .withMemory()
