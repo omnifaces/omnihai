@@ -395,11 +395,12 @@ private AIService trackedService;
 - Native CDI with EL - `@AI(apiKey = "#{config.openaiKey}")` with expression resolution
 - MicroProfile Config - `@AI(apiKey = "${config:openai.key}")` with expression resolution
 - 10 providers out of the box - Including Ollama for local/offline
+- Caller-owned conversation memory - History lives in `ChatOptions`, not in the service. No server-side session state, no memory leaks, no lifecycle management. The caller controls it.
 - Clean exception hierarchy - Specific exceptions per HTTP status
 
 ### Where OmniHai is Intentionally Simpler
 
-No tools, embeddings, RAG, memory, or agents. This isn't a gap - it's a design choice. OmniHai is a utility library, not a framework.
+No tools, embeddings, RAG, or agents. This isn't a gap - it's a design choice. OmniHai is a utility library, not a framework.
 
 ### Positioning
 
@@ -457,8 +458,8 @@ The design strongly suggests yes:
 - You prefer simplicity over feature completeness
 
 **Choose LangChain4J when:**
-- You're building complex AI agents with tools
-- You need conversation memory management
+- You're building complex AI agents with tool calling and orchestration
+- You need Retrieval-Augmented Generation (RAG) or vector stores
 - You want the most comprehensive feature set
 - You're not tied to a specific framework
 
