@@ -12,6 +12,8 @@
  */
 package org.omnifaces.ai.service;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.logging.Logger;
 
 import org.junit.jupiter.api.AfterEach;
@@ -68,6 +70,15 @@ abstract class AIServiceIT {
 
     void log(String message) {
         logger.info(String.format("%s %s: %s: %s", getProvider(), getModel(), currentTestMethod.get(), message));
+    }
+
+    byte[] readAllBytes(String resource) {
+        try {
+            return getClass().getResourceAsStream(resource).readAllBytes();
+        }
+        catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
     }
 
     @AfterEach

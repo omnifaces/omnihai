@@ -18,7 +18,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.util.Base64;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
@@ -32,17 +31,6 @@ import org.opentest4j.TestAbortedException;
  * Base class for IT on text-analyzer-related methods of AI service.
  */
 abstract class BaseAIServiceTextHandlerIT extends AIServiceIT {
-
-    private static final String DUMMY_PDF = ""
-            + "JVBERi0xLjQKMSAwIG9iago8PC9UeXBlIC9DYXRhbG9nCi9QYWdlcyAyIDAgUgo+PgplbmRvYmoKMiAwIG9iago8PC9UeXBlIC9QYWdl"
-            + "cwovS2lkcyBbMyAwIFJdCi9Db3VudCAxCj4+CmVuZG9iagozIDAgb2JqCjw8L1R5cGUgL1BhZ2UKL1BhcmVudCAyIDAgUgovTWVkaWFC"
-            + "b3ggWzAgMCA1OTUgODQyXQovQ29udGVudHMgNSAwIFIKL1Jlc291cmNlcyA8PC9Qcm9jU2V0IFsvUERGIC9UZXh0XQovRm9udCA8PC9G"
-            + "MSA0IDAgUj4+Cj4+Cj4+CmVuZG9iago0IDAgb2JqCjw8L1R5cGUgL0ZvbnQKL1N1YnR5cGUgL1R5cGUxCi9OYW1lIC9GMQovQmFzZUZv"
-            + "bnQgL0hlbHZldGljYQovRW5jb2RpbmcgL01hY1JvbWFuRW5jb2RpbmcKPj4KZW5kb2JqCjUgMCBvYmoKPDwvTGVuZ3RoIDUzCj4+CnN0"
-            + "cmVhbQpCVAovRjEgMjAgVGYKMjIwIDQwMCBUZAooRHVtbXkgUERGKSBUagpFVAplbmRzdHJlYW0KZW5kb2JqCnhyZWYKMCA2CjAwMDAw"
-            + "MDAwMDAgNjU1MzUgZgowMDAwMDAwMDA5IDAwMDAwIG4KMDAwMDAwMDA2MyAwMDAwMCBuCjAwMDAwMDAxMjQgMDAwMDAgbgowMDAwMDAw"
-            + "Mjc3IDAwMDAwIG4KMDAwMDAwMDM5MiAwMDAwMCBuCnRyYWlsZXIKPDwvU2l6ZSA2Ci9Sb290IDEgMCBSCj4+CnN0YXJ0eHJlZgo0OTUK"
-            + "JSVFT0YK";
 
     @Test
     void chat() {
@@ -117,8 +105,8 @@ abstract class BaseAIServiceTextHandlerIT extends AIServiceIT {
         }
 
         var input = ChatInput.newBuilder()
-            .attach(Base64.getDecoder().decode(DUMMY_PDF))
-            .message("What exactly does this PDF say?")
+            .attach(readAllBytes("/dummy.pdf"))
+            .message("What exactly does this PDF contain?")
             .build();
         var response = service.chat(input);
         log(response);
