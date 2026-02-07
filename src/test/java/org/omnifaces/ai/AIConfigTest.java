@@ -138,7 +138,7 @@ class AIConfigTest {
 
     @Test
     void constructor_nonNullStrategyIsPreserved() {
-        var strategy = new AIStrategy(OpenAITextHandler.class, null);
+        var strategy = AIStrategy.of(OpenAITextHandler.class);
         var config = new AIConfig("OPENAI", null, null, null, null, strategy, emptyMap());
         assertEquals(strategy, config.strategy());
         assertEquals(OpenAITextHandler.class, config.strategy().textHandler());
@@ -305,7 +305,7 @@ class AIConfigTest {
     @Test
     void withStrategy_returnsNewInstanceWithUpdatedStrategy() {
         var original = AIConfig.of(AIProvider.OPENAI, "key");
-        var strategy = new AIStrategy(OpenAITextHandler.class, null);
+        var strategy = AIStrategy.of(OpenAITextHandler.class);
         var modified = original.withStrategy(strategy);
         assertNotSame(original, modified);
         assertNull(original.strategy().textHandler());
@@ -383,7 +383,7 @@ class AIConfigTest {
 
     @Test
     void withXxx_chainingPreservesAllFields() {
-        var strategy = new AIStrategy(OpenAITextHandler.class, null);
+        var strategy = AIStrategy.of(OpenAITextHandler.class);
         var config = AIConfig.of(AIProvider.ANTHROPIC, "my-key")
                 .withModel("claude-sonnet-4-5")
                 .withEndpoint("https://custom.api.com")
@@ -424,7 +424,7 @@ class AIConfigTest {
 
     @Test
     void withStrategy_nullResetsToDefault() {
-        var strategy = new AIStrategy(OpenAITextHandler.class, null);
+        var strategy = AIStrategy.of(OpenAITextHandler.class);
         var config = AIConfig.of(AIProvider.OPENAI, "key").withStrategy(strategy).withStrategy(null);
         assertNotNull(config.strategy());
         assertNull(config.strategy().textHandler());
@@ -685,5 +685,7 @@ class AIConfigTest {
         @Override public CompletableFuture<String> analyzeImageAsync(byte[] image, String prompt) throws AIException { return null; }
         @Override public CompletableFuture<String> generateAltTextAsync(byte[] image) throws AIException { return null; }
         @Override public CompletableFuture<byte[]> generateImageAsync(String prompt, GenerateImageOptions options) throws AIException { return null; }
+        @Override public String transcribe(byte[] audio) throws AIException { return AIService.super.transcribe(audio); }
+        @Override public CompletableFuture<String> transcribeAsync(byte[] audio) { return null; }
     }
 }
