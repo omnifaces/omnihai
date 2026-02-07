@@ -25,6 +25,7 @@ import java.lang.annotation.Target;
 import jakarta.enterprise.util.Nonbinding;
 import jakarta.inject.Qualifier;
 
+import org.omnifaces.ai.AIAudioHandler;
 import org.omnifaces.ai.AIImageHandler;
 import org.omnifaces.ai.AIProvider;
 import org.omnifaces.ai.AIService;
@@ -151,5 +152,15 @@ public @interface AI {
      */
     @Nonbinding
     Class<? extends AIImageHandler> imageHandler() default AIImageHandler.class;
+
+    /**
+     * Custom {@link AIAudioHandler} implementation class.
+     * If not specified, uses the provider's default audio handler as per {@link AIProvider#getDefaultAudioHandler()}.
+     *
+     * @return The custom audio handler class, or {@link AIAudioHandler AIAudioHandler.class} if not specified.
+     * @since 1.1
+     */
+    @Nonbinding
+    Class<? extends AIAudioHandler> audioHandler() default AIAudioHandler.class;
 
 }

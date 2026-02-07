@@ -95,4 +95,9 @@ public class XAIService extends OpenAIService {
     public boolean supportsOpenAIModerationCapability(Set<String> categories) {
         return false;
     }
+
+    @Override
+    public boolean supportsOpenAITranscriptionCapability() {
+        return false;
+    }
 }

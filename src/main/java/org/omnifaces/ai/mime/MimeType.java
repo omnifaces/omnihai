@@ -37,6 +37,33 @@ public interface MimeType {
     String extension();
 
     /**
+     * Returns whether this is an image mime type.
+     * @return whether this is an image mime type.
+     * @since 1.1
+     */
+    default boolean isImage() {
+        return value().startsWith("image/");
+    }
+
+    /**
+     * Returns whether this is an audio mime type.
+     * @return whether this is an audio mime type.
+     * @since 1.1
+     */
+    default boolean isAudio() {
+        return value().startsWith("audio/");
+    }
+
+    /**
+     * Returns whether this is a video mime type.
+     * @return whether this is a video mime type.
+     * @since 1.1
+     */
+    default boolean isVideo() {
+        return value().startsWith("video/");
+    }
+
+    /**
      * Guesses the MIME type of the given content based on magic bytes.
      * <p>
      * Detection order: images first, then audio/video, then documents. Falls back to {@code application/octet-stream}

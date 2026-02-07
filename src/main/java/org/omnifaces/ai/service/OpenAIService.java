@@ -12,10 +12,12 @@
  */
 package org.omnifaces.ai.service;
 
+import static org.omnifaces.ai.helper.JsonHelper.findFirstNonBlankByPath;
 import static org.omnifaces.ai.helper.JsonHelper.isEmpty;
 import static org.omnifaces.ai.helper.JsonHelper.parseJson;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -29,8 +31,10 @@ import org.omnifaces.ai.AIProvider;
 import org.omnifaces.ai.AIService;
 import org.omnifaces.ai.exception.AIException;
 import org.omnifaces.ai.exception.AIResponseException;
+import org.omnifaces.ai.mime.MimeType;
 import org.omnifaces.ai.modality.OpenAIImageHandler;
 import org.omnifaces.ai.modality.OpenAITextHandler;
+import org.omnifaces.ai.model.ChatInput.Attachment;
 import org.omnifaces.ai.model.ModerationOptions;
 import org.omnifaces.ai.model.ModerationOptions.Category;
 import org.omnifaces.ai.model.ModerationResult;
@@ -100,14 +104,27 @@ public class OpenAIService extends BaseAIService {
 
     /**
      * Returns whether this OpenAI based service supports native moderation for the given categories.
-     * When {@code true}, {@link #moderateContent(String, ModerationOptions)} will use OpenAI's moderation API.
+     * When {@code true}, {@link #moderateContentAsync(String, ModerationOptions)} will use OpenAI's moderation API.
      * When {@code false}, it falls back to the chat-based moderation in {@link BaseAIService}.
      *
+     * @implNote The default implementation checks if all categories are {@link Category#isOpenAISupported()}.
      * @param categories The moderation categories to check.
      * @return {@code true} if all categories are supported by OpenAI's moderation API.
      */
     public boolean supportsOpenAIModerationCapability(Set<String> categories) {
         return categories.stream().allMatch(Category.OPENAI_SUPPORTED_CATEGORY_NAMES::contains);
+    }
+
+    /**
+     * Returns whether this OpenAI based service supports native transcription.
+     * When {@code true}, {@link #transcribeAsync(byte[] audio)} will use OpenAI's transcription API.
+     * When {@code false}, it falls back to the chat-based transcription in {@link BaseAIService}.
+     *
+     * @implNote The default implementation returns true.
+     * @return {@code true} if this service supports OpenAI's transcription API.
+     */
+    public boolean supportsOpenAITranscriptionCapability() {
+        return true;
     }
 
     /**
@@ -150,6 +167,9 @@ public class OpenAIService extends BaseAIService {
         return supportsOpenAIResponsesApi() ? "responses" : "chat/completions";
     }
 
+    /**
+     * Returns {@code files}.
+     */
     @Override
     protected String getFilesPath() {
         return "files";
@@ -210,5 +230,30 @@ public class OpenAIService extends BaseAIService {
         }
 
         return new ModerationResult(flagged, scores);
+    }
+
+    @Override
+    public CompletableFuture<String> transcribeAsync(byte[] audio) throws AIException {
+        if (supportsOpenAITranscriptionCapability()) {
+            var mimeType = MimeType.guessMimeType(audio);
+            var attachment = new Attachment(audio, mimeType, "audio." + mimeType.extension(), Map.of("model", getModelName(), "response_format", "json"));
+            return HTTP_CLIENT.upload(this, "audio/transcriptions", attachment).thenApply(this::parseOpenAITranscribeResponse);
+        }
+        else {
+            return super.transcribeAsync(audio);
+        }
+    }
+
+    /**
+     * Parses the transcription result from OpenAI's transcription API response.
+     *
+     * @param responseBody The JSON response from OpenAI's transcription API.
+     * @return The transcription result.
+     * @throws AIResponseException If the response cannot be parsed as JSON or is missing transcription text.
+     * @since 1.1
+     */
+    protected String parseOpenAITranscribeResponse(String responseBody) throws AIResponseException {
+        var responseJson = parseJson(responseBody);
+        return findFirstNonBlankByPath(responseJson, List.of("text")).orElseThrow(() -> new AIResponseException("No transcription text found", responseBody));
     }
 }

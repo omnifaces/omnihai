@@ -40,6 +40,7 @@ import java.util.function.Predicate;
 import jakarta.json.Json;
 import jakarta.json.JsonObject;
 
+import org.omnifaces.ai.AIAudioHandler;
 import org.omnifaces.ai.AIConfig;
 import org.omnifaces.ai.AIImageHandler;
 import org.omnifaces.ai.AIProvider;
@@ -89,6 +90,8 @@ public abstract class BaseAIService implements AIService {
     protected final AITextHandler textHandler;
     /** The AI image handler for this service. */
     protected final AIImageHandler imageHandler;
+    /** The AI audio handler for this service. */
+    protected final AIAudioHandler audioHandler;
 
     /**
      * Constructs an AI service with the specified configuration.
@@ -111,6 +114,7 @@ public abstract class BaseAIService implements AIService {
         this.prompt = config.prompt();
         this.textHandler = createHandler(config.strategy().textHandler(), provider.getDefaultTextHandler(), "text");
         this.imageHandler = createHandler(config.strategy().imageHandler(), provider.getDefaultImageHandler(), "image");
+        this.audioHandler = createHandler(config.strategy().audioHandler(), provider.getDefaultAudioHandler(), "audio");
     }
 
     private static <T> T createHandler(Class<? extends T> configuredHandler, Class<? extends T> defaultHandler, String handlerName) {
@@ -369,7 +373,7 @@ public abstract class BaseAIService implements AIService {
 
     /**
      * Returns the path of the image generation endpoint. E.g. {@code images/generations}.
-     * @implNote The default implementation delegates to {@link #getChatPath(boolean)}
+     * @implNote The default implementation delegates to {@link #getChatPath(boolean)} with {@code false}.
      * @return the path of the image generation endpoint.
      */
     protected String getGenerateImagePath() {
@@ -380,6 +384,15 @@ public abstract class BaseAIService implements AIService {
     public CompletableFuture<byte[]> generateImageAsync(String prompt, GenerateImageOptions options) throws AIException {
         return asyncPostAndParseImageContent(getGenerateImagePath(), imageHandler.buildGenerateImagePayload(this, requireNonBlank(prompt, "prompt"), options));
     }
+
+    // Audio Transcription Implementation ------------------------------------------------------------------------------
+
+    @Override
+    public CompletableFuture<String> transcribeAsync(byte[] audio) throws AIException {
+        var input = ChatInput.newBuilder().message(audioHandler.buildTranscribePrompt()).attach(audio).build();
+        return asyncPostAndParseChatResponse(getChatPath(false), textHandler.buildChatPayload(this, input, DETERMINISTIC, false));
+    }
+
 
     // HTTP Helper Methods --------------------------------------------------------------------------------------------
 

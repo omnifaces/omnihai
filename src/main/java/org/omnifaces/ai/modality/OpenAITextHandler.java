@@ -51,7 +51,9 @@ public class OpenAITextHandler extends DefaultAITextHandler {
     @Override
     public JsonObject buildChatPayload(AIService service, ChatInput input, ChatOptions options, boolean streaming) {
         var currentModelVersion = service.getModelVersion();
-        var supportsResponsesApi = supportsResponsesApi(service);
+        var audioFiles = input.getFiles().stream().filter(attachment -> attachment.mimeType().isAudio()).toList();
+        var remainingFiles = input.getFiles().stream().filter(attachment -> !attachment.mimeType().isAudio()).toList();
+        var supportsResponsesApi = supportsResponsesApi(service) && audioFiles.isEmpty();
         var payload = Json.createObjectBuilder()
             .add("model", service.getModelName());
 
@@ -93,10 +95,17 @@ public class OpenAITextHandler extends DefaultAITextHandler {
             content.add(img);
         }
 
-        if (!input.getFiles().isEmpty()) {
+        for (var audioFile : audioFiles) {
+            content.add(Json.createObjectBuilder().add("type", "input_audio")
+                .add("input_audio", Json.createObjectBuilder()
+                    .add("data", audioFile.toBase64())
+                    .add("format", audioFile.mimeType().extension())));
+        }
+
+        if (!remainingFiles.isEmpty()) {
             checkSupportsFileUpload(service);
 
-            for (var file : input.getFiles()) {
+            for (var file : remainingFiles) {
                 var fileId = service.upload(file.withMetadata("purpose", supportsResponsesApi ? "user_data" : "assistants"));
 
                 content.add(Json.createObjectBuilder()

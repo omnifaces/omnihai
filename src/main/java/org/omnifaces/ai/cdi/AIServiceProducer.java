@@ -28,6 +28,7 @@ import jakarta.enterprise.inject.Produces;
 import jakarta.enterprise.inject.spi.BeanManager;
 import jakarta.enterprise.inject.spi.InjectionPoint;
 
+import org.omnifaces.ai.AIAudioHandler;
 import org.omnifaces.ai.AIConfig;
 import org.omnifaces.ai.AIImageHandler;
 import org.omnifaces.ai.AIProvider;
@@ -83,7 +84,8 @@ class AIServiceProducer {
         var prompt = resolveExpressionsIfNecessary(beanManager, annotation.prompt());
         var textHandler = annotation.textHandler() == AITextHandler.class ? null : annotation.textHandler();
         var imageHandler = annotation.imageHandler() == AIImageHandler.class ? null : annotation.imageHandler();
-        var config = new AIConfig(provider, apiKey, model, endpoint, prompt, new AIStrategy(textHandler, imageHandler), emptyMap());
+        var audioHandler = annotation.audioHandler() == AIAudioHandler.class ? null : annotation.audioHandler();
+        var config = new AIConfig(provider, apiKey, model, endpoint, prompt, AIStrategy.of(textHandler, imageHandler, audioHandler), emptyMap());
 
         return serviceCache.computeIfAbsent(config, AIConfig::createService);
     }

@@ -57,6 +57,7 @@ public class GoogleAIService extends BaseAIService {
 
     private static final long serialVersionUID = 1L;
 
+    private static final AIModelVersion GEMINI_1_5 = AIModelVersion.of("gemini", 1, 5);
     private static final AIModelVersion GEMINI_2 = AIModelVersion.of("gemini", 2);
 
     /**
@@ -71,11 +72,13 @@ public class GoogleAIService extends BaseAIService {
 
     @Override
     public boolean supportsModality(AIModality modality) {
+        var currentModelVersion = getModelVersion();
         var fullModelName = getModelName().toLowerCase();
 
         return switch (modality) {
             case IMAGE_ANALYSIS -> true;
-            case IMAGE_GENERATION -> fullModelName.contains("image");
+            case IMAGE_GENERATION -> currentModelVersion.gte(GEMINI_2) || fullModelName.contains("image");
+            case AUDIO_ANALYSIS -> currentModelVersion.gte(GEMINI_1_5);
             default -> false;
         };
     }

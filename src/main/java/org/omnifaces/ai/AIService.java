@@ -989,6 +989,39 @@ public interface AIService extends Serializable {
     CompletableFuture<byte[]> generateImageAsync(String prompt, GenerateImageOptions options);
 
 
+    // Audio Transcription Capabilities ---------------------------------------------------------------------------------
+
+    /**
+     * Transcribes audio to text.
+     * @implNote The default implementation delegates to {@link #transcribeAsync(byte[])}.
+     * @param audio The audio bytes to transcribe.
+     * @return The transcription text, never {@code null}.
+     * @throws UnsupportedOperationException if audio transcription is not supported by the implementation.
+     * @throws AIException if transcription fails.
+     * @since 1.1
+     */
+    default String transcribe(byte[] audio) throws AIException {
+        try {
+            return transcribeAsync(audio).join();
+        }
+        catch (CompletionException e) {
+            throw AIException.asyncRequestFailed(e);
+        }
+    }
+
+    /**
+     * Asynchronously transcribes audio to text.
+     * <p>
+     * This is the core method for audio transcription.
+     *
+     * @param audio The audio bytes to transcribe.
+     * @return A CompletableFuture that will contain the transcription text, never {@code null}.
+     * @throws UnsupportedOperationException if audio transcription is not supported by the implementation.
+     * @since 1.1
+     */
+    CompletableFuture<String> transcribeAsync(byte[] audio);
+
+
     // Service Metadata -----------------------------------------------------------------------------------------------
 
     /**

@@ -16,6 +16,7 @@ import static java.util.Arrays.stream;
 
 import org.omnifaces.ai.cdi.AI;
 import org.omnifaces.ai.modality.AnthropicAITextHandler;
+import org.omnifaces.ai.modality.DefaultAIAudioHandler;
 import org.omnifaces.ai.modality.DefaultAIImageHandler;
 import org.omnifaces.ai.modality.GoogleAIImageHandler;
 import org.omnifaces.ai.modality.GoogleAITextHandler;
@@ -69,7 +70,7 @@ public enum AIProvider {
      * @see <a href="https://platform.openai.com/api-keys">Manage OpenAI API Keys</a>
      * @see <a href="https://platform.openai.com/docs/models">Available OpenAI Models</a>
      */
-    OPENAI("OpenAI", OpenAIService.class, true, "gpt-5-mini", "https://api.openai.com/v1", OpenAITextHandler.class, OpenAIImageHandler.class),
+    OPENAI("OpenAI", OpenAIService.class, true, "gpt-5-mini", "https://api.openai.com/v1", OpenAITextHandler.class, OpenAIImageHandler.class, DefaultAIAudioHandler.class),
 
     /**
      * Anthropic: Claude Opus, Claude Sonnet, Claude Haiku, etc.
@@ -79,7 +80,7 @@ public enum AIProvider {
      * @see <a href="https://platform.claude.com/settings/keys">Manage Anthropic API Keys</a>
      * @see <a href="https://platform.claude.com/docs/en/about-claude/models/overview">Available Anthropic AI Models</a>
      */
-    ANTHROPIC("Anthropic", AnthropicAIService.class, true, "claude-sonnet-4-5-20250929", "https://api.anthropic.com/v1", AnthropicAITextHandler.class, DefaultAIImageHandler.class),
+    ANTHROPIC("Anthropic", AnthropicAIService.class, true, "claude-sonnet-4-5-20250929", "https://api.anthropic.com/v1", AnthropicAITextHandler.class, DefaultAIImageHandler.class, DefaultAIAudioHandler.class),
 
     /**
      * Google AI: Gemini Pro, Gemini Flash, Gemini Flash Lite, etc.
@@ -89,7 +90,7 @@ public enum AIProvider {
      * @see <a href="https://aistudio.google.com/app/api-keys">Manage Google AI API Keys</a>
      * @see <a href="https://ai.google.dev/gemini-api/docs/models">Available Google AI Models</a>
      */
-    GOOGLE("Google AI", GoogleAIService.class, true, "gemini-2.5-flash", "https://generativelanguage.googleapis.com/v1beta", GoogleAITextHandler.class, GoogleAIImageHandler.class),
+    GOOGLE("Google AI", GoogleAIService.class, true, "gemini-2.5-flash", "https://generativelanguage.googleapis.com/v1beta", GoogleAITextHandler.class, GoogleAIImageHandler.class, DefaultAIAudioHandler.class),
 
     /**
      * xAI: Grok Fast Reasoning, Grok Non Reasoning, Grok Code, etc.
@@ -99,7 +100,7 @@ public enum AIProvider {
      * @see <a href="https://console.x.ai/">Manage xAI API Keys</a>
      * @see <a href="https://docs.x.ai/developers/models">Available xAI Models</a>
      */
-    XAI("xAI", XAIService.class, true, "grok-4-1-fast-reasoning", "https://api.x.ai/v1", OpenAITextHandler.class, XAIImageHandler.class),
+    XAI("xAI", XAIService.class, true, "grok-4-1-fast-reasoning", "https://api.x.ai/v1", OpenAITextHandler.class, XAIImageHandler.class, DefaultAIAudioHandler.class),
 
     /**
      * Mistral AI: Mistral Large, Mistral Medium, Mistral Small, etc.
@@ -109,7 +110,7 @@ public enum AIProvider {
      * @see <a href="https://console.mistral.ai/home?workspace_dialog=apiKeys">Manage Mistral AI API Keys</a>
      * @see <a href="https://docs.mistral.ai/getting-started/models/">Available Mistral AI Models</a>
      */
-    MISTRAL("Mistral AI", MistralAIService.class, true, "mistral-medium-2508", "https://api.mistral.ai/v1", OpenAITextHandler.class, OpenAIImageHandler.class),
+    MISTRAL("Mistral AI", MistralAIService.class, true, "mistral-medium-2508", "https://api.mistral.ai/v1", OpenAITextHandler.class, OpenAIImageHandler.class, DefaultAIAudioHandler.class),
 
     /**
      * Meta AI: Llama Maverick, Llama Scout, Llama default, etc.
@@ -119,7 +120,7 @@ public enum AIProvider {
      * @see <a href="https://llama.developer.meta.com/docs/api-keys/">Manage Meta AI API Keys</a>
      * @see <a href="https://llama.developer.meta.com/docs/models/">Available Meta AI Models</a>
      */
-    META("Meta AI", MetaAIService.class, true, "Llama-4-Scout-17B-16E-Instruct-FP8", "https://api.llama.com/v1", MetaAITextHandler.class, OpenAIImageHandler.class),
+    META("Meta AI", MetaAIService.class, true, "Llama-4-Scout-17B-16E-Instruct-FP8", "https://api.llama.com/v1", MetaAITextHandler.class, OpenAIImageHandler.class, DefaultAIAudioHandler.class),
 
     /**
      * Azure OpenAI: Aggregates a broad range of AI models via a unified OpenAI-compatible API.
@@ -129,7 +130,7 @@ public enum AIProvider {
      * @see <a href="https://portal.azure.com/">Manage Azure OpenAI API Keys</a>
      * @see <a href="https://ai.azure.com/catalog">Available Azure OpenAI Models</a>
      */
-    AZURE("Azure OpenAI", AzureAIService.class, true, "gpt-5-mini", "https://{org.omnifaces.ai.AZURE_RESOURCE}.openai.azure.com/openai/v1", OpenAITextHandler.class, OpenAIImageHandler.class),
+    AZURE("Azure OpenAI", AzureAIService.class, true, "gpt-5-mini", "https://{org.omnifaces.ai.AZURE_RESOURCE}.openai.azure.com/openai/v1", OpenAITextHandler.class, OpenAIImageHandler.class, DefaultAIAudioHandler.class),
 
     /**
      * OpenRouter: Aggregates a broad range of AI models via a unified OpenAI-compatible API.
@@ -139,7 +140,7 @@ public enum AIProvider {
      * @see <a href="https://openrouter.ai/settings/keys/">Manage OpenRouter API Keys</a>
      * @see <a href="https://openrouter.ai/models">Available OpenRouter Models</a>
      */
-    OPENROUTER("OpenRouter", OpenRouterAIService.class, true, "deepseek/deepseek-v3.2", "https://openrouter.ai/api/v1", OpenRouterAITextHandler.class, OpenAIImageHandler.class),
+    OPENROUTER("OpenRouter", OpenRouterAIService.class, true, "deepseek/deepseek-v3.2", "https://openrouter.ai/api/v1", OpenRouterAITextHandler.class, OpenAIImageHandler.class, DefaultAIAudioHandler.class),
 
     /**
      * Hugging Face: Aggregates a broad range of AI models via a unified OpenAI-compatible API.
@@ -149,7 +150,7 @@ public enum AIProvider {
      * @see <a href="https://huggingface.co/settings/tokens">Manage Hugging Face API Keys</a>
      * @see <a href="https://huggingface.co/models">Available Hugging Face Models</a>
      */
-    HUGGINGFACE("Hugging Face", HuggingFaceAIService.class, true, "google/gemma-3-27b-it", "https://router.huggingface.co/v1", OpenAITextHandler.class, OpenAIImageHandler.class),
+    HUGGINGFACE("Hugging Face", HuggingFaceAIService.class, true, "google/gemma-3-27b-it", "https://router.huggingface.co/v1", OpenAITextHandler.class, OpenAIImageHandler.class, DefaultAIAudioHandler.class),
 
     /**
      * Ollama: Local models, e.g. Llama, Gemma, Mistral, etc via local server.
@@ -176,19 +177,19 @@ public enum AIProvider {
      * @see OllamaAIService
      * @see <a href="https://ollama.com/library">Available Ollama Models</a> (no API Keys required)
      */
-    OLLAMA("Ollama", OllamaAIService.class, false, "gemma3", "http://localhost:11434", OllamaAITextHandler.class, DefaultAIImageHandler.class),
+    OLLAMA("Ollama", OllamaAIService.class, false, "gemma3", "http://localhost:11434", OllamaAITextHandler.class, DefaultAIImageHandler.class, DefaultAIAudioHandler.class),
 
     /**
      * Custom: provide the {@link Class} instance of your custom {@link AIService} implementation as the provider in {@link AIConfig},
      * or use {@link AI#serviceClass()} when using CDI injection.
      * <p>
      * Custom providers that extend {@link org.omnifaces.ai.service.BaseAIService} must supply their handlers via
-     * {@link AIConfig#withStrategy(AIStrategy)} or {@link AI#textHandler()} and {@link AI#imageHandler()},
+     * {@link AIConfig#withStrategy(AIStrategy)} or {@link AI#textHandler()}, {@link AI#imageHandler()} and {@link AI#audioHandler()},
      * since this provider has no default handlers.
      * <p>
      * If you have a great one, feel free to submit it to OmniHai so it ends up as a new enum entry here :)
      */
-    CUSTOM(null, null, false, null, null, null, null);
+    CUSTOM(null, null, false, null, null, null, null, null);
 
     private final String name;
     private final Class<? extends AIService> serviceClass;
@@ -197,8 +198,9 @@ public enum AIProvider {
     private final String defaultEndpoint;
     private final Class<? extends AITextHandler> defaultTextHandler;
     private final Class<? extends AIImageHandler> defaultImageHandler;
+    private final Class<? extends AIAudioHandler> defaultAudioHandler;
 
-    AIProvider(String name, Class<? extends AIService> serviceClass, boolean apiKeyRequired, String defaultModel, String defaultEndpoint, Class<? extends AITextHandler> defaultTextHandler, Class<? extends AIImageHandler> defaultImageHandler) {
+    AIProvider(String name, Class<? extends AIService> serviceClass, boolean apiKeyRequired, String defaultModel, String defaultEndpoint, Class<? extends AITextHandler> defaultTextHandler, Class<? extends AIImageHandler> defaultImageHandler, Class<? extends AIAudioHandler> defaultAudioHandler) {
         this.name = name;
         this.serviceClass = serviceClass;
         this.apiKeyRequired = apiKeyRequired;
@@ -206,6 +208,7 @@ public enum AIProvider {
         this.defaultEndpoint = defaultEndpoint;
         this.defaultTextHandler = defaultTextHandler;
         this.defaultImageHandler = defaultImageHandler;
+        this.defaultAudioHandler = defaultAudioHandler;
     }
 
     /**
@@ -276,6 +279,16 @@ public enum AIProvider {
      */
     public Class<? extends AIImageHandler> getDefaultImageHandler() {
         return defaultImageHandler;
+    }
+
+    /**
+     * Returns the AI provider's default AI audio handler.
+     * Can be overridden via {@link AIConfig#withStrategy(AIStrategy)} or {@link AIStrategy#withAudioHandler(Class)} or {@link AI#audioHandler()}.
+     * @return the AI provider's default AI audio handler.
+     * @since 1.1
+     */
+    public Class<? extends AIAudioHandler> getDefaultAudioHandler() {
+        return defaultAudioHandler;
     }
 
 }

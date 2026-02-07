@@ -53,6 +53,8 @@ public class MistralAIService extends OpenAIService {
     private static final long serialVersionUID = 1L;
 
     private static final AIModelVersion MISTRAL_2402 = AIModelVersion.of("mistral", 2402);
+    private static final AIModelVersion VOXTRAL = AIModelVersion.of("voxtral");
+    private static final AIModelVersion VOXTRAL_MINI = AIModelVersion.of("voxtral-mini");
 
     /**
      * Constructs a Mistral AI service with the specified configuration.
@@ -66,8 +68,11 @@ public class MistralAIService extends OpenAIService {
 
     @Override
     public boolean supportsModality(AIModality modality) {
+        var currentModelVersion = getModelVersion();
+
         return switch (modality) {
             case IMAGE_ANALYSIS -> true;
+            case AUDIO_ANALYSIS -> currentModelVersion.gte(VOXTRAL);
             default -> false;
         };
     }
@@ -90,5 +95,10 @@ public class MistralAIService extends OpenAIService {
     @Override
     public boolean supportsOpenAIModerationCapability(Set<String> categories) {
         return false;
+    }
+
+    @Override
+    public boolean supportsOpenAITranscriptionCapability() {
+        return getModelVersion().gte(VOXTRAL_MINI);
     }
 }

@@ -68,7 +68,7 @@ public class OpenRouterAIService extends OpenAIService {
         return switch (modality) {
             case IMAGE_ANALYSIS -> true;
             case IMAGE_GENERATION -> fullModelName.contains("image");
-            case AUDIO_ANALYSIS -> fullModelName.contains("transcribe");
+            case AUDIO_ANALYSIS -> fullModelName.contains("audio");
             default -> false;
         };
     }
@@ -95,6 +95,11 @@ public class OpenRouterAIService extends OpenAIService {
 
     @Override
     public boolean supportsOpenAIModerationCapability(Set<String> categories) {
+        return false;
+    }
+
+    @Override
+    public boolean supportsOpenAITranscriptionCapability() {
         return false;
     }
 }

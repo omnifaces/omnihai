@@ -13,11 +13,14 @@
 package org.omnifaces.ai.service;
 
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 
 import org.omnifaces.ai.AIConfig;
 import org.omnifaces.ai.AIModality;
 import org.omnifaces.ai.AIProvider;
 import org.omnifaces.ai.AIService;
+import org.omnifaces.ai.exception.AIException;
+import org.omnifaces.ai.mime.MimeType;
 
 /**
  * AI service implementation using Hugging Face API.
@@ -68,7 +71,7 @@ public class HuggingFaceAIService extends OpenAIService {
         return switch (modality) {
             case IMAGE_ANALYSIS -> true;
             case IMAGE_GENERATION -> fullModelName.contains("image");
-            case AUDIO_ANALYSIS -> fullModelName.contains("transcribe");
+            case AUDIO_ANALYSIS -> fullModelName.contains("transcribe") || fullModelName.contains("whisper");
             default -> false;
         };
     }
@@ -91,5 +94,21 @@ public class HuggingFaceAIService extends OpenAIService {
     @Override
     public boolean supportsOpenAIModerationCapability(Set<String> categories) {
         return false;
+    }
+
+    @Override
+    public boolean supportsOpenAITranscriptionCapability() {
+        return false;
+    }
+
+    @Override
+    public CompletableFuture<String> transcribeAsync(byte[] audio) throws AIException {
+        var mimeType = MimeType.guessMimeType(audio);
+
+        if (!mimeType.value().startsWith("audio/")) {
+            throw new UnsupportedOperationException("Unrecognized audio mime type.");
+        }
+
+        return HTTP_CLIENT.post(this, "../hf-inference/models/" + getModelName(), audio, mimeType.value()).thenApply(this::parseOpenAITranscribeResponse);
     }
 }
