@@ -17,6 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.omnifaces.ai.model.ChatOptions.DETERMINISTIC;
 
 import java.util.List;
 
@@ -106,11 +107,11 @@ abstract class BaseAIServiceTextHandlerIT extends AIServiceIT {
 
         var input = ChatInput.newBuilder()
             .attach(readAllBytes("/dummy.pdf"))
-            .message("What exactly does this PDF contain?")
+            .message("Extract the contents of this PDF. No explanation.")
             .build();
-        var response = service.chat(input);
+        var response = service.chat(input, DETERMINISTIC);
         log(response);
-        assertTrue(response.toLowerCase().contains("dummy pdf"), response);
+        assertTrue(response.contains("Dummy PDF file"), response);
     }
 
     public record Capital(String city, String country) {}

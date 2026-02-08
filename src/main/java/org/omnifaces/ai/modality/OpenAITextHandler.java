@@ -20,6 +20,8 @@ import static org.omnifaces.ai.model.Sse.Event.Type.DATA;
 import static org.omnifaces.ai.model.Sse.Event.Type.EVENT;
 
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 import jakarta.json.Json;
@@ -109,11 +111,16 @@ public class OpenAITextHandler extends DefaultAITextHandler {
             for (var file : remainingFiles) {
                 if (supportsFilesApi(service)) {
                     var purpose = supportsResponsesApi ? currentModelVersion.gte(GPT_5) ? "user_data" : "assistants" : "ocr"; // NOTE: "ocr" is actually for Mistral. Other models ignore this but this needs improvement in long term.
-                    var fileId = service.upload(file.withMetadata("purpose", purpose));
-
+                    var fileId = service.upload(file.withMetadata(Map.of("purpose", purpose, "expires_after[anchor]", "created_at", "expires_after[seconds]", String.valueOf(TimeUnit.HOURS.toSeconds(1)))));
                     content.add(Json.createObjectBuilder()
-                            .add("type", supportsResponsesApi ? "input_file" : "file")
-                            .add("file_id", fileId));
+                        .add("type", supportsResponsesApi ? "input_file" : "file")
+                        .add("file_id", fileId));
+                }
+                else if (supportsResponsesApi) {
+                    content.add(Json.createObjectBuilder()
+                        .add("type", "input_file")
+                        .add("filename", file.fileName())
+                        .add("file_data", file.toDataUri()));
                 }
                 else {
                     content.add(Json.createObjectBuilder()
