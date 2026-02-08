@@ -90,7 +90,8 @@ public final record AIModelVersion(String modelName, int majorVersion, int minor
      * @return A new AIModelVersion instance.
      */
     public static AIModelVersion of(String fullModelName) {
-        return new AIModelVersion(getModelPrefix(fullModelName), getModelMajorVersion(fullModelName), getModelMinorVersion(fullModelName));
+        var normalizedName = stripDateSuffix(fullModelName);
+        return new AIModelVersion(getModelPrefix(normalizedName), getModelMajorVersion(normalizedName), getModelMinorVersion(normalizedName));
     }
 
     /**
@@ -203,6 +204,18 @@ public final record AIModelVersion(String modelName, int majorVersion, int minor
         }
 
         return Integer.compare(minorVersion, other.minorVersion);
+    }
+
+    /**
+     * Strips date-like suffixes and everything after them from the model name to prevent date components from being
+     * parsed as version numbers. Handles both {@code YYYY-MM-DD} (e.g., {@code -2025-08-07}) and {@code YYYYMMDD}
+     * (e.g., {@code -20250929}) formats.
+     *
+     * @param fullModelName The full model name.
+     * @return The model name with date suffixes and trailing content removed.
+     */
+    private static String stripDateSuffix(String fullModelName) {
+        return fullModelName.split("-\\d{4}-\\d{2}-\\d{2}|-\\d{8}")[0];
     }
 
     /**

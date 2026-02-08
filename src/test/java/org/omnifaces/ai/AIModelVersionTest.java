@@ -82,6 +82,14 @@ class AIModelVersionTest {
     }
 
     @Test
+    void ofFullModelName_gptWithDateSuffix() {
+        var version = AIModelVersion.of("gpt-5-2025-08-07");
+        assertEquals("gpt", version.modelName());
+        assertEquals(5, version.majorVersion());
+        assertEquals(0, version.minorVersion());
+    }
+
+    @Test
     void ofFullModelName_bedrockClaude() {
         var version = AIModelVersion.of("anthropic.claude-3-haiku-20240307-v1:0");
         assertEquals("anthropic.claude", version.modelName());
