@@ -83,13 +83,23 @@ public class MistralAIService extends OpenAIService {
     }
 
     @Override
+    public boolean supportsFileUpload() {
+        return true;
+    }
+
+    @Override
     public boolean supportsStructuredOutput() {
-        return true; // Not model-bound, it's API-bound and supported since January 2025.
+        return true; // Not version-bound, support is API-bound since January 2025.
     }
 
     @Override
     public boolean supportsOpenAIResponsesApi() {
         return false;
+    }
+
+    @Override
+    public boolean supportsOpenAIFilesApi() {
+        return true; // Not version-bound, support is API-bound.
     }
 
     @Override

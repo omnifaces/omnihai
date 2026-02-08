@@ -73,7 +73,6 @@ public class OpenAIService extends BaseAIService {
     private static final long serialVersionUID = 1L;
 
     private static final AIModelVersion GPT_4 = AIModelVersion.of("gpt", 4);
-    private static final AIModelVersion GPT_4_1 = AIModelVersion.of("gpt", 4, 1);
     private static final AIModelVersion GPT_5 = AIModelVersion.of("gpt", 5);
     private static final AIModelVersion DALL_E = AIModelVersion.of("dall-e");
 
@@ -129,11 +128,20 @@ public class OpenAIService extends BaseAIService {
 
     /**
      * Returns whether this OpenAI based service implementation supports the {@code responses} API as replacement for the legacy {@code chat/completions} API.
-     * @implNote The default implementation returns true if {@link #getModelVersion()} is at least {@code gpt-4}.
+     * @implNote The default implementation returns true if {@link #getModelVersion()} is at least {@code GPT-4}.
      * @return Whether this OpenAI based service implementation supports the {@code responses} API as replacement for the legacy {@code chat/completions} API.
      */
     public boolean supportsOpenAIResponsesApi() {
         return getModelVersion().gte(GPT_4);
+    }
+
+    /**
+     * Returns whether this OpenAI based service implementation supports the {@code files} API for file inputs.
+     * @implNote The default implementation delegates to {@link #supportsOpenAIResponsesApi()}.
+     * @return Whether this OpenAI based service implementation supports the {@code files} API for file inputs.
+     */
+    public boolean supportsOpenAIFilesApi() {
+        return supportsOpenAIResponsesApi();
     }
 
     @Override
@@ -143,7 +151,7 @@ public class OpenAIService extends BaseAIService {
 
     @Override
     public boolean supportsFileUpload() {
-        return getModelVersion().gte(GPT_4_1);
+        return getModelVersion().gte(GPT_4);
     }
 
     @Override

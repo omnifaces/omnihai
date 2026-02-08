@@ -16,16 +16,16 @@ import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.omnifaces.ai.AIProvider;
 
 /**
- * This test uses a model which supports OpenAI native transcription API.
+ * This test uses a model which does NOT support OpenAI responses API and hence uses the legacy chat/completions fallback.
  */
-@EnabledIfEnvironmentVariable(named = MistralAIServiceOpenAIAudioHandlerIT.API_KEY_ENV_NAME, matches = ".+")
-class MistralAIServiceOpenAIAudioHandlerIT extends BaseAIServiceAudioHandlerIT {
+@EnabledIfEnvironmentVariable(named = OpenAIServiceLegacyTextHandlerIT.API_KEY_ENV_NAME, matches = ".+")
+class OpenAIServiceLegacyTextHandlerIT extends BaseAIServiceTextHandlerIT {
 
-    protected static final String API_KEY_ENV_NAME = "MISTRAL_API_KEY";
+    protected static final String API_KEY_ENV_NAME = "OPENAI_API_KEY";
 
     @Override
     protected AIProvider getProvider() {
-        return AIProvider.MISTRAL;
+        return AIProvider.OPENAI;
     }
 
     @Override
@@ -35,6 +35,6 @@ class MistralAIServiceOpenAIAudioHandlerIT extends BaseAIServiceAudioHandlerIT {
 
     @Override
     protected String getModel() {
-        return "voxtral-mini-2602";
+        return "gpt-3.5-turbo-0125";
     }
 }

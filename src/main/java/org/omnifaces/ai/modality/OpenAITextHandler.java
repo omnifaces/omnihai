@@ -53,12 +53,13 @@ public class OpenAITextHandler extends DefaultAITextHandler {
         var currentModelVersion = service.getModelVersion();
         var audioFiles = input.getFiles().stream().filter(attachment -> attachment.mimeType().isAudio()).toList();
         var remainingFiles = input.getFiles().stream().filter(attachment -> !attachment.mimeType().isAudio()).toList();
-        var supportsResponsesApi = supportsResponsesApi(service) && audioFiles.isEmpty();
+        var supportsResponsesApi = supportsResponsesApi(service);
         var payload = Json.createObjectBuilder()
             .add("model", service.getModelName());
 
         if (options.getMaxTokens() != null) {
-            payload.add(supportsResponsesApi ? "max_output_tokens" : currentModelVersion.gte(GPT_5) ? "max_completion_tokens" : "max_tokens", options.getMaxTokens());
+            var maxTokensField = supportsResponsesApi ? "max_output_tokens" : currentModelVersion.gte(GPT_5) ? "max_completion_tokens" : "max_tokens";
+            payload.add(maxTokensField, options.getMaxTokens());
         }
 
         var message = Json.createArrayBuilder();
@@ -98,7 +99,7 @@ public class OpenAITextHandler extends DefaultAITextHandler {
         for (var audioFile : audioFiles) {
             content.add(Json.createObjectBuilder().add("type", "input_audio")
                 .add("input_audio", Json.createObjectBuilder()
-                    .add("data", audioFile.toBase64())
+                    .add(supportsResponsesApi ? "audio_base64" : "data", audioFile.toBase64())
                     .add("format", audioFile.mimeType().extension())));
         }
 
@@ -106,11 +107,21 @@ public class OpenAITextHandler extends DefaultAITextHandler {
             checkSupportsFileUpload(service);
 
             for (var file : remainingFiles) {
-                var fileId = service.upload(file.withMetadata("purpose", supportsResponsesApi ? "user_data" : "assistants"));
+                if (supportsFilesApi(service)) {
+                    var purpose = supportsResponsesApi ? currentModelVersion.gte(GPT_5) ? "user_data" : "assistants" : "ocr"; // NOTE: "ocr" is actually for Mistral. Other models ignore this but this needs improvement in long term.
+                    var fileId = service.upload(file.withMetadata("purpose", purpose));
 
-                content.add(Json.createObjectBuilder()
-                        .add("type", "input_file")
-                        .add("file_id", fileId));
+                    content.add(Json.createObjectBuilder()
+                            .add("type", supportsResponsesApi ? "input_file" : "file")
+                            .add("file_id", fileId));
+                }
+                else {
+                    content.add(Json.createObjectBuilder()
+                        .add("type", "file")
+                        .add("file", Json.createObjectBuilder()
+                            .add("filename", file.fileName())
+                            .add("file_data", file.toDataUri())));
+                }
             }
         }
 
@@ -129,7 +140,7 @@ public class OpenAITextHandler extends DefaultAITextHandler {
             payload.add("stream", true);
         }
 
-        if (currentModelVersion.ne(GPT_5)) {
+        if (currentModelVersion.ne(GPT_5)) { // Bug in GPT 5.0; should have been allowed when reasoning_effort=none
             payload.add("temperature", options.getTemperature());
         }
 
@@ -244,5 +255,9 @@ public class OpenAITextHandler extends DefaultAITextHandler {
 
     private static boolean supportsResponsesApi(AIService service) {
         return service instanceof OpenAIService openai && openai.supportsOpenAIResponsesApi();
+    }
+
+    private static boolean supportsFilesApi(AIService service) {
+        return service instanceof OpenAIService openai && openai.supportsOpenAIFilesApi();
     }
 }

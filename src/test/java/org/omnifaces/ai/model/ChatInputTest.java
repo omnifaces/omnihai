@@ -203,27 +203,6 @@ class ChatInputTest {
     }
 
     // =================================================================================================================
-    // withoutFiles tests
-    // =================================================================================================================
-
-    @Test
-    void withoutFiles_preservesMessageAndImages_removesFiles() {
-        var input = ChatInput.newBuilder()
-                .message("Original message")
-                .attach(PNG_BYTES, JPEG_BYTES, PDF_BYTES)
-                .build();
-
-        var withoutFiles = input.withoutFiles();
-
-        assertNotSame(input, withoutFiles);
-        assertEquals("Original message", withoutFiles.getMessage());
-        assertEquals(2, withoutFiles.getImages().size());
-        assertTrue(withoutFiles.getFiles().isEmpty());
-        // Original unchanged
-        assertEquals(1, input.getFiles().size());
-    }
-
-    // =================================================================================================================
     // withHistory tests
     // =================================================================================================================
 

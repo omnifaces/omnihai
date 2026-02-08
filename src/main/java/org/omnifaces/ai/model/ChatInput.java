@@ -185,17 +185,6 @@ public class ChatInput implements Serializable {
     }
 
     /**
-     * Returns a copy of this input without any files.
-     * <p>
-     * This is useful for providers that handle files separately from the main chat payload.
-     *
-     * @return A new {@code ChatInput} containing only the message, images, and history.
-     */
-    public ChatInput withoutFiles() {
-        return new ChatInput(message, images, emptyList(), history);
-    }
-
-    /**
      * Returns a copy of this input with the specified conversation history.
      * <p>
      * This is used to include prior messages in the AI request payload for multi-turn conversations.

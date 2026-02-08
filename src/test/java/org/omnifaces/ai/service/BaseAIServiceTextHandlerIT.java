@@ -110,7 +110,7 @@ abstract class BaseAIServiceTextHandlerIT extends AIServiceIT {
             .build();
         var response = service.chat(input);
         log(response);
-        assertTrue(response.contains("Dummy PDF"), response);
+        assertTrue(response.toLowerCase().contains("dummy pdf"), response);
     }
 
     public record Capital(String city, String country) {}

@@ -15,6 +15,9 @@ package org.omnifaces.ai.service;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.omnifaces.ai.AIProvider;
 
+/**
+ * This test uses a model which does NOT support OpenAI native transcription API and hence uses the chat-with-attachment fallback.
+ */
 @EnabledIfEnvironmentVariable(named = MistralAIServiceAudioHandlerIT.API_KEY_ENV_NAME, matches = ".+")
 class MistralAIServiceAudioHandlerIT extends BaseAIServiceAudioHandlerIT {
 

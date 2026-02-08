@@ -92,6 +92,11 @@ public class XAIService extends OpenAIService {
     }
 
     @Override
+    public boolean supportsOpenAIFilesApi() {
+        return true; // Not version-bound, support is API-bound.
+    }
+
+    @Override
     public boolean supportsOpenAIModerationCapability(Set<String> categories) {
         return false;
     }

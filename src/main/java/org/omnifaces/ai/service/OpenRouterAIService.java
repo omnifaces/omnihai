@@ -94,6 +94,11 @@ public class OpenRouterAIService extends OpenAIService {
     }
 
     @Override
+    public boolean supportsOpenAIFilesApi() {
+        return false;
+    }
+
+    @Override
     public boolean supportsOpenAIModerationCapability(Set<String> categories) {
         return false;
     }

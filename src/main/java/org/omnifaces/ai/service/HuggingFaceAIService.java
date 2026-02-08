@@ -82,12 +82,22 @@ public class HuggingFaceAIService extends OpenAIService {
     }
 
     @Override
+    public boolean supportsFileUpload() {
+        return false;
+    }
+
+    @Override
     public boolean supportsStructuredOutput() {
         return true;
     }
 
     @Override
     public boolean supportsOpenAIResponsesApi() {
+        return false;
+    }
+
+    @Override
+    public boolean supportsOpenAIFilesApi() {
         return false;
     }
 
