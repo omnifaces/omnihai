@@ -324,6 +324,27 @@ class JsonHelperTest {
         assertFalse(innerSchema.getBoolean("additionalProperties"));
     }
 
+    @Test
+    void addStrictAdditionalProperties_arrayWithNestedObjectItems() {
+        var schema = Json.createObjectBuilder()
+                .add("type", "object")
+                .add("properties", Json.createObjectBuilder()
+                        .add("items", Json.createObjectBuilder()
+                                .add("type", "array")
+                                .add("items", Json.createObjectBuilder()
+                                        .add("type", "object")
+                                        .add("properties", Json.createObjectBuilder()
+                                                .add("name", Json.createObjectBuilder().add("type", "string"))))))
+                .build();
+
+        var result = JsonHelper.addStrictAdditionalProperties(schema);
+
+        assertFalse(result.getBoolean("additionalProperties"));
+        var arrayProp = result.getJsonObject("properties").getJsonObject("items");
+        var itemsSchema = arrayProp.getJsonObject("items");
+        assertFalse(itemsSchema.getBoolean("additionalProperties"));
+    }
+
     // =================================================================================================================
     // replaceField tests
     // =================================================================================================================

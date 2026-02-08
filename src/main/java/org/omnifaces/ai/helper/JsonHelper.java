@@ -231,18 +231,22 @@ public final class JsonHelper {
         var builder = Json.createObjectBuilder(schema).add("additionalProperties", false);
 
         if (schema.containsKey("properties")) {
-            var props = Json.createObjectBuilder();
+            var properties = Json.createObjectBuilder();
 
             schema.getJsonObject("properties").forEach((key, value) -> {
-                if (value instanceof JsonObject obj && "object".equals(obj.getString("type", null))) {
-                    props.add(key, addStrictAdditionalProperties(obj));
+                if (value instanceof JsonObject object && "object".equals(object.getString("type", null))) {
+                    properties.add(key, addStrictAdditionalProperties(object));
+                }
+                else if (value instanceof JsonObject object && "array".equals(object.getString("type", null))
+                        && object.containsKey("items") && "object".equals(object.getJsonObject("items").getString("type", null))) {
+                    properties.add(key, Json.createObjectBuilder(object).add("items", addStrictAdditionalProperties(object.getJsonObject("items"))));
                 }
                 else {
-                    props.add(key, value);
+                    properties.add(key, value);
                 }
             });
 
-            builder.add("properties", props);
+            builder.add("properties", properties);
         }
 
         return builder.build();
