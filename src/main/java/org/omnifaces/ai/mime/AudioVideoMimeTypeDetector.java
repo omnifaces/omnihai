@@ -32,10 +32,10 @@ final class AudioVideoMimeTypeDetector {
     static final byte[] FTYP_MAGIC = {'f', 't', 'y', 'p'};
 
     private enum AudioVideoMimeType implements MimeType {
+        AAC("audio/aac", "aac", 0, new byte[]{(byte)0xFF, (byte)0xF1}, 0, null),
+        AAC_ADTS("audio/aac", "aac", 0, new byte[]{(byte)0xFF, (byte)0xF9}, 0, null), // Also handled as special case.
         MP3("audio/mpeg", "mp3", 0, new byte[]{(byte)0xFF, (byte)0xE0}, 0, null), // Also handled as special case.
         MP3_ID3("audio/mpeg", "mp3", 0, new byte[]{'I', 'D', '3'}, 0, null),
-        AAC("audio/aac", "aac", 0, new byte[]{(byte)0xFF, (byte)0xF1}, 0, null),
-        AAC_ADTS("audio/aac", "aac", 0, new byte[]{(byte)0xFF, (byte)0xF9}, 0, null),
         FLAC("audio/flac", "flac", 0, new byte[]{'f', 'L', 'a', 'C'}, 0, null),
         OGG("audio/ogg", "ogg", 0, new byte[]{'O', 'g', 'g', 'S'}, 0, null),
         MKV("video/x-matroska", "mkv", 0, MKV_MAGIC, 0, null),
@@ -93,7 +93,7 @@ final class AudioVideoMimeTypeDetector {
     /**
      * Guesses the MIME type of audio/video content based on its magic bytes.
      * <p>
-     * Recognized types: MP3, FLAC, OGG, MKV, WEBM, AVI, WAV, MP4, MOV, M4A.
+     * Recognized types: AAC, MP3, FLAC, OGG, MKV, WEBM, AIFF, AVI, WAV, MP4, MOV, M4A.
      *
      * @param content The content bytes to check.
      * @return An {@link Optional} containing the MIME type if recognized as audio/video, or empty if not.
@@ -103,8 +103,13 @@ final class AudioVideoMimeTypeDetector {
             return Optional.empty();
         }
 
-        // Special case: MP3 without ID3 tag (frame syncword)
-        if ((content[0] & AudioVideoMimeType.MP3.magic[0]) == AudioVideoMimeType.MP3.magic[0] && (content[1] & AudioVideoMimeType.MP3.magic[1]) == AudioVideoMimeType.MP3.magic[1]) {
+        // Special case: AAC ADTS frame (12-bit syncword 0xFFF, layer bits = 00)
+        if (content[0] == (byte) 0xFF && (content[1] & 0xF6) == 0xF0) {
+            return Optional.of(AudioVideoMimeType.AAC);
+        }
+
+        // Special case: MP3 without ID3 tag (11-bit syncword 0xFFE, layer bits != 00)
+        if (content[0] == (byte) 0xFF && (content[1] & 0xE0) == 0xE0) {
             return Optional.of(AudioVideoMimeType.MP3);
         }
 

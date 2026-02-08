@@ -21,6 +21,28 @@ import org.junit.jupiter.api.Test;
 class AudioVideoMimeTypeDetectorTest {
 
     // =================================================================================================================
+    // Test guessAudioVideoMimeType - AAC detection
+    // =================================================================================================================
+
+    @Test
+    void guessAudioVideoMimeType_aac_mpeg4() {
+        var content = new byte[]{(byte)0xFF, (byte)0xF1, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+        var result = AudioVideoMimeTypeDetector.guessAudioVideoMimeType(content);
+        assertTrue(result.isPresent());
+        assertEquals("audio/aac", result.get().value());
+        assertEquals("aac", result.get().extension());
+    }
+
+    @Test
+    void guessAudioVideoMimeType_aac_mpeg2() {
+        var content = new byte[]{(byte)0xFF, (byte)0xF9, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+        var result = AudioVideoMimeTypeDetector.guessAudioVideoMimeType(content);
+        assertTrue(result.isPresent());
+        assertEquals("audio/aac", result.get().value());
+        assertEquals("aac", result.get().extension());
+    }
+
+    // =================================================================================================================
     // Test guessAudioVideoMimeType - MP3 detection
     // =================================================================================================================
 
@@ -51,6 +73,15 @@ class AudioVideoMimeTypeDetectorTest {
     // =================================================================================================================
     // Test guessAudioVideoMimeType - other audio formats
     // =================================================================================================================
+
+    @Test
+    void guessAudioVideoMimeType_aiff() {
+        var content = new byte[]{'F', 'O', 'R', 'M', 0x00, 0x00, 0x00, 0x00, 'A', 'I', 'F', 'F'};
+        var result = AudioVideoMimeTypeDetector.guessAudioVideoMimeType(content);
+        assertTrue(result.isPresent());
+        assertEquals("audio/x-aiff", result.get().value());
+        assertEquals("aif", result.get().extension());
+    }
 
     @Test
     void guessAudioVideoMimeType_flac() {
