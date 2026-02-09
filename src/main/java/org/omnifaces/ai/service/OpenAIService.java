@@ -179,6 +179,11 @@ public class OpenAIService extends BaseAIService {
         return "files";
     }
 
+    @Override
+    protected UploadedFileJsonStructure getUploadedFileJsonStructure() {
+        return new UploadedFileJsonStructure("data", "filename", "id", "created_at");
+    }
+
     /**
      * Returns {@code image/generations}.
      */

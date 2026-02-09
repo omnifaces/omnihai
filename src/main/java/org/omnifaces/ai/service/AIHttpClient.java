@@ -71,6 +71,10 @@ final class AIHttpClient {
     private static final Logger logger = Logger.getLogger(AIHttpClient.class.getPackageName());
     private static final AtomicInteger requestCounter = new AtomicInteger();
 
+    private static final String GET = "GET";
+    private static final String POST = "POST";
+    private static final String DELETE = "DELETE";
+
     private static final String APPLICATION_JSON = "application/json";
     private static final String EVENT_STREAM = "text/event-stream";
     private static final String MULTIPART_FORM_DATA = "multipart/form-data";
@@ -84,12 +88,14 @@ final class AIHttpClient {
     private final Duration requestTimeout;
     private final String userAgent;
     private final String multipartBoundaryPrefix;
+    final String uploadedFileNamePrefix;
 
     private AIHttpClient(HttpClient client, Duration requestTimeout) {
         this.client = client;
         this.requestTimeout = requestTimeout;
         this.userAgent = OmniHai.userAgent();
         this.multipartBoundaryPrefix = OmniHai.name() + "Boundary";
+        uploadedFileNamePrefix = OmniHai.name() + ".";
     }
 
     /**
@@ -101,6 +107,20 @@ final class AIHttpClient {
      */
     public static AIHttpClient newInstance(Duration connectTimeout, Duration requestTimeout) {
         return new AIHttpClient(newBuilder().connectTimeout(connectTimeout).build(), requestTimeout);
+    }
+
+    /**
+     * Sends a GET request for the specified {@link BaseAIService}.
+     * Will retry at most {@value #MAX_RETRIES} times in case of a connection error with exponentially incremental backoff of {@value #INITIAL_BACKOFF_MS}ms.
+     *
+     * @param service The {@link BaseAIService} to extract URI and headers from.
+     * @param path the API path
+     * @return The response body as a string
+     * @throws AIHttpException if the request fails
+     * @since 1.1
+     */
+    public CompletableFuture<String> get(BaseAIService service, String path) throws AIHttpException {
+        return sendWithRetryAsync(service, path, GET, newRequest(service, path, GET, null, APPLICATION_JSON, BodyPublishers.noBody()));
     }
 
     /**
@@ -129,7 +149,7 @@ final class AIHttpClient {
      * @since 1.1
      */
     public CompletableFuture<String> post(BaseAIService service, String path, Attachment attachment) throws AIHttpException {
-        return sendWithRetryAsync(service, path, attachment, newRequest(service, path, attachment.mimeType().value(), APPLICATION_JSON, BodyPublishers.ofByteArray(attachment.content())));
+        return sendWithRetryAsync(service, path, attachment, newRequest(service, path, POST, attachment.mimeType().value(), APPLICATION_JSON, BodyPublishers.ofByteArray(attachment.content())));
     }
 
     /**
@@ -161,6 +181,20 @@ final class AIHttpClient {
         return sendWithRetryAsync(service, path, attachment, newUploadRequest(service, path, attachment, APPLICATION_JSON));
     }
 
+    /**
+     * Sends a DELETE request for the specified {@link BaseAIService}.
+     * Will retry at most {@value #MAX_RETRIES} times in case of a connection error with exponentially incremental backoff of {@value #INITIAL_BACKOFF_MS}ms.
+     *
+     * @param service The {@link BaseAIService} to extract URI and headers from.
+     * @param path the API path
+     * @return The response body as a string
+     * @throws AIHttpException if the request fails
+     * @since 1.1
+     */
+    public CompletableFuture<String> delete(BaseAIService service, String path) throws AIHttpException {
+        return sendWithRetryAsync(service, path, DELETE, newRequest(service, path, DELETE, null, APPLICATION_JSON, BodyPublishers.noBody()));
+    }
+
     private CompletableFuture<String> sendWithRetryAsync(BaseAIService service, String path, Object payload, HttpRequest request) {
         final int requestId = logRequest(service, path, payload);
         return sendWithRetryAsync(request, 0).thenApply(response -> {
@@ -172,7 +206,7 @@ final class AIHttpClient {
     private static int logRequest(BaseAIService service, String path, Object payload) {
         if (logger.isLoggable(FINER)) {
             int requestId = requestCounter.incrementAndGet();
-            var uriWithoutQueryString = service.resolveURI(path).toString().split("\\?", 2)[0]; // Because query string may contain API key (Google AI e.g.).
+            var uriWithoutQueryString = service.resolveURI(path).toString().split("\\?", 2)[0]; // Because query string may contain API key (e.g. Google AI).
             logger.log(FINER, () -> "Request #" + requestId + " to " + uriWithoutQueryString + ": " + payload.toString());
             return requestId;
         }
@@ -182,18 +216,20 @@ final class AIHttpClient {
     }
 
     private HttpRequest newJsonRequest(BaseAIService service, String path, JsonObject payload, String accept) {
-        return newRequest(service, path, APPLICATION_JSON, accept, BodyPublishers.ofString(payload.toString()));
+        return newRequest(service, path, POST, APPLICATION_JSON, accept, BodyPublishers.ofString(payload.toString()));
     }
 
     private HttpRequest newUploadRequest(BaseAIService service, String path, Attachment attachment, String accept) {
         var multipart = new MultipartBodyPublisher(attachment);
-        return newRequest(service, path, MULTIPART_FORM_DATA + "; boundary=" + multipart.boundary, accept, multipart.body);
+        return newRequest(service, path, POST, MULTIPART_FORM_DATA + "; boundary=" + multipart.boundary, accept, multipart.body);
     }
 
-    private HttpRequest newRequest(BaseAIService service, String path, String contentType, String accept, BodyPublisher body) {
-        var builder = HttpRequest.newBuilder(service.resolveURI(path)).timeout(requestTimeout).POST(body);
+    private HttpRequest newRequest(BaseAIService service, String path, String method, String contentType, String accept, BodyPublisher body) {
+        var builder = HttpRequest.newBuilder(service.resolveURI(path)).timeout(requestTimeout).method(method, body);
         builder.header("User-Agent", userAgent);
-        builder.header("Content-Type", contentType);
+        if (contentType != null) {
+            builder.header("Content-Type", contentType);
+        }
         builder.header("Accept", accept);
         service.getRequestHeaders().forEach(builder::header);
         return builder.build();
@@ -371,13 +407,13 @@ final class AIHttpClient {
         private final String boundary;
 
         private MultipartBodyPublisher(Attachment attachment) {
-            this.boundary = AIHttpClient.this.multipartBoundaryPrefix + System.currentTimeMillis();
+            this.boundary = multipartBoundaryPrefix + System.currentTimeMillis();
 
             try (var os = new ByteArrayOutputStream()) {
                 for (var entry : attachment.metadata().entrySet()) {
                     writeTextPart(os, entry.getKey(), entry.getValue());
                 }
-                writeFilePart(os, "file", attachment.fileName(), attachment.mimeType().value(), attachment.content());
+                writeFilePart(os, "file", uploadedFileNamePrefix + attachment.fileName(), attachment.mimeType().value(), attachment.content());
                 writeLine(os, "--" + boundary + "--");
                 body = HttpRequest.BodyPublishers.ofByteArray(os.toByteArray());
             }

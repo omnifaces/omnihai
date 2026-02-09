@@ -205,7 +205,7 @@ public class OpenAITextHandler extends DefaultAITextHandler {
      */
     protected Map<String, String> getFileUploadMetadata(AIService service, Attachment file) {
         var purpose = service.getModelVersion().gte(GPT_5) ? "user_data" : "assistants";
-        return Map.of("purpose", purpose, "expires_after[anchor]", "created_at", "expires_after[seconds]", String.valueOf(TimeUnit.DAYS.toSeconds(1)));
+        return Map.of("purpose", purpose, "expires_after[anchor]", "created_at", "expires_after[seconds]", String.valueOf(TimeUnit.DAYS.toSeconds(2)));
     }
 
     @Override

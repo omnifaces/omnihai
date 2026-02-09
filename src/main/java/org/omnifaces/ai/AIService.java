@@ -612,6 +612,9 @@ public interface AIService extends Serializable {
      * <p>
      * This is the core method for sending file attachments to AI providers that require file attachments to be uploaded
      * separately before being referenced in chat requests.
+     * <p>
+     * The implementation should also attempt to ensure that any stale files are cleaned up in case the AI provider does
+     * not automatically do that or does not allow configuring that via file upload metadata.
      *
      * @param attachment The file attachment to upload.
      * @return The file ID or URI that can be used to reference the uploaded file attachment in subsequent chat requests.

@@ -123,4 +123,9 @@ public class AnthropicAIService extends BaseAIService {
     protected String getFilesPath() {
         return "files";
     }
+
+    @Override
+    protected UploadedFileJsonStructure getUploadedFileJsonStructure() {
+        return new UploadedFileJsonStructure("data", "filename", "id", "created_at");
+    }
 }

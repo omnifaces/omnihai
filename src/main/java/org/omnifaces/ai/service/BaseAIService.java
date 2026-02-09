@@ -17,9 +17,11 @@ import static java.util.Objects.requireNonNull;
 import static java.util.Optional.ofNullable;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.function.Predicate.not;
+import static java.util.logging.Level.FINER;
 import static org.omnifaces.ai.AIConfig.PROPERTY_API_KEY;
 import static org.omnifaces.ai.AIConfig.PROPERTY_ENDPOINT;
 import static org.omnifaces.ai.AIConfig.PROPERTY_MODEL;
+import static org.omnifaces.ai.helper.JsonHelper.findFirstNonBlankByPath;
 import static org.omnifaces.ai.helper.JsonHelper.parseJson;
 import static org.omnifaces.ai.helper.TextHelper.isBlank;
 import static org.omnifaces.ai.helper.TextHelper.requireNonBlank;
@@ -28,17 +30,22 @@ import static org.omnifaces.ai.model.ChatOptions.DETERMINISTIC_TEMPERATURE;
 
 import java.net.URI;
 import java.time.Duration;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
+import java.util.logging.Logger;
 
 import jakarta.json.Json;
 import jakarta.json.JsonObject;
+import jakarta.json.JsonValue;
 
 import org.omnifaces.ai.AIAudioHandler;
 import org.omnifaces.ai.AIConfig;
@@ -70,8 +77,11 @@ public abstract class BaseAIService implements AIService {
 
     private static final long serialVersionUID = 1L;
 
+    private static final Logger logger = Logger.getLogger(BaseAIService.class.getPackageName());
     private static final Duration DEFAULT_CONNECT_TIMEOUT = Duration.ofSeconds(10);
     private static final Duration DEFAULT_REQUEST_TIMEOUT = Duration.ofSeconds(60);
+
+    private final AtomicBoolean staleUploadedFilesCleanupRunning = new AtomicBoolean();
 
     /** The shared HTTP client for API requests. */
     static final AIHttpClient HTTP_CLIENT = AIHttpClient.newInstance(DEFAULT_CONNECT_TIMEOUT, DEFAULT_REQUEST_TIMEOUT);
@@ -197,7 +207,7 @@ public abstract class BaseAIService implements AIService {
             onToken.accept(token);
         } : onToken;
 
-        var neededForStackTrace = new Exception("Async chat streaming failed");
+        var neededForStackTrace = new Exception("Async thread");
 
         return asyncPostAndProcessStreamEvents(getChatPath(true), payload, event -> textHandler.processChatStreamEvent(this, event, effectiveOnToken)).handle((result, exception) -> {
             if (exception == null) {
@@ -217,18 +227,133 @@ public abstract class BaseAIService implements AIService {
 
     /**
      * Returns the path of the files endpoint. E.g. {@code files}.
+     * @implNote The default implementation throws UnsupportedOperationException.
      * @return the path of the files endpoint.
-     * @throws UnsupportedOperationException If file upload operation is not supported.
      */
-    protected abstract String getFilesPath();
+    protected String getFilesPath() {
+        throw new UnsupportedOperationException("Please implement getFilesPath() method in class " + getClass().getSimpleName());
+    }
 
+    /**
+     * This also cleans up uploaded files older than 2 days if {@link #getUploadedFileJsonStructure()} returns non-{@code null}.
+     * This is called as a fire-and-forget task after each upload. Failures are logged at FINER level and never propagated.
+     */
     @Override
     public String upload(Attachment attachment) throws AIException {
         try {
-            return asyncUploadAndParseFileIdResponse(getFilesPath(), attachment).join();
+            var fileId = asyncUploadAndParseFileIdResponse(getFilesPath(), attachment).join();
+
+            if (getUploadedFileJsonStructure() != null && staleUploadedFilesCleanupRunning.compareAndSet(false, true)) {
+                ExecutorServiceHelper.runAsync(() -> {
+                    try {
+                        cleanupStaleUploadedFiles();
+                    }
+                    finally {
+                        staleUploadedFilesCleanupRunning.set(false);
+                    }
+                });
+            }
+
+            return fileId;
         }
         catch (CompletionException e) {
             throw AIException.asyncRequestFailed(e);
+        }
+    }
+
+    /**
+     * Describes the JSON structure of the file listing response, used by the clean up task of
+     * {@link BaseAIService#upload(Attachment)} to identify and delete stale uploads.
+     *
+     * @param filesArrayProperty JSON property name of the array containing file objects.
+     * @param fileNameProperty JSON property name of the file name within each file object.
+     * @param fileIdProperty JSON property name of the file ID within each file object.
+     * @param createdAtProperty JSON property name of the creation timestamp within each file object.
+     */
+    protected final record UploadedFileJsonStructure(String filesArrayProperty, String fileNameProperty, String fileIdProperty, String createdAtProperty) {
+
+        /**
+         * Validates and normalizes the record components by stripping whitespace.
+         *
+         * @param filesArrayProperty JSON property name of the array containing file objects, may not be blank.
+         * @param fileNameProperty JSON property name of the file name within each file object, may not be blank.
+         * @param fileIdProperty JSON property name of the file ID within each file object, may not be blank.
+         * @param createdAtProperty JSON property name of the creation timestamp within each file object, may not be blank.
+         */
+        public UploadedFileJsonStructure {
+            filesArrayProperty = requireNonBlank(filesArrayProperty, "filesArrayProperty");
+            fileNameProperty = requireNonBlank(fileNameProperty, "fileNameProperty");
+            fileIdProperty = requireNonBlank(fileIdProperty, "fileIdProperty");
+            createdAtProperty = requireNonBlank(createdAtProperty, "createdAtProperty");
+        }
+    }
+
+    /**
+     * Returns the uploaded file JSON structure which will be used for automatic cleanup of stale files.
+     * @implNote The default implementation returns {@code null}, indicating that cleanup is not needed.
+     * @return The uploaded file JSON structure, or {@code null} if cleanup is not needed (i.e. the AI provider already automatically does that).
+     */
+    protected UploadedFileJsonStructure getUploadedFileJsonStructure() {
+        return null;
+    }
+
+    private void cleanupStaleUploadedFiles() {
+        var jsonStructure = getUploadedFileJsonStructure();
+
+        if (jsonStructure == null) {
+            throw new IllegalStateException();
+        }
+
+        try {
+            var responseBody = HTTP_CLIENT.get(this, getFilesPath()).join();
+            var files = parseJson(responseBody).getJsonArray(jsonStructure.filesArrayProperty);
+
+            if (files == null || files.isEmpty()) {
+                return;
+            }
+
+            var cutoff = Instant.now().minus(2, ChronoUnit.DAYS); // Same default as Google AI.
+
+            files.stream()
+                .map(JsonValue::asJsonObject)
+                .filter(file -> isEligibleForCleanup(file, jsonStructure))
+                .forEach(file -> deleteFileQuietly(file, jsonStructure, cutoff));
+        }
+        catch (Exception e) {
+            logger.log(FINER, "Failed to list files for cleanup", e);
+        }
+    }
+
+    private static boolean isEligibleForCleanup(JsonObject file, UploadedFileJsonStructure jsonStructure) {
+        return findFirstNonBlankByPath(file, List.of(jsonStructure.fileNameProperty))
+            .filter(name -> name.startsWith(HTTP_CLIENT.uploadedFileNamePrefix))
+            .isPresent();
+    }
+
+    private void deleteFileQuietly(JsonObject file, UploadedFileJsonStructure jsonStructure, Instant cutoff) {
+        try {
+            var id = findFirstNonBlankByPath(file, List.of(jsonStructure.fileIdProperty));
+            var createdAt = findFirstNonBlankByPath(file, List.of(jsonStructure.createdAtProperty));
+
+            if (id.isPresent() && createdAt.isPresent()) {
+                var timestamp = tryParseFileCreatedAtTimestamp(createdAt.get());
+
+                if (timestamp.isBefore(cutoff)) {
+                    HTTP_CLIENT.delete(this, getFilesPath() + "/" + id.get()).join();
+                }
+            }
+        }
+        catch (Exception e) {
+            logger.log(FINER, "Failed to cleanup file: " + file, e);
+        }
+    }
+
+    private static Instant tryParseFileCreatedAtTimestamp(String createdAt) {
+        try {
+            return Instant.ofEpochSecond(Long.parseLong(createdAt)); // At least OpenAI, Mistral and xAI.
+        }
+        catch (NumberFormatException ignore) {
+            return Instant.parse(createdAt); // At least Anthropic.
         }
     }
 
