@@ -32,8 +32,6 @@ import org.omnifaces.ai.AIService;
 import org.omnifaces.ai.exception.AIException;
 import org.omnifaces.ai.exception.AIResponseException;
 import org.omnifaces.ai.mime.MimeType;
-import org.omnifaces.ai.modality.OpenAIImageHandler;
-import org.omnifaces.ai.modality.OpenAITextHandler;
 import org.omnifaces.ai.model.ChatInput.Attachment;
 import org.omnifaces.ai.model.ModerationOptions;
 import org.omnifaces.ai.model.ModerationOptions.Category;
@@ -62,8 +60,6 @@ import org.omnifaces.ai.model.ModerationResult;
  * @author Bauke Scholtz
  * @since 1.0
  * @see AIProvider#OPENAI
- * @see OpenAITextHandler
- * @see OpenAIImageHandler
  * @see BaseAIService
  * @see AIService
  * @see <a href="https://platform.openai.com/docs/api-reference">API Reference</a>

@@ -18,15 +18,18 @@ import org.omnifaces.ai.cdi.AI;
 import org.omnifaces.ai.modality.AnthropicAITextHandler;
 import org.omnifaces.ai.modality.DefaultAIAudioHandler;
 import org.omnifaces.ai.modality.DefaultAIImageHandler;
+import org.omnifaces.ai.modality.DefaultAITextHandler;
 import org.omnifaces.ai.modality.GoogleAIImageHandler;
 import org.omnifaces.ai.modality.GoogleAITextHandler;
 import org.omnifaces.ai.modality.MetaAITextHandler;
+import org.omnifaces.ai.modality.MistralAITextHandler;
 import org.omnifaces.ai.modality.OllamaAITextHandler;
 import org.omnifaces.ai.modality.OpenAIImageHandler;
 import org.omnifaces.ai.modality.OpenAITextHandler;
 import org.omnifaces.ai.modality.XAIImageHandler;
 import org.omnifaces.ai.service.AnthropicAIService;
 import org.omnifaces.ai.service.AzureAIService;
+import org.omnifaces.ai.service.BaseAIService;
 import org.omnifaces.ai.service.GoogleAIService;
 import org.omnifaces.ai.service.HuggingFaceAIService;
 import org.omnifaces.ai.service.MetaAIService;
@@ -66,6 +69,9 @@ public enum AIProvider {
      * <p>
      * Defaults currently to model {@code gpt-5.2-2025-12-11} at endpoint {@code https://api.openai.com/v1}.
      * @see OpenAIService
+     * @see OpenAITextHandler
+     * @see OpenAIImageHandler
+     * @see DefaultAIAudioHandler
      * @see <a href="https://platform.openai.com/api-keys">Manage OpenAI API Keys</a>
      * @see <a href="https://platform.openai.com/docs/models">Available OpenAI Models</a>
      */
@@ -76,6 +82,9 @@ public enum AIProvider {
      * <p>
      * Defaults currently to model {@code claude-sonnet-4-5-20250929} at endpoint {@code https://api.anthropic.com/v1}.
      * @see AnthropicAIService
+     * @see AnthropicAITextHandler
+     * @see DefaultAIImageHandler
+     * @see DefaultAIAudioHandler
      * @see <a href="https://platform.claude.com/settings/keys">Manage Anthropic API Keys</a>
      * @see <a href="https://platform.claude.com/docs/en/about-claude/models/overview">Available Anthropic AI Models</a>
      */
@@ -86,6 +95,9 @@ public enum AIProvider {
      * <p>
      * Defaults currently to model {@code gemini-2.5-flash} at endpoint {@code https://generativelanguage.googleapis.com/v1beta}.
      * @see GoogleAIService
+     * @see GoogleAITextHandler
+     * @see GoogleAIImageHandler
+     * @see DefaultAIAudioHandler
      * @see <a href="https://aistudio.google.com/app/api-keys">Manage Google AI API Keys</a>
      * @see <a href="https://ai.google.dev/gemini-api/docs/models">Available Google AI Models</a>
      */
@@ -96,6 +108,9 @@ public enum AIProvider {
      * <p>
      * Defaults currently to model {@code grok-4-1-fast-reasoning} at endpoint {@code https://api.x.ai/v1}.
      * @see XAIService
+     * @see OpenAITextHandler
+     * @see XAIImageHandler
+     * @see DefaultAIAudioHandler
      * @see <a href="https://console.x.ai/">Manage xAI API Keys</a>
      * @see <a href="https://docs.x.ai/developers/models">Available xAI Models</a>
      */
@@ -106,16 +121,22 @@ public enum AIProvider {
      * <p>
      * Defaults currently to model {@code mistral-medium-2508} at endpoint {@code https://api.mistral.ai/v1}.
      * @see MistralAIService
+     * @see MistralAITextHandler
+     * @see OpenAIImageHandler
+     * @see DefaultAIAudioHandler
      * @see <a href="https://console.mistral.ai/home?workspace_dialog=apiKeys">Manage Mistral AI API Keys</a>
      * @see <a href="https://docs.mistral.ai/getting-started/models/">Available Mistral AI Models</a>
      */
-    MISTRAL("Mistral AI", MistralAIService.class, true, "mistral-medium-2508", "https://api.mistral.ai/v1", OpenAITextHandler.class, OpenAIImageHandler.class, DefaultAIAudioHandler.class),
+    MISTRAL("Mistral AI", MistralAIService.class, true, "mistral-medium-2508", "https://api.mistral.ai/v1", MistralAITextHandler.class, OpenAIImageHandler.class, DefaultAIAudioHandler.class),
 
     /**
      * Meta AI: Llama Maverick, Llama Scout, Llama default, etc.
      * <p>
      * Defaults currently to model {@code Llama-4-Scout-17B-16E-Instruct-FP8} at endpoint {@code https://api.llama.com/v1}.
      * @see MetaAIService
+     * @see MetaAITextHandler
+     * @see OpenAIImageHandler
+     * @see DefaultAIAudioHandler
      * @see <a href="https://llama.developer.meta.com/docs/api-keys/">Manage Meta AI API Keys</a>
      * @see <a href="https://llama.developer.meta.com/docs/models/">Available Meta AI Models</a>
      */
@@ -126,6 +147,9 @@ public enum AIProvider {
      * <p>
      * Defaults currently to model {@code gpt-5-mini} at endpoint {@code https://{org.omnifaces.ai.AZURE_RESOURCE}.openai.azure.com/openai/v1}.
      * @see AzureAIService
+     * @see OpenAITextHandler
+     * @see OpenAIImageHandler
+     * @see DefaultAIAudioHandler
      * @see <a href="https://portal.azure.com/">Manage Azure OpenAI API Keys</a>
      * @see <a href="https://ai.azure.com/catalog">Available Azure OpenAI Models</a>
      */
@@ -136,6 +160,9 @@ public enum AIProvider {
      * <p>
      * Defaults currently to model {@code deepseek/deepseek-v3.2} at endpoint {@code https://openrouter.ai/api/v1}.
      * @see OpenRouterAIService
+     * @see OpenAITextHandler
+     * @see OpenAIImageHandler
+     * @see DefaultAIAudioHandler
      * @see <a href="https://openrouter.ai/settings/keys/">Manage OpenRouter API Keys</a>
      * @see <a href="https://openrouter.ai/models">Available OpenRouter Models</a>
      */
@@ -146,6 +173,9 @@ public enum AIProvider {
      * <p>
      * Defaults currently to model {@code google/gemma-3-27b-it} at endpoint {@code https://router.huggingface.co/v1}.
      * @see HuggingFaceAIService
+     * @see OpenAITextHandler
+     * @see OpenAIImageHandler
+     * @see DefaultAIAudioHandler
      * @see <a href="https://huggingface.co/settings/tokens">Manage Hugging Face API Keys</a>
      * @see <a href="https://huggingface.co/models">Available Hugging Face Models</a>
      */
@@ -174,6 +204,9 @@ public enum AIProvider {
      * Test by opening {@code http://localhost:11434} in web browser.
      *
      * @see OllamaAIService
+     * @see OllamaAITextHandler
+     * @see DefaultAIImageHandler
+     * @see DefaultAIAudioHandler
      * @see <a href="https://ollama.com/library">Available Ollama Models</a> (no API Keys required)
      */
     OLLAMA("Ollama", OllamaAIService.class, false, "gemma3", "http://localhost:11434", OllamaAITextHandler.class, DefaultAIImageHandler.class, DefaultAIAudioHandler.class),
@@ -187,6 +220,12 @@ public enum AIProvider {
      * since this provider has no default handlers.
      * <p>
      * If you have a great one, feel free to submit it to OmniHai so it ends up as a new enum entry here :)
+     *
+     * @see AIService
+     * @see BaseAIService
+     * @see DefaultAITextHandler
+     * @see DefaultAIImageHandler
+     * @see DefaultAIAudioHandler
      */
     CUSTOM(null, null, false, null, null, null, null, null);
 

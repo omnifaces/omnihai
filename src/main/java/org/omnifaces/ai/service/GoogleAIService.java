@@ -21,8 +21,6 @@ import org.omnifaces.ai.AIModality;
 import org.omnifaces.ai.AIModelVersion;
 import org.omnifaces.ai.AIProvider;
 import org.omnifaces.ai.AIService;
-import org.omnifaces.ai.modality.GoogleAIImageHandler;
-import org.omnifaces.ai.modality.GoogleAITextHandler;
 
 /**
  * AI service implementation using Google AI API.
@@ -47,8 +45,6 @@ import org.omnifaces.ai.modality.GoogleAITextHandler;
  * @author Bauke Scholtz
  * @since 1.0
  * @see AIProvider#GOOGLE
- * @see GoogleAITextHandler
- * @see GoogleAIImageHandler
  * @see BaseAIService
  * @see AIService
  * @see <a href="https://ai.google.dev/api">API Reference</a>

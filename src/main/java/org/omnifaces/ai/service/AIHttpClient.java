@@ -25,11 +25,13 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.function.Function.identity;
 import static java.util.logging.Level.FINER;
 import static java.util.stream.Collectors.joining;
+import static java.util.stream.Stream.iterate;
 import static org.omnifaces.ai.exception.AIHttpException.fromStatusCode;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.net.ConnectException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpRequest.BodyPublisher;
@@ -156,30 +158,6 @@ final class AIHttpClient {
      * @throws AIHttpException if the request fails
      */
     public CompletableFuture<String> upload(BaseAIService service, String path, Attachment attachment) throws AIHttpException {
-//        try {
-//            HttpResponse<String> response = client.send(HttpRequest.newBuilder()
-//                    .uri(URI.create("https://api.openai.com/v1/files"))
-//                    .header("Authorization", "Bearer " + service.apiKey)
-//                    .header("Content-Type", "application/json")
-//                    .GET()
-//                    .build(), HttpResponse.BodyHandlers.ofString());
-//            System.out.println("=====================================================================");
-//            System.out.println(response.body());
-//            List<String> fileIds = JsonHelper.findAllByPath(JsonHelper.parseJson(response.body()), "data[*].id");
-//            for (var id : fileIds) {
-//                response = client.send(HttpRequest.newBuilder()
-//                        .uri(URI.create("https://api.openai.com/v1/files/" + id))
-//                        .header("Authorization", "Bearer " + service.apiKey)
-//                        .DELETE()
-//                        .build(), HttpResponse.BodyHandlers.ofString());
-//                System.out.println("DELETE "+ id + ": " + response.statusCode() + ": " + response.body());
-//            }
-//            System.out.println("=====================================================================");
-//        }
-//        catch (Exception e) {
-//            throw new RuntimeException(e);
-//        }
-
         return sendWithRetryAsync(service, path, attachment, newUploadRequest(service, path, attachment, APPLICATION_JSON));
     }
 
@@ -194,7 +172,8 @@ final class AIHttpClient {
     private static int logRequest(BaseAIService service, String path, Object payload) {
         if (logger.isLoggable(FINER)) {
             int requestId = requestCounter.incrementAndGet();
-            logger.log(FINER, () -> "Request #" + requestId + " to " + service.resolveURI(path).toString().split("\\?", 2)[0] + ": " + (payload instanceof Attachment attachment ? attachment.fileName() : payload.toString()));
+            var uriWithoutQueryString = service.resolveURI(path).toString().split("\\?", 2)[0]; // Because query string may contain API key (Google AI e.g.).
+            logger.log(FINER, () -> "Request #" + requestId + " to " + uriWithoutQueryString + ": " + payload.toString());
             return requestId;
         }
         else {
@@ -357,26 +336,31 @@ final class AIHttpClient {
     /**
      * Determines whether a failed request should be retried based on the exception.
      * <p>
-     * Retryable errors are transient connection issues indicated by an {@link IOException}
-     * with a message containing "timed", "terminated", "reset", "refused", or "goaway" anywhere in the cause chain.
+     * Retryable errors are transient connection issues indicated by an {@link IOException} which is either an instance
+     * of {@link ConnectException} or has a message containing "timed", "terminated", "reset", "refused", or "goaway"
+     * anywhere in the cause chain.
      *
      * @param throwable The exception to check.
      * @return {@code true} if the error is transient and the request should be retried.
      */
-    private static boolean isRetryable(Throwable throwable) {
+    static boolean isRetryable(Throwable throwable) {
         if (throwable == null) {
             return false;
         }
 
-        return Stream.iterate(throwable, Objects::nonNull, Throwable::getCause)
+        return iterate(throwable, Objects::nonNull, Throwable::getCause)
             .filter(IOException.class::isInstance)
             .findFirst()
-            .map(ioException ->
-                Stream.iterate(ioException, Objects::nonNull, Throwable::getCause)
+            .map(ioException -> ioException instanceof java.net.ConnectException
+                || iterate(ioException, Objects::nonNull, Throwable::getCause)
                       .map(Throwable::getMessage)
                       .filter(Objects::nonNull)
                       .map(String::toLowerCase)
-                      .anyMatch(msg -> msg.contains("timed") || msg.contains("terminated") || msg.contains("reset") || msg.contains("refused") || msg.contains("goaway"))
+                      .anyMatch(msg -> msg.contains("timed")
+                              || msg.contains("terminated")
+                              || msg.contains("reset")
+                              || msg.contains("refused")
+                              || msg.contains("goaway"))
             )
             .orElse(false);
     }

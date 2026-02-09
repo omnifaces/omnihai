@@ -31,6 +31,7 @@ import org.omnifaces.ai.AIService;
 import org.omnifaces.ai.exception.AIResponseException;
 import org.omnifaces.ai.exception.AITokenLimitExceededException;
 import org.omnifaces.ai.model.ChatInput;
+import org.omnifaces.ai.model.ChatInput.Attachment;
 import org.omnifaces.ai.model.ChatInput.Message.Role;
 import org.omnifaces.ai.model.ChatOptions;
 import org.omnifaces.ai.model.Sse.Event;
@@ -125,8 +126,7 @@ public class OpenAITextHandler extends DefaultAITextHandler {
 
             for (var file : remainingFiles) {
                 if (supportsFilesApi(service)) {
-                    var purpose = supportsResponsesApi ? currentModelVersion.gte(GPT_5) ? "user_data" : "assistants" : "ocr"; // NOTE: "ocr" is actually for Mistral. Other models ignore this but this may need improvement in long term.
-                    var fileId = service.upload(file.withMetadata(Map.of("purpose", purpose, "expires_after[anchor]", "created_at", "expires_after[seconds]", String.valueOf(TimeUnit.DAYS.toSeconds(1)))));
+                    var fileId = service.upload(file.withMetadata(getFileUploadMetadata(service, file)));
 
                     if (options.hasMemory()) {
                         options.recordUploadedFile(fileId, file.mimeType());
@@ -196,6 +196,16 @@ public class OpenAITextHandler extends DefaultAITextHandler {
         }
 
         return payload.build();
+    }
+
+    /**
+     * Returns file upload metadata. This basically represents additional form data during file upload request.
+     * @param file The file to upload.
+     * @return File upload metadata.
+     */
+    protected Map<String, String> getFileUploadMetadata(AIService service, Attachment file) {
+        var purpose = service.getModelVersion().gte(GPT_5) ? "user_data" : "assistants";
+        return Map.of("purpose", purpose, "expires_after[anchor]", "created_at", "expires_after[seconds]", String.valueOf(TimeUnit.DAYS.toSeconds(1)));
     }
 
     @Override

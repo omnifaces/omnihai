@@ -17,8 +17,6 @@ import org.omnifaces.ai.AIModality;
 import org.omnifaces.ai.AIModelVersion;
 import org.omnifaces.ai.AIProvider;
 import org.omnifaces.ai.AIService;
-import org.omnifaces.ai.modality.DefaultAIImageHandler;
-import org.omnifaces.ai.modality.OllamaAITextHandler;
 
 /**
  * AI service implementation using Ollama API for local/self-hosted models.
@@ -42,8 +40,6 @@ import org.omnifaces.ai.modality.OllamaAITextHandler;
  * @author Bauke Scholtz
  * @since 1.0
  * @see AIProvider#OLLAMA
- * @see OllamaAITextHandler
- * @see DefaultAIImageHandler
  * @see BaseAIService
  * @see AIService
  * @see <a href="https://docs.ollama.com/api/introduction">API Reference</a>.
