@@ -178,6 +178,7 @@ public class ModerationOptions implements Serializable {
          *
          * @param categories Custom categories to check, each category may only contain alphabetic characters or hyphens.
          * @return This builder instance for chaining.
+         * @throws NullPointerException when a category is null.
          * @throws IllegalArgumentException if a category contains illegal characters.
          */
         public Builder addCategories(String... categories) {
@@ -216,7 +217,7 @@ public class ModerationOptions implements Serializable {
          * Finalizes the configuration and creates a {@link ModerationOptions} instance.
          *
          * @return A fully configured {@code ModerationOptions} object.
-         * @throws IllegalArgumentException if a categories is empty.
+         * @throws IllegalArgumentException if categories is empty.
          */
         public ModerationOptions build() {
             if (categories.isEmpty()) {
