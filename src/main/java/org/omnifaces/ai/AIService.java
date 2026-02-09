@@ -14,6 +14,7 @@ package org.omnifaces.ai;
 
 import static org.omnifaces.ai.helper.JsonSchemaHelper.buildJsonSchema;
 import static org.omnifaces.ai.helper.JsonSchemaHelper.fromJson;
+import static org.omnifaces.ai.model.ChatOptions.DEFAULT;
 
 import java.io.Serializable;
 import java.util.List;
@@ -340,7 +341,7 @@ public interface AIService extends Serializable {
      * @throws IllegalArgumentException if input message is blank.
      */
     default CompletableFuture<String> chatAsync(ChatInput input) {
-        return chatAsync(input, ChatOptions.newBuilder().systemPrompt(getChatPrompt()).build());
+        return chatAsync(input, DEFAULT.withSystemPrompt(getChatPrompt()));
     }
 
     /**
@@ -359,7 +360,7 @@ public interface AIService extends Serializable {
      * @see JsonSchemaHelper#fromJson(String, Class)
      */
     default <T> CompletableFuture<T> chatAsync(String message, Class<T> type) {
-        return chatAsync(message, ChatOptions.newBuilder().systemPrompt(getChatPrompt()).build(), type);
+        return chatAsync(message, DEFAULT.withSystemPrompt(getChatPrompt()), type);
     }
 
     /**
@@ -378,7 +379,7 @@ public interface AIService extends Serializable {
      * @see JsonSchemaHelper#fromJson(String, Class)
      */
     default <T> CompletableFuture<T> chatAsync(ChatInput input, Class<T> type) {
-        return chatAsync(input, ChatOptions.newBuilder().systemPrompt(getChatPrompt()).build(), type);
+        return chatAsync(input, DEFAULT.withSystemPrompt(getChatPrompt()), type);
     }
 
     /**
@@ -538,7 +539,7 @@ public interface AIService extends Serializable {
      * @throws UnsupportedOperationException if chat streaming is not supported by the implementation.
      */
     default CompletableFuture<Void> chatStream(ChatInput input, Consumer<String> onToken) {
-        return chatStream(input, ChatOptions.newBuilder().systemPrompt(getChatPrompt()).build(), onToken);
+        return chatStream(input, DEFAULT.withSystemPrompt(getChatPrompt()), onToken);
     }
 
     /**

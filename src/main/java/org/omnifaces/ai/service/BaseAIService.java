@@ -385,12 +385,7 @@ public abstract class BaseAIService implements AIService {
 
     @Override
     public CompletableFuture<String> detectLanguageAsync(String text) throws AIException {
-        var options = ChatOptions.newBuilder()
-            .systemPrompt(textHandler.buildDetectLanguagePrompt())
-            .temperature(DETERMINISTIC_TEMPERATURE)
-            .build();
-
-        return chatAsync(requireNonBlank(text, "text"), options).thenApply(response -> {
+        return chatAsync(requireNonBlank(text, "text"), DETERMINISTIC.withSystemPrompt(textHandler.buildDetectLanguagePrompt())).thenApply(response -> {
             if (isBlank(response)) {
                 throw new AIResponseException("Response is empty", response);
             }
@@ -401,12 +396,7 @@ public abstract class BaseAIService implements AIService {
 
     @Override
     public CompletableFuture<String> translateAsync(String text, String sourceLang, String targetLang) throws AIException {
-        var options = ChatOptions.newBuilder()
-            .systemPrompt(textHandler.buildTranslatePrompt(sourceLang, requireNonBlank(targetLang, "target language")))
-            .temperature(DETERMINISTIC_TEMPERATURE)
-            .build();
-
-        return chatAsync(requireNonBlank(text, "text"), options);
+        return chatAsync(requireNonBlank(text, "text"), DETERMINISTIC.withSystemPrompt(textHandler.buildTranslatePrompt(sourceLang, requireNonBlank(targetLang, "target language"))));
     }
 
 
@@ -414,12 +404,7 @@ public abstract class BaseAIService implements AIService {
 
     @Override
     public CompletableFuture<String> proofreadAsync(String text) throws AIException {
-        var options = ChatOptions.newBuilder()
-            .systemPrompt(textHandler.buildProofreadPrompt())
-            .temperature(DETERMINISTIC_TEMPERATURE)
-            .build();
-
-        return chatAsync(requireNonBlank(text, "text"), options);
+        return chatAsync(requireNonBlank(text, "text"), DETERMINISTIC.withSystemPrompt(textHandler.buildProofreadPrompt()));
     }
 
 
