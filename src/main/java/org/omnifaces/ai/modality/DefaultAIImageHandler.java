@@ -12,7 +12,7 @@
  */
 package org.omnifaces.ai.modality;
 
-import static org.omnifaces.ai.helper.JsonHelper.findFirstNonBlankByPath;
+import static org.omnifaces.ai.helper.JsonHelper.findFirstNonBlankByPaths;
 import static org.omnifaces.ai.helper.JsonHelper.parseAndCheckErrors;
 
 import java.util.Base64;
@@ -97,7 +97,7 @@ public class DefaultAIImageHandler implements AIImageHandler {
             throw new IllegalStateException("getImageResponseContentPaths() may not return an empty list");
         }
 
-        var imageContent = findFirstNonBlankByPath(responseJson, imageContentPaths).orElseThrow(() -> new AIResponseException("No image content found at paths " + imageContentPaths, responseBody));
+        var imageContent = findFirstNonBlankByPaths(responseJson, imageContentPaths).orElseThrow(() -> new AIResponseException("No image content found at paths " + imageContentPaths, responseBody));
 
         try {
             return Base64.getDecoder().decode(imageContent);

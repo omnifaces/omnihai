@@ -17,11 +17,11 @@ import static java.util.Objects.requireNonNull;
 import static java.util.Optional.ofNullable;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.function.Predicate.not;
-import static java.util.logging.Level.FINER;
+import static java.util.logging.Level.WARNING;
 import static org.omnifaces.ai.AIConfig.PROPERTY_API_KEY;
 import static org.omnifaces.ai.AIConfig.PROPERTY_ENDPOINT;
 import static org.omnifaces.ai.AIConfig.PROPERTY_MODEL;
-import static org.omnifaces.ai.helper.JsonHelper.findFirstNonBlankByPath;
+import static org.omnifaces.ai.helper.JsonHelper.findNonBlankByPath;
 import static org.omnifaces.ai.helper.JsonHelper.parseJson;
 import static org.omnifaces.ai.helper.TextHelper.isBlank;
 import static org.omnifaces.ai.helper.TextHelper.requireNonBlank;
@@ -236,7 +236,7 @@ public abstract class BaseAIService implements AIService {
 
     /**
      * This also cleans up uploaded files older than 2 days if {@link #getUploadedFileJsonStructure()} returns non-{@code null}.
-     * This is called as a fire-and-forget task after each upload. Failures are logged at FINER level and never propagated.
+     * This is called as a fire-and-forget task after each upload. Failures are logged at WARNING level and never propagated.
      */
     @Override
     public String upload(Attachment attachment) throws AIException {
@@ -320,20 +320,20 @@ public abstract class BaseAIService implements AIService {
                 .forEach(file -> deleteFileQuietly(file, jsonStructure, cutoff));
         }
         catch (Exception e) {
-            logger.log(FINER, "Failed to list files for cleanup", e);
+            logger.log(WARNING, "Failed to list files for cleanup", e);
         }
     }
 
     private static boolean isEligibleForCleanup(JsonObject file, UploadedFileJsonStructure jsonStructure) {
-        return findFirstNonBlankByPath(file, List.of(jsonStructure.fileNameProperty))
+        return findNonBlankByPath(file, jsonStructure.fileNameProperty)
             .filter(name -> name.startsWith(HTTP_CLIENT.uploadedFileNamePrefix))
             .isPresent();
     }
 
     private void deleteFileQuietly(JsonObject file, UploadedFileJsonStructure jsonStructure, Instant cutoff) {
         try {
-            var id = findFirstNonBlankByPath(file, List.of(jsonStructure.fileIdProperty));
-            var createdAt = findFirstNonBlankByPath(file, List.of(jsonStructure.createdAtProperty));
+            var id = findNonBlankByPath(file, jsonStructure.fileIdProperty);
+            var createdAt = findNonBlankByPath(file, jsonStructure.createdAtProperty);
 
             if (id.isPresent() && createdAt.isPresent()) {
                 var timestamp = tryParseFileCreatedAtTimestamp(createdAt.get());
@@ -344,7 +344,7 @@ public abstract class BaseAIService implements AIService {
             }
         }
         catch (Exception e) {
-            logger.log(FINER, "Failed to cleanup file: " + file, e);
+            logger.log(WARNING, "Failed to cleanup file: " + file, e);
         }
     }
 

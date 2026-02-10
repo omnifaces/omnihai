@@ -198,6 +198,53 @@ class JsonHelperTest {
     }
 
     // =================================================================================================================
+    // findNonBlankByPath tests
+    // =================================================================================================================
+
+    @Test
+    void findNonBlankByPath_simplePath() {
+        var json = Json.createObjectBuilder()
+                .add("message", "hello")
+                .build();
+
+        assertEquals("hello", JsonHelper.findNonBlankByPath(json, "message").orElseThrow());
+    }
+
+    @Test
+    void findNonBlankByPath_stripsWhitespace() {
+        var json = Json.createObjectBuilder()
+                .add("message", "  hello  ")
+                .build();
+
+        assertEquals("hello", JsonHelper.findNonBlankByPath(json, "message").orElseThrow());
+    }
+
+    @Test
+    void findNonBlankByPath_whitespaceOnly_returnsEmpty() {
+        var json = Json.createObjectBuilder()
+                .add("token", "   ")
+                .build();
+
+        assertTrue(JsonHelper.findNonBlankByPath(json, "token").isEmpty());
+    }
+
+    @Test
+    void findNonBlankByPath_emptyString_returnsEmpty() {
+        var json = Json.createObjectBuilder()
+                .add("token", "")
+                .build();
+
+        assertTrue(JsonHelper.findNonBlankByPath(json, "token").isEmpty());
+    }
+
+    @Test
+    void findNonBlankByPath_missingPath_returnsEmpty() {
+        var json = Json.createObjectBuilder().add("key", "value").build();
+
+        assertTrue(JsonHelper.findNonBlankByPath(json, "nonexistent").isEmpty());
+    }
+
+    // =================================================================================================================
     // findFirstNonBlankByPath tests
     // =================================================================================================================
 
@@ -208,7 +255,7 @@ class JsonHelperTest {
                 .add("fallback", "second")
                 .build();
 
-        assertEquals("first", JsonHelper.findFirstNonBlankByPath(json, List.of("primary", "fallback")).orElseThrow());
+        assertEquals("first", JsonHelper.findFirstNonBlankByPaths(json, List.of("primary", "fallback")).orElseThrow());
     }
 
     @Test
@@ -218,7 +265,7 @@ class JsonHelperTest {
                 .add("valid", "found")
                 .build();
 
-        assertEquals("found", JsonHelper.findFirstNonBlankByPath(json, List.of("empty", "valid")).orElseThrow());
+        assertEquals("found", JsonHelper.findFirstNonBlankByPaths(json, List.of("empty", "valid")).orElseThrow());
     }
 
     @Test
@@ -229,7 +276,7 @@ class JsonHelperTest {
                 .build();
 
         // findFirstNonBlankByPath skips whitespace-only because it's looking for meaningful content
-        assertEquals("found", JsonHelper.findFirstNonBlankByPath(json, List.of("whitespace", "valid")).orElseThrow());
+        assertEquals("found", JsonHelper.findFirstNonBlankByPaths(json, List.of("whitespace", "valid")).orElseThrow());
     }
 
     @Test
@@ -238,7 +285,7 @@ class JsonHelperTest {
                 .add("fallback", "value")
                 .build();
 
-        assertEquals("value", JsonHelper.findFirstNonBlankByPath(json, List.of("missing", "fallback")).orElseThrow());
+        assertEquals("value", JsonHelper.findFirstNonBlankByPaths(json, List.of("missing", "fallback")).orElseThrow());
     }
 
     @Test
@@ -247,7 +294,7 @@ class JsonHelperTest {
                 .add("other", "value")
                 .build();
 
-        assertTrue(JsonHelper.findFirstNonBlankByPath(json, List.of("missing1", "missing2")).isEmpty());
+        assertTrue(JsonHelper.findFirstNonBlankByPaths(json, List.of("missing1", "missing2")).isEmpty());
     }
 
     // =================================================================================================================

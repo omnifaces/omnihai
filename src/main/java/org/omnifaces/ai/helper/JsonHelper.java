@@ -97,25 +97,39 @@ public final class JsonHelper {
      */
     public static JsonObject parseAndCheckErrors(String responseBody, List<String> errorMessagePaths) throws AIResponseException {
         var responseJson = parseJson(responseBody);
-        findFirstNonBlankByPath(responseJson, errorMessagePaths).ifPresent(errorMessage -> {
+        findFirstNonBlankByPaths(responseJson, errorMessagePaths).ifPresent(errorMessage -> {
             throw new AIResponseException(errorMessage, responseBody);
         });
         return responseJson;
     }
 
     /**
-     * Finds the first string value from a JSON object found at the given dot-separated path.
+     * Finds the string value from a JSON object found at the given dot-separated path.
      * <p>
      * Supports array indexing with bracket notation, e.g. {@code "choices[0].message.content"}.
      * Also supports wildcard array indexes, e.g. {@code "output[*].content[*].text"}.
      *
      * @param root JSON root value (usually a {@link JsonObject})
      * @param path dot-separated path, may contain {@code [index]} or {@code [*]} segments
-     * @return an {@link Optional} containing the first string value, or empty if not found
+     * @return an {@link Optional} containing the string value, or empty if not found
      */
     public static Optional<String> findByPath(JsonObject root, String path) {
-        var values = findAllByPath(root, path);
-        return values.isEmpty() ? Optional.empty() : Optional.of(values.get(0));
+        return findAllByPath(root, path).stream().findFirst();
+    }
+
+    /**
+     * Finds the non-blank string value from a JSON object found at the given dot-separated path.
+     * <p>
+     * Supports array indexing with bracket notation, e.g. {@code "choices[0].message.content"}.
+     * Also supports wildcard array indexes, e.g. {@code "output[*].content[*].text"}.
+     *
+     * @param root JSON root value (usually a {@link JsonObject})
+     * @param path dot-separated path, may contain {@code [index]} or {@code [*]} segments
+     * @return an {@link Optional} containing the non-blank string value, or empty if not found
+     * @since 1.1
+     */
+    public static Optional<String> findNonBlankByPath(JsonObject root, String path) {
+        return findByPath(root, path).map(String::strip).filter(not(String::isEmpty));
     }
 
     /**
@@ -128,16 +142,8 @@ public final class JsonHelper {
      * @return an {@link Optional} containing the first non-blank value found, or empty if no path matches.
      * @see #findByPath(JsonObject, String)
      */
-    public static Optional<String> findFirstNonBlankByPath(JsonObject root, List<String> paths) {
-        for (var path : paths) {
-            var value = findByPath(root, path).map(String::strip);
-
-            if (value.filter(not(String::isEmpty)).isPresent()) {
-                return value;
-            }
-        }
-
-        return Optional.empty();
+    public static Optional<String> findFirstNonBlankByPaths(JsonObject root, List<String> paths) {
+        return paths.stream().map(path -> findNonBlankByPath(root, path)).flatMap(Optional::stream).findFirst();
     }
 
     /**

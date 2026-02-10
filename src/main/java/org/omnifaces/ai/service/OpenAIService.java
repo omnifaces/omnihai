@@ -12,7 +12,7 @@
  */
 package org.omnifaces.ai.service;
 
-import static org.omnifaces.ai.helper.JsonHelper.findFirstNonBlankByPath;
+import static org.omnifaces.ai.helper.JsonHelper.findFirstNonBlankByPaths;
 import static org.omnifaces.ai.helper.JsonHelper.isEmpty;
 import static org.omnifaces.ai.helper.JsonHelper.parseJson;
 
@@ -263,6 +263,6 @@ public class OpenAIService extends BaseAIService {
      */
     protected String parseOpenAITranscribeResponse(String responseBody) throws AIResponseException {
         var responseJson = parseJson(responseBody);
-        return findFirstNonBlankByPath(responseJson, List.of("text")).orElseThrow(() -> new AIResponseException("No transcription text found", responseBody));
+        return findFirstNonBlankByPaths(responseJson, List.of("text")).orElseThrow(() -> new AIResponseException("No transcription text found", responseBody));
     }
 }

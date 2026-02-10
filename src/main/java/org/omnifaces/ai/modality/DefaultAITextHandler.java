@@ -13,7 +13,7 @@
 package org.omnifaces.ai.modality;
 
 import static java.util.logging.Level.WARNING;
-import static org.omnifaces.ai.helper.JsonHelper.findFirstNonBlankByPath;
+import static org.omnifaces.ai.helper.JsonHelper.findFirstNonBlankByPaths;
 import static org.omnifaces.ai.helper.JsonHelper.parseAndCheckErrors;
 import static org.omnifaces.ai.helper.JsonHelper.parseJson;
 
@@ -183,7 +183,7 @@ public class DefaultAITextHandler implements AITextHandler {
             throw new IllegalStateException("getChatResponseContentPaths() may not return an empty list");
         }
 
-        return findFirstNonBlankByPath(responseJson, messageContentPaths).orElseThrow(() -> new AIResponseException("No message content found at paths " + messageContentPaths, responseBody));
+        return findFirstNonBlankByPaths(responseJson, messageContentPaths).orElseThrow(() -> new AIResponseException("No message content found at paths " + messageContentPaths, responseBody));
     }
 
     @Override
@@ -195,7 +195,7 @@ public class DefaultAITextHandler implements AITextHandler {
             throw new IllegalStateException("getFileResponseIdPaths() may not return an empty list");
         }
 
-        return findFirstNonBlankByPath(responseJson, fileIdPaths).orElseThrow(() -> new AIResponseException("No file ID found at paths " + fileIdPaths, responseBody));
+        return findFirstNonBlankByPaths(responseJson, fileIdPaths).orElseThrow(() -> new AIResponseException("No file ID found at paths " + fileIdPaths, responseBody));
     }
 
     /**
