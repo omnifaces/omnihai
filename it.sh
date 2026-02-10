@@ -6,7 +6,7 @@ set +a
 VERBOSE_ARG=""
 
 if [ "$1" = "--verbose" ]; then
-    VERBOSE_ARG="-DargLine=-Djava.util.logging.config.file=src/test/resources/logging.properties"
+    VERBOSE_ARG="-DargLine=-Djava.util.logging.config.file=src/test/resources/verbose.logging.properties"
     shift
 fi
 
