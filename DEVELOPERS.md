@@ -44,3 +44,19 @@ It will pass-through all arguments to underlying `mvn clean verify`:
 ```
 
 The `it.sh` script by default skips Surefire plugin (for unit tests) as well as Javadoc plugin.
+
+# Verbose logging
+
+To enable verbose logging during integration tests, use the `--verbose` flag:
+
+```bash
+./it.sh --verbose
+```
+
+This will log request bodies, response bodies, SSE stream events, and unknown SSE lines.
+
+This can be combined with other arguments:
+
+```bash
+./it.sh --verbose -Dit.test=OpenAIServiceTextHandlerIT#chatStream
+```
