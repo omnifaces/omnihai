@@ -207,7 +207,7 @@ public abstract class BaseAIService implements AIService {
             onToken.accept(token);
         } : onToken;
 
-        var neededForStackTrace = new Exception("Async thread");
+        var callerStackTrace = new Exception("Caller stack trace");
 
         return asyncPostAndProcessStreamEvents(getChatPath(true), payload, event -> textHandler.processChatStreamEvent(this, event, effectiveOnToken)).handle((result, exception) -> {
             if (exception == null) {
@@ -218,7 +218,7 @@ public abstract class BaseAIService implements AIService {
                 return result;
             }
 
-            throw AIException.asyncRequestFailed(exception, neededForStackTrace);
+            throw AIException.asyncRequestFailed(exception, callerStackTrace);
         });
     }
 

@@ -45,7 +45,7 @@ public class AIException extends RuntimeException {
      * @return The unwrapped or newly created AI exception.
      */
     public static AIException asyncRequestFailed(Throwable exception) {
-        return asyncRequestFailed(exception, new Exception("Async thread"));
+        return asyncRequestFailed(exception, new Exception("Caller stack trace"));
     }
 
     /**

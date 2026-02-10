@@ -15,7 +15,7 @@ package org.omnifaces.ai.service;
 import static java.lang.Runtime.getRuntime;
 import static java.util.concurrent.Executors.newSingleThreadScheduledExecutor;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static java.util.logging.Level.FINER;
+import static java.util.logging.Level.WARNING;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
@@ -72,11 +72,11 @@ final class ExecutorServiceHelper {
      * @param task The task to run.
      */
     static void runAsync(Runnable task) {
-        var neededForStackTrace = new Exception("Async thread");
+        var callerStackTrace = new Exception("Caller stack trace");
 
         CompletableFuture.runAsync(task, executorService).exceptionally(throwable -> {
-            throwable.addSuppressed(neededForStackTrace);
-            logger.log(FINER, "Async task failed", throwable);
+            throwable.addSuppressed(callerStackTrace);
+            logger.log(WARNING, "Async task failed", throwable);
             return null;
         });
     }
