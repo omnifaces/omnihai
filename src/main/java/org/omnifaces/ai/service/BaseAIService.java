@@ -81,6 +81,7 @@ public abstract class BaseAIService implements AIService {
     private static final Duration DEFAULT_CONNECT_TIMEOUT = Duration.ofSeconds(10);
     private static final Duration DEFAULT_REQUEST_TIMEOUT = Duration.ofSeconds(60);
 
+    /** Whether the "stale uploadedd files cleanup" task is running. */
     private final AtomicBoolean staleUploadedFilesCleanupRunning = new AtomicBoolean();
 
     /** The shared HTTP client for API requests. */

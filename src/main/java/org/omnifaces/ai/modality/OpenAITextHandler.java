@@ -200,6 +200,7 @@ public class OpenAITextHandler extends DefaultAITextHandler {
 
     /**
      * Returns file upload metadata. This basically represents additional form data during file upload request.
+     * @param service The visiting AI service.
      * @param file The file to upload.
      * @return File upload metadata.
      */
