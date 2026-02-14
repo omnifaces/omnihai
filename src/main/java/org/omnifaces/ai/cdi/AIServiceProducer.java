@@ -109,18 +109,18 @@ class AIServiceProducer {
             throw new IllegalArgumentException("The expression '" + stripped + "' in an @AI annotation attribute appears corrupted, it is missing the trailing '}'.");
         }
 
-        var resolved = stripped;
+        var expression = stripped;
 
-        if (looksLikeMicroProfileConfigExpression(resolved)) {
+        if (looksLikeMicroProfileConfigExpression(expression)) {
             if (!isMicroProfileConfigAvailable()) {
                 throw new UnsupportedOperationException("You need a runtime implementation of microprofile-config-api in order for MP config resolution in @AI attributes to work."
                     + " E.g. io.smallrye.config:smallrye-config:3.15.1 or simply a MicroProfile-compatible runtime such as Quarkus");
             }
 
-            resolved = resolveMicroProfileConfigExpression(resolved);
+            expression = resolveMicroProfileConfigExpression(expression);
         }
 
-        if (looksLikeExpression(resolved)) {
+        if (looksLikeExpression(expression)) {
             if (!isELAwareBeanManagerAvailable(beanManager)) {
                 throw new UnsupportedOperationException("You need a runtime implementation of jakarta.enterprise.cdi-el-api in order for EL resolution in @AI attributes to work."
                     + " E.g. org.jboss.weld.servlet:weld-servlet-shaded:6.0.0.Final or org.jboss.weld.se:weld-se-core:6.0.0.Final or simply a Jakarta EE-compatible runtime such as WildFly");
@@ -131,10 +131,10 @@ class AIServiceProducer {
                     + " E.g. org.glassfish.expressly:expressly:6.0.0 or simply a Jakarta EE-compatible runtime such as WildFly");
             }
 
-            resolved = resolveELExpression(beanManager, resolved);
+            expression = resolveELExpression(beanManager, expression);
         }
 
-        return resolved;
+        return expression;
     }
 
     private static boolean isJsonAvailable() {
