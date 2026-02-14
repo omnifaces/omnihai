@@ -27,11 +27,9 @@ import static java.util.stream.Stream.iterate;
 import static org.omnifaces.ai.exception.AIHttpException.fromStatusCode;
 
 import java.io.BufferedReader;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.OutputStream;
 import java.net.ConnectException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -40,6 +38,7 @@ import java.net.http.HttpRequest.BodyPublishers;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.Objects;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -419,37 +418,49 @@ final class AIHttpClient {
         private final String boundary;
 
         private MultipartBodyPublisher(Attachment attachment) {
-            this.boundary = multipartBoundaryPrefix + System.currentTimeMillis();
+            this.boundary = multipartBoundaryPrefix + UUID.randomUUID();
 
-            try (var os = new ByteArrayOutputStream()) {
+            try {
+                var textPartBuilder = new StringBuilder();
+
                 for (var entry : attachment.metadata().entrySet()) {
-                    writeTextPart(os, entry.getKey(), entry.getValue());
+                    appendTextPart(textPartBuilder, entry.getKey(), entry.getValue());
                 }
-                writeFilePart(os, "file", uploadedFileNamePrefix + attachment.fileName(), attachment.mimeType().value(), attachment.content());
-                writeLine(os, "--" + boundary + "--");
-                body = HttpRequest.BodyPublishers.ofByteArray(os.toByteArray());
+
+                prependFilePart(textPartBuilder, "file", uploadedFileNamePrefix + attachment.fileName(), attachment.mimeType().value());
+
+                this.body = BodyPublishers.concat(
+                    BodyPublishers.ofString(textPartBuilder.toString(), UTF_8),
+                    (attachment.source() != null) ? BodyPublishers.ofFile(attachment.source()) : BodyPublishers.ofByteArray(attachment.content()),
+                    BodyPublishers.ofString(closeFilePart(), UTF_8)
+                );
             }
             catch (IOException e) {
-                throw new AIException("Cannot prepare multipart/form-data request for " + attachment.fileName(), e);
+                throw new AIException("Cannot prepare multipart/form-data request for " + attachment, e);
             }
         }
 
-        private void writeTextPart(OutputStream os, String name, String value) throws IOException {
-            writeLine(os, "--" + boundary);
-            writeLine(os, "Content-Disposition: form-data; name=\"" + name + "\"\r\n");
-            writeLine(os, value);
+        private void appendTextPart(StringBuilder sb, String name, String value) {
+            appendLine(sb, "--" + boundary);
+            appendLine(sb, "Content-Disposition: form-data; name=\"" + name + "\"\r\n");
+            appendLine(sb, value);
         }
 
-        private void writeFilePart(OutputStream os, String name, String filename, String contentType, byte[] data) throws IOException {
-            writeLine(os, "--" + boundary);
-            writeLine(os, "Content-Disposition: form-data; name=\"" + name + "\"; filename=\"" + filename + "\"");
-            writeLine(os, "Content-Type: " + contentType + "\r\n");
-            os.write(data);
-            writeLine(os, "");
+        private void prependFilePart(StringBuilder sb, String name, String filename, String contentType) {
+            appendLine(sb, "--" + boundary);
+            appendLine(sb, "Content-Disposition: form-data; name=\"" + name + "\"; filename=\"" + filename + "\"");
+            appendLine(sb, "Content-Type: " + contentType + "\r\n");
         }
 
-        private static void writeLine(OutputStream os, String line) throws IOException {
-            os.write((line + "\r\n").getBytes(UTF_8));
+        private String closeFilePart() {
+            var sb = new StringBuilder();
+            appendLine(sb, "");
+            appendLine(sb, "--" + boundary + "--");
+            return sb.toString();
+        }
+
+        private static void appendLine(StringBuilder sb, String line) {
+            sb.append(line + "\r\n");
         }
     }
 }

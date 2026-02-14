@@ -23,7 +23,14 @@ import static org.omnifaces.ai.helper.TextHelper.isBlank;
 import static org.omnifaces.ai.helper.TextHelper.requireNonBlank;
 import static org.omnifaces.ai.mime.MimeType.guessMimeType;
 
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.RandomAccessFile;
 import java.io.Serializable;
+import java.io.UncheckedIOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.HashMap;
@@ -46,6 +53,8 @@ import org.omnifaces.ai.mime.MimeType;
 public class ChatInput implements Serializable {
 
     private static final long serialVersionUID = 1L;
+
+    private static final int MAGIC_BYTES_LENGTH = 1024;
 
     /**
      * Represents a single message in a conversation history.
@@ -118,8 +127,10 @@ public class ChatInput implements Serializable {
 
         private static final long serialVersionUID = 1L;
 
-        /** The content bytes. */
+        /** The content bytes, or {@code null} if backed by a {@link #source() Path}. */
         private final byte[] content;
+        /** The source path, or {@code null} if backed by {@link #content() byte[]}. */
+        private transient Path source;
         /** The MIME type. */
         private final MimeType mimeType;
         /** The file name. */
@@ -136,7 +147,29 @@ public class ChatInput implements Serializable {
          * @param metadata Additional provider-specific metadata to use in upload request, must not be {@code null}.
          */
         public Attachment(byte[] content, MimeType mimeType, String fileName, Map<String, String> metadata) {
-            this.content = requireNonNull(content, "content");
+            this(requireNonNull(content, "content"), null, mimeType, fileName, metadata);
+        }
+
+        /**
+         * Creates a new attachment backed by a source path for memory-efficient streaming.
+         * <p>
+         * The file name is derived from the path and the MIME type is detected by reading the first kilobyte of magic
+         * bytes. The file content is initially <strong>not</strong> loaded into memory; it will be streamed when the AI
+         * service builds the request payload and supports a {@code files} API for file attachments. It is only loaded
+         * into memory when the AI service does not support any {@code files} API.
+         *
+         * @param source The source path, must not be {@code null}.
+         * @param metadata Additional provider-specific metadata to use in upload request, must not be {@code null}.
+         * @throws UncheckedIOException if the source cannot be read for MIME type detection.
+         * @since 1.2
+         */
+        public Attachment(Path source, Map<String, String> metadata) {
+            this(null, requireNonNull(source, "source"), guessMimeType(readMagicBytes(source)), source.getFileName().toString(), metadata);
+        }
+
+        private Attachment(byte[] content, Path source, MimeType mimeType, String fileName, Map<String, String> metadata) {
+            this.content = content;
+            this.source = source;
             this.mimeType = requireNonNull(mimeType, "mimeType");
             this.fileName = requireNonBlank(fileName, "fileName");
             this.metadata = requireNonNull(metadata, "metadata").entrySet().stream()
@@ -145,11 +178,44 @@ public class ChatInput implements Serializable {
         }
 
         /**
-         * Gets the content bytes.
-         * @return The content bytes.
+         * Custom serialization to handle non-serializable {@link Path}.
+         * @param output The object output stream.
+         * @throws IOException If an I/O error occurs.
+         */
+        private void writeObject(ObjectOutputStream output) throws IOException {
+            output.defaultWriteObject();
+            output.writeObject(source != null ? source.toString() : null);
+        }
+
+        /**
+         * Custom deserialization to restore {@link Path} from its string representation.
+         * @param input The object input stream.
+         * @throws IOException If an I/O error occurs.
+         * @throws ClassNotFoundException If the class of a serialized object cannot be found.
+         */
+        private void readObject(ObjectInputStream input) throws IOException, ClassNotFoundException {
+            input.defaultReadObject();
+            var sourceString = (String) input.readObject();
+            if (sourceString != null) {
+                source = Path.of(sourceString);
+            }
+        }
+
+        /**
+         * Gets the content bytes, or {@code null} if this attachment is backed by a {@link #source() Path}.
+         * @return The content bytes, or {@code null} for Path-backed attachments.
          */
         public byte[] content() {
             return content;
+        }
+
+        /**
+         * Gets the source path, or {@code null} if this attachment is backed by {@link #content() byte[]}.
+         * @return The source path, or {@code null} for byte[]-backed attachments.
+         * @since 1.2
+         */
+        public Path source() {
+            return source;
         }
 
         /**
@@ -178,15 +244,18 @@ public class ChatInput implements Serializable {
 
         /**
          * Converts this attachment to a Base64 encoded string.
+         *
          * @return The Base64 encoded content.
          */
         public String toBase64() {
-            return Base64.getEncoder().encodeToString(content);
+            return Base64.getEncoder().encodeToString(content != null ? content : readAllBytes(source));
         }
 
         /**
          * Converts this attachment to a data URI.
+         *
          * @return The data URI string in the format {@code data:<media-type>;base64,<data>}.
+         * @throws IllegalStateException if this attachment is backed by a {@link #source() Path}.
          */
         public String toDataUri() {
             return "data:" + mimeType.value() + ";base64," + toBase64();
@@ -202,7 +271,7 @@ public class ChatInput implements Serializable {
         public Attachment withMetadata(String name, String value) {
             var newMetadata = new HashMap<>(metadata);
             newMetadata.put(requireNonBlank(name, "name").strip(), requireNonBlank(value, "value").strip());
-            return new Attachment(content, mimeType, fileName, newMetadata);
+            return new Attachment(content, source, mimeType, fileName, newMetadata);
         }
 
         /**
@@ -215,14 +284,16 @@ public class ChatInput implements Serializable {
         public Attachment withMetadata(Map<String, String> metadata) {
             var newMetadata = new HashMap<>(this.metadata);
             newMetadata.putAll(metadata);
-            return new Attachment(content, mimeType, fileName, newMetadata);
+            return new Attachment(content, source, mimeType, fileName, newMetadata);
         }
 
         @Override
         public String toString() {
             var stringBuilder = new StringBuilder("Attachment[fileName=").append(fileName)
-                .append(", mimeType=").append(mimeType.value())
-                .append(", contentLength=").append(content.length);
+                .append(", mimeType=").append(mimeType.value());
+
+            stringBuilder.append(", contentLength=").append(content != null ? content.length : source.toFile().length());
+            stringBuilder.append(", source=").append(source != null ? source : "byte[]");
 
             if (!metadata.isEmpty()) {
                 stringBuilder.append(", metadata=").append(metadata);
@@ -337,30 +408,66 @@ public class ChatInput implements Serializable {
         }
 
         /**
-         * Attaches files to this input.
+         * Attaches file contents to this input.
          * <p>
-         * Files are automatically classified based on their content:
+         * File contents are automatically classified based on their content:
          * <ul>
          *   <li>Supported image formats (JPEG, PNG, GIF, BMP, WEBP, SVG) are added as images and sanitized for AI compatibility.</li>
          *   <li>All other files are added as files with their MIME type auto-detected.</li>
          * </ul>
-         * @param files The file content bytes to attach.
+         * @param contents The file contents to attach.
          * @return This builder instance for chaining.
          * @see ImageHelper#isSupportedAsImageAttachment(MimeType)
          * @see ImageHelper#sanitizeImageAttachment(byte[])
          */
-        public Builder attach(byte[]... files) {
-            for (var content : files) {
-                var mimeType = guessMimeType(content);
-                var isImage = isSupportedAsImageAttachment(mimeType);
-                var processedContent = isImage ? sanitizeImageAttachment(content) : content;
-                var prefix = isImage ? "image" : "file";
-                var list = isImage ? this.images : this.files;
-                var fileName = String.format("%s%d.%s", prefix, list.size() + 1, mimeType.extension());
-                list.add(new Attachment(processedContent, mimeType, fileName, emptyMap()));
+        public Builder attach(byte[]... contents) {
+            for (var content : contents) {
+                processAndAttach(content, null, guessMimeType(content));
             }
 
             return this;
+        }
+
+        /**
+         * Attaches source paths to this input.
+         * <p>
+         * Source paths are automatically classified based on their content:
+         * <ul>
+         *   <li>Supported image formats (JPEG, PNG, GIF, BMP, WEBP, SVG) are added as images and sanitized for AI compatibility.</li>
+         *   <li>All other files are added as files with their MIME type auto-detected.</li>
+         * </ul>
+         * @param sources The source paths to attach.
+         * @return This builder instance for chaining.
+         * @see ImageHelper#isSupportedAsImageAttachment(MimeType)
+         * @see ImageHelper#sanitizeImageAttachment(byte[])
+         * @since 1.2
+         */
+        public Builder attach(Path... sources) {
+            for (var source : sources) {
+                processAndAttach(null, source, guessMimeType(readMagicBytes(source)));
+            }
+
+            return this;
+        }
+
+        private void processAndAttach(byte[] content, Path source, MimeType mimeType) {
+            var isImage = isSupportedAsImageAttachment(mimeType);
+            var list = isImage ? this.images : this.files;
+            var prefix = isImage ? "image" : "file";
+            var fileName = String.format("%s%d.%s", prefix, list.size() + 1, mimeType.extension());
+
+            byte[] finalContent;
+            Path finalSource;
+
+            if (isImage) {
+                finalContent = sanitizeImageAttachment(content != null ? content : readAllBytes(source));
+                finalSource = null;
+            } else {
+                finalContent = content;
+                finalSource = source;
+            }
+
+            list.add(new Attachment(finalContent, finalSource, mimeType, fileName, emptyMap()));
         }
 
         /**
@@ -371,6 +478,26 @@ public class ChatInput implements Serializable {
         public ChatInput build() {
             requireNonBlank(message, "message");
             return new ChatInput(this);
+        }
+    }
+
+    private static byte[] readMagicBytes(Path source) {
+        try (var raf = new RandomAccessFile(source.toFile(), "r")) {
+            var bytes = new byte[(int) Math.min(raf.length(), MAGIC_BYTES_LENGTH)];
+            raf.readFully(bytes);
+            return bytes;
+        }
+        catch (IOException e) {
+            throw new UncheckedIOException("Cannot read magic bytes from " + source, e);
+        }
+    }
+
+    private static byte[] readAllBytes(Path source) {
+        try {
+            return Files.readAllBytes(source);
+        }
+        catch (IOException e) {
+            throw new UncheckedIOException("Cannot read all bytes from " + source, e);
         }
     }
 }
