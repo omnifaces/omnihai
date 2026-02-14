@@ -35,6 +35,7 @@ import org.omnifaces.ai.modality.OpenAITextHandler;
 import org.omnifaces.ai.model.ChatInput;
 import org.omnifaces.ai.model.ChatInput.Attachment;
 import org.omnifaces.ai.model.ChatOptions;
+import org.omnifaces.ai.model.GenerateAudioOptions;
 import org.omnifaces.ai.model.GenerateImageOptions;
 import org.omnifaces.ai.model.ModerationOptions;
 import org.omnifaces.ai.model.ModerationResult;
@@ -670,24 +671,26 @@ class AIConfigTest {
     public static class NoConstructorService implements AIService {
         private static final long serialVersionUID = 1L;
         // No AIConfig constructor — createService should fail.
-        @Override public String getProviderName() { return null; }
-        @Override public String getModelName() { return null; }
-        @Override public String getChatPrompt() { return null; }
-        @Override public boolean supportsModality(AIModality modality) { return false; }
+        @Override public String getProviderName() throws AIException { return null; }
+        @Override public String getModelName() throws AIException { return null; }
+        @Override public String getChatPrompt() throws AIException { return null; }
+        @Override public boolean supportsModality(AIModality modality) throws AIException { return false; }
         @Override public CompletableFuture<String> chatAsync(ChatInput input, ChatOptions options) throws AIException { return null; }
-        @Override public CompletableFuture<Void> chatStream(ChatInput input, ChatOptions options, Consumer<String> onToken) { return null; }
+        @Override public CompletableFuture<Void> chatStream(ChatInput input, ChatOptions options, Consumer<String> onToken) throws AIException { return null; }
         @Override public String upload(Attachment attachment) throws AIException { return null; }
         @Override public CompletableFuture<String> summarizeAsync(String text, int maxWords) throws AIException { return null; }
         @Override public CompletableFuture<List<String>> extractKeyPointsAsync(String text, int maxPoints) throws AIException { return null; }
         @Override public CompletableFuture<String> detectLanguageAsync(String text) throws AIException { return null; }
         @Override public CompletableFuture<String> translateAsync(String text, String sourceLang, String targetLang) throws AIException { return null; }
-        @Override public CompletableFuture<String> proofreadAsync(String text) { return null; }
+        @Override public CompletableFuture<String> proofreadAsync(String text) throws AIException { return null; }
         @Override public CompletableFuture<ModerationResult> moderateContentAsync(String content, ModerationOptions options) throws AIException { return null; }
         @Override public CompletableFuture<String> analyzeImageAsync(byte[] image, String prompt) throws AIException { return null; }
         @Override public CompletableFuture<String> generateAltTextAsync(byte[] image) throws AIException { return null; }
         @Override public CompletableFuture<byte[]> generateImageAsync(String prompt, GenerateImageOptions options) throws AIException { return null; }
         @Override public String transcribe(byte[] audio) throws AIException { return AIService.super.transcribe(audio); }
-        @Override public CompletableFuture<String> transcribeAsync(byte[] audio) { return null; }
-        @Override public CompletableFuture<String> transcribeAsync(Path audio) { return null; }
+        @Override public CompletableFuture<String> transcribeAsync(byte[] audio) throws AIException { return null; }
+        @Override public CompletableFuture<String> transcribeAsync(Path audio) throws AIException { return null; }
+        @Override public CompletableFuture<byte[]> generateAudioAsync(String text, GenerateAudioOptions options) throws AIException { return null; }
+        @Override public CompletableFuture<Void> generateAudioAsync(String text, Path path, GenerateAudioOptions options) throws AIException { return null; }
     }
 }

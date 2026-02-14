@@ -279,4 +279,12 @@ public class OpenAIService extends BaseAIService {
         var responseJson = parseJson(responseBody);
         return findFirstNonBlankByPaths(responseJson, List.of("text")).orElseThrow(() -> new AIResponseException("No transcription text found", responseBody));
     }
+
+    /**
+     * Returns {@code audio/speech}.
+     */
+    @Override
+    protected String getGenerateAudioPath() {
+        return "audio/speech";
+    }
 }

@@ -64,7 +64,7 @@ public interface AIImageHandler extends Serializable {
      * @return The JSON request payload.
      */
     default JsonObject buildGenerateImagePayload(AIService service, String prompt, GenerateImageOptions options) {
-        throw new UnsupportedOperationException("Please implement buildGenerateImagePayload(String prompt, GenerateImageOptions options) method in class " + getClass().getSimpleName());
+        throw new UnsupportedOperationException("Please implement buildGenerateImagePayload(AIService service, String prompt, GenerateImageOptions options) method in class " + getClass().getSimpleName());
     }
 
     /**

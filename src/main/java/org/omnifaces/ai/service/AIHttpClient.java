@@ -124,7 +124,7 @@ final class AIHttpClient {
     }
 
     /**
-     * Sends a POST request for the specified {@link BaseAIService} with JSON payload.
+     * Sends a POST request for the specified {@link BaseAIService} with JSON payload and returns response as string.
      * Will retry at most {@value #MAX_RETRIES} times in case of a connection error with exponentially incremental backoff of {@value #INITIAL_BACKOFF_MS}ms.
      *
      * @param service The {@link BaseAIService} to extract URI and headers from.
@@ -138,7 +138,7 @@ final class AIHttpClient {
     }
 
     /**
-     * Sends a POST request for the specified {@link BaseAIService} with raw payload.
+     * Sends a POST request for the specified {@link BaseAIService} with raw payload and returns response as string.
      * Will retry at most {@value #MAX_RETRIES} times in case of a connection error with exponentially incremental backoff of {@value #INITIAL_BACKOFF_MS}ms.
      *
      * @param service The {@link BaseAIService} to extract URI and headers from.
@@ -150,6 +150,21 @@ final class AIHttpClient {
      */
     public CompletableFuture<String> post(BaseAIService service, String path, Attachment attachment) throws AIHttpException {
         return sendWithRetryAsync(service, path, attachment, newRequest(service, path, POST, attachment.mimeType().value(), APPLICATION_JSON, BodyPublishers.ofByteArray(attachment.content())));
+    }
+
+    /**
+     * Sends a POST request for the specified {@link BaseAIService} with JSON payload and returns response as stream.
+     * Will retry at most {@value #MAX_RETRIES} times in case of a connection error with exponentially incremental backoff of {@value #INITIAL_BACKOFF_MS}ms.
+     *
+     * @param service The {@link BaseAIService} to extract URI and headers from.
+     * @param path the API path
+     * @param payload The JSON payload
+     * @return The response as a {@link HttpResponse} with an {@link InputStream} body.
+     * @throws AIHttpException if the request fails
+     * @since 1.2
+     */
+    public CompletableFuture<HttpResponse<InputStream>> stream(BaseAIService service, String path, JsonObject payload) throws AIHttpException {
+        return sendWithRetryAsync(service, path, payload, newJsonRequest(service, path, payload, APPLICATION_JSON), CompletableFuture::completedFuture);
     }
 
     /**
@@ -197,8 +212,12 @@ final class AIHttpClient {
     }
 
     private CompletableFuture<String> sendWithRetryAsync(BaseAIService service, String path, Object payload, HttpRequest request) {
+        return sendWithRetryAsync(service, path, payload, request, r -> completedFuture(readBody(r)));
+    }
+
+    private <R> CompletableFuture<R> sendWithRetryAsync(BaseAIService service, String path, Object payload, HttpRequest request, Function<HttpResponse<InputStream>, CompletableFuture<R>> responseHandler) {
         final int requestId = logRequest(service, path, payload);
-        return sendWithRetryAsync(request, r -> completedFuture(readBody(r)), 0).thenApply(response -> {
+        return sendWithRetryAsync(request, responseHandler, 0).thenApply(response -> {
             logger.log(FINER, () -> "Response for #" + requestId + ": " + response);
             return response;
         });
@@ -231,7 +250,9 @@ final class AIHttpClient {
         if (contentType != null) {
             builder.header("Content-Type", contentType);
         }
-        builder.header("Accept", accept);
+        if (accept != null) {
+            builder.header("Accept", accept);
+        }
         builder.header("Accept-Encoding", "gzip");
         service.getRequestHeaders().forEach(builder::header);
         return builder.build();

@@ -15,9 +15,11 @@ package org.omnifaces.ai;
 import java.io.Serializable;
 
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.json.JsonObject;
 
 import org.omnifaces.ai.exception.AIResponseException;
 import org.omnifaces.ai.modality.DefaultAIAudioHandler;
+import org.omnifaces.ai.model.GenerateAudioOptions;
 
 /**
  * Handler for audio-based AI operations including transcription.
@@ -37,7 +39,8 @@ import org.omnifaces.ai.modality.DefaultAIAudioHandler;
 public interface AIAudioHandler extends Serializable {
 
     /**
-     * Builds the system prompt for {@link AIService#transcribe(byte[])} and {@link AIService#transcribeAsync(byte[])}.
+     * Builds the system prompt for {@link AIService#transcribe(byte[])}, {@link AIService#transcribe(java.nio.file.Path)},
+     * {@link AIService#transcribeAsync(byte[])}, and {@link AIService#transcribeAsync(java.nio.file.Path)}.
      * @return The system prompt.
      */
     String buildTranscribePrompt();
@@ -51,5 +54,17 @@ public interface AIAudioHandler extends Serializable {
      */
     default String parseTranscribeResponse(String responseBody) throws AIResponseException {
         throw new UnsupportedOperationException("Please implement parseTranscribeResponse(String responseBody) method in class " + getClass().getSimpleName());
+    }
+
+    /**
+     * Builds the JSON request payload for all generate audio operations.
+     * @implNote The default implementation throws UnsupportedOperationException.
+     * @param service The visiting AI service.
+     * @param text The text to convert to audio.
+     * @param options The audio generation options.
+     * @return The JSON request payload.
+     */
+    default JsonObject buildGenerateAudioPayload(AIService service, String text, GenerateAudioOptions options) {
+        throw new UnsupportedOperationException("Please implement buildGenerateAudioPayload(AIService service, String text, GenerateAudioOptions options) method in class " + getClass().getSimpleName());
     }
 }

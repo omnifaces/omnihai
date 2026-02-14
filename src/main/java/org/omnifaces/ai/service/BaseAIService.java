@@ -28,8 +28,13 @@ import static org.omnifaces.ai.helper.TextHelper.requireNonBlank;
 import static org.omnifaces.ai.model.ChatOptions.DETERMINISTIC;
 import static org.omnifaces.ai.model.ChatOptions.DETERMINISTIC_TEMPERATURE;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.UncheckedIOException;
 import java.net.URI;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -41,6 +46,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.logging.Logger;
 
@@ -61,6 +67,7 @@ import org.omnifaces.ai.model.ChatInput;
 import org.omnifaces.ai.model.ChatInput.Attachment;
 import org.omnifaces.ai.model.ChatInput.Message.Role;
 import org.omnifaces.ai.model.ChatOptions;
+import org.omnifaces.ai.model.GenerateAudioOptions;
 import org.omnifaces.ai.model.GenerateImageOptions;
 import org.omnifaces.ai.model.ModerationOptions;
 import org.omnifaces.ai.model.ModerationResult;
@@ -501,6 +508,7 @@ public abstract class BaseAIService implements AIService {
         return asyncPostAndParseImageContent(getGenerateImagePath(), imageHandler.buildGenerateImagePayload(this, requireNonBlank(prompt, "prompt"), options));
     }
 
+
     // Audio Transcription Implementation ------------------------------------------------------------------------------
 
     @Override
@@ -518,6 +526,57 @@ public abstract class BaseAIService implements AIService {
         inputBuilder.accept(input);
         var options = DETERMINISTIC.withSystemPrompt(audioHandler.buildTranscribePrompt());
         return asyncPostAndParseChatResponse(getChatPath(false), textHandler.buildChatPayload(this, input.build(), options, false));
+    }
+
+
+    // Audio Generator Implementation -------------------------------------------------------------------------------------------
+
+    /**
+     * Returns the path of the audio generation (text-to-speech) endpoint.
+     * @implNote The default implementation throws UnsupportedOperationException.
+     * @return the path of the audio generation endpoint.
+     * @since 1.2
+     */
+    protected String getGenerateAudioPath() {
+        throw new UnsupportedOperationException("Please implement getGenerateAudioPath() method in class " + getClass().getSimpleName());
+    }
+
+    @Override
+    public CompletableFuture<byte[]> generateAudioAsync(String text, GenerateAudioOptions options) {
+        return asyncPostAndStreamResponseBody(text, options, stream -> {
+            try {
+                return stream.readAllBytes();
+            }
+            catch (IOException e) {
+                throw new UncheckedIOException("Cannot read all bytes from response body", e);
+            }
+        });
+    }
+
+    @Override
+    public CompletableFuture<Void> generateAudioAsync(String text, Path path, GenerateAudioOptions options) {
+        return asyncPostAndStreamResponseBody(text, options, stream -> {
+            try {
+                Files.copy(stream, path, StandardCopyOption.REPLACE_EXISTING);
+                return null;
+            }
+            catch (IOException e) {
+                throw new CompletionException("Cannot stream response body to path " + path, e);
+            }
+        });
+    }
+
+    /**
+     * Sends a POST request to the audio generation endpoint and streams the response body.
+     * @param text The text to convert to audio.
+     * @param options Audio generation options (voice, speed, output format, etc.).
+     * @param responseBodyHandler The handler to process the response body stream.
+     * @param <R> The return type of the response body handler.
+     * @return A CompletableFuture containing the result of the response body handler.
+     * @throws AIException if the request fails.
+     */
+    protected <R> CompletableFuture<R> asyncPostAndStreamResponseBody(String text, GenerateAudioOptions options, Function<InputStream, R> responseBodyHandler) throws AIException {
+        return HTTP_CLIENT.stream(this, getGenerateAudioPath(), audioHandler.buildGenerateAudioPayload(this, requireNonBlank(text, "text"), options)).thenApply(response -> responseBodyHandler.apply(response.body()));
     }
 
 

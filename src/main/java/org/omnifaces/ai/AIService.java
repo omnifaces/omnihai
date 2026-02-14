@@ -30,6 +30,7 @@ import org.omnifaces.ai.helper.JsonSchemaHelper;
 import org.omnifaces.ai.model.ChatInput;
 import org.omnifaces.ai.model.ChatInput.Attachment;
 import org.omnifaces.ai.model.ChatOptions;
+import org.omnifaces.ai.model.GenerateAudioOptions;
 import org.omnifaces.ai.model.GenerateImageOptions;
 import org.omnifaces.ai.model.ModerationOptions;
 import org.omnifaces.ai.model.ModerationOptions.Category;
@@ -1079,6 +1080,147 @@ public interface AIService extends Serializable {
      * @since 1.2
      */
     CompletableFuture<String> transcribeAsync(Path audio) throws AIException;
+
+
+    // Audio generation capabilities ----------------------------------------------------------------------------------
+
+    /**
+     * Generates audio from text and returns it as a byte array.
+     * @implNote The default implementation delegates to {@link #generateAudioAsync(String)}.
+     * @param text The text to convert to audio.
+     * @return Generated audio bytes, never {@code null}.
+     * @throws IllegalArgumentException if text is blank.
+     * @throws UnsupportedOperationException if audio generation is not supported by the implementation.
+     * @throws AIException if audio generation fails.
+     * @since 1.2
+     */
+    default byte[] generateAudio(String text) throws AIException {
+        try {
+            return generateAudioAsync(text).join();
+        }
+        catch (CompletionException e) {
+            throw AIException.asyncRequestFailed(e);
+        }
+    }
+
+    /**
+     * Generates audio from text and returns it as a byte array.
+     * @implNote The default implementation delegates to {@link #generateAudioAsync(String, GenerateAudioOptions)}.
+     * @param text The text to convert to audio.
+     * @param options Audio generation options (voice, speed, output format, etc.).
+     * @return Generated audio bytes, never {@code null}.
+     * @throws IllegalArgumentException if text is blank.
+     * @throws UnsupportedOperationException if audio generation is not supported by the implementation.
+     * @throws AIException if audio generation fails.
+     * @since 1.2
+     */
+    default byte[] generateAudio(String text, GenerateAudioOptions options) throws AIException {
+        try {
+            return generateAudioAsync(text, options).join();
+        }
+        catch (CompletionException e) {
+            throw AIException.asyncRequestFailed(e);
+        }
+    }
+
+    /**
+     * Generates audio from text and saves it to the specified path.
+     * @implNote The default implementation delegates to {@link #generateAudioAsync(String, Path)}.
+     * @param text The text to convert to audio.
+     * @param path The path where the audio file should be saved.
+     * @throws IllegalArgumentException if text is blank.
+     * @throws UnsupportedOperationException if audio generation is not supported by the implementation.
+     * @throws AIException if audio generation fails.
+     * @since 1.2
+     */
+    default void generateAudio(String text, Path path) throws AIException {
+        try {
+            generateAudioAsync(text, path).join();
+        }
+        catch (CompletionException e) {
+            throw AIException.asyncRequestFailed(e);
+        }
+    }
+
+    /**
+     * Generates audio from text and saves it to the specified path.
+     * @implNote The default implementation delegates to {@link #generateAudioAsync(String, Path, GenerateAudioOptions)}.
+     * @param text The text to convert to audio.
+     * @param path The path where the audio file should be saved.
+     * @param options Audio generation options (voice, speed, output format, etc.).
+     * @throws IllegalArgumentException if text is blank.
+     * @throws UnsupportedOperationException if audio generation is not supported by the implementation.
+     * @throws AIException if audio generation fails.
+     * @since 1.2
+     */
+    default void generateAudio(String text, Path path, GenerateAudioOptions options) throws AIException {
+        try {
+            generateAudioAsync(text, path, options).join();
+        }
+        catch (CompletionException e) {
+            throw AIException.asyncRequestFailed(e);
+        }
+    }
+
+    /**
+     * Asynchronously generates audio from text and returns it as a byte array.
+     * @implNote The default implementation delegates to {@link #generateAudioAsync(String, GenerateAudioOptions)} with {@link GenerateAudioOptions#DEFAULT}.
+     * @param text The text to convert to audio.
+     * @return A CompletableFuture that will contain the generated audio bytes, never {@code null}.
+     * @throws IllegalArgumentException if text is blank.
+     * @throws UnsupportedOperationException if audio generation is not supported by the implementation.
+     * @throws AIException if audio generation fails.
+     * @since 1.2
+     */
+    default CompletableFuture<byte[]> generateAudioAsync(String text) throws AIException {
+        return generateAudioAsync(text, GenerateAudioOptions.DEFAULT);
+    }
+
+    /**
+     * Asynchronously generates audio from text and saves it to the specified path.
+     * @implNote The default implementation delegates to {@link #generateAudioAsync(String, Path, GenerateAudioOptions)} with {@link GenerateAudioOptions#DEFAULT}.
+     * @param text The text to convert to audio.
+     * @param path The path where the audio file should be saved.
+     * @return An empty CompletableFuture which only completes when the end of stream is reached, never {@code null}.
+     * @throws IllegalArgumentException if text is blank.
+     * @throws UnsupportedOperationException if audio generation is not supported by the implementation.
+     * @throws AIException if audio generation fails.
+     * @since 1.2
+     */
+    default CompletableFuture<Void> generateAudioAsync(String text, Path path) throws AIException {
+        return generateAudioAsync(text, path, GenerateAudioOptions.DEFAULT);
+    }
+
+    /**
+     * Asynchronously generates audio from text and returns it as a byte array.
+     * <p>
+     * This is the core method for audio generation returning a byte array.
+     *
+     * @param text The text to convert to audio.
+     * @param options Audio generation options (voice, speed, output format, etc.).
+     * @return A CompletableFuture that will contain the generated audio bytes, never {@code null}.
+     * @throws IllegalArgumentException if text is blank.
+     * @throws UnsupportedOperationException if audio generation is not supported by the implementation.
+     * @throws AIException if audio generation fails.
+     * @since 1.2
+     */
+    CompletableFuture<byte[]> generateAudioAsync(String text, GenerateAudioOptions options) throws AIException;
+
+    /**
+     * Asynchronously generates audio from text and saves it to the specified path.
+     * <p>
+     * This is the core method for streaming audio generation to a file.
+     *
+     * @param text The text to convert to audio.
+     * @param path The path where the audio file should be saved.
+     * @param options Audio generation options (voice, speed, output format, etc.).
+     * @return An empty CompletableFuture which only completes when the end of stream is reached, never {@code null}.
+     * @throws IllegalArgumentException if text is blank.
+     * @throws UnsupportedOperationException if audio generation is not supported by the implementation.
+     * @throws AIException if audio generation fails.
+     * @since 1.2
+     */
+    CompletableFuture<Void> generateAudioAsync(String text, Path path, GenerateAudioOptions options) throws AIException;
 
 
     // Service Metadata -----------------------------------------------------------------------------------------------

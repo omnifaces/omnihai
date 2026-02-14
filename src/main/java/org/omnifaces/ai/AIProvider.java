@@ -24,6 +24,7 @@ import org.omnifaces.ai.modality.GoogleAITextHandler;
 import org.omnifaces.ai.modality.MetaAITextHandler;
 import org.omnifaces.ai.modality.MistralAITextHandler;
 import org.omnifaces.ai.modality.OllamaAITextHandler;
+import org.omnifaces.ai.modality.OpenAIAudioHandler;
 import org.omnifaces.ai.modality.OpenAIImageHandler;
 import org.omnifaces.ai.modality.OpenAITextHandler;
 import org.omnifaces.ai.modality.XAIImageHandler;
@@ -71,11 +72,11 @@ public enum AIProvider {
      * @see OpenAIService
      * @see OpenAITextHandler
      * @see OpenAIImageHandler
-     * @see DefaultAIAudioHandler
+     * @see OpenAIAudioHandler
      * @see <a href="https://platform.openai.com/api-keys">Manage OpenAI API Keys</a>
      * @see <a href="https://platform.openai.com/docs/models">Available OpenAI Models</a>
      */
-    OPENAI("OpenAI", OpenAIService.class, true, "gpt-5.2-2025-12-11", "https://api.openai.com/v1", OpenAITextHandler.class, OpenAIImageHandler.class, DefaultAIAudioHandler.class),
+    OPENAI("OpenAI", OpenAIService.class, true, "gpt-5.2-2025-12-11", "https://api.openai.com/v1", OpenAITextHandler.class, OpenAIImageHandler.class, OpenAIAudioHandler.class),
 
     /**
      * Anthropic: Claude Opus, Claude Sonnet, Claude Haiku, etc.
