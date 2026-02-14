@@ -108,32 +108,72 @@ public class ChatInput implements Serializable {
 
     /**
      * Represents an attached file.
-     * @param content The content bytes.
-     * @param mimeType The mime type.
-     * @param fileName The file name.
-     * @param metadata Additional provider-specific metadata to use in upload request.
+     *
      * @see ChatInput.Builder#attach(byte[]...)
      * @see ChatInput#getImages()
      * @see ChatInput#getFiles()
      * @since 1.0
      */
-    public final record Attachment(byte[] content, MimeType mimeType, String fileName, Map<String, String> metadata) implements Serializable {
+    public static final class Attachment implements Serializable {
+
+        private static final long serialVersionUID = 1L;
+
+        /** The content bytes. */
+        private final byte[] content;
+        /** The MIME type. */
+        private final MimeType mimeType;
+        /** The file name. */
+        private final String fileName;
+        /** Additional provider-specific metadata. */
+        private final Map<String, String> metadata;
 
         /**
-         * Validates and normalizes the record components by stripping whitespace and filtering blank properties.
+         * Creates a new attachment with the given content, MIME type, file name, and metadata.
          *
-         * @param content The content bytes.
-         * @param mimeType The mime type.
-         * @param fileName The file name.
-         * @param metadata Additional provider-specific metadata to use in upload request, may not be null.
+         * @param content The content bytes, must not be {@code null}.
+         * @param mimeType The MIME type, must not be {@code null}.
+         * @param fileName The file name, must not be blank.
+         * @param metadata Additional provider-specific metadata to use in upload request, must not be {@code null}.
          */
-        public Attachment {
-            content = requireNonNull(content, "content");
-            mimeType = requireNonNull(mimeType, "mimeType");
-            fileName = requireNonBlank(fileName, "fileName");
-            metadata = requireNonNull(metadata, "metadata").entrySet().stream()
+        public Attachment(byte[] content, MimeType mimeType, String fileName, Map<String, String> metadata) {
+            this.content = requireNonNull(content, "content");
+            this.mimeType = requireNonNull(mimeType, "mimeType");
+            this.fileName = requireNonBlank(fileName, "fileName");
+            this.metadata = requireNonNull(metadata, "metadata").entrySet().stream()
                     .filter(e -> !isBlank(e.getKey()) && !isBlank(e.getValue()))
                     .collect(toUnmodifiableMap(e -> e.getKey().strip(), e -> e.getValue().strip()));
+        }
+
+        /**
+         * Gets the content bytes.
+         * @return The content bytes.
+         */
+        public byte[] content() {
+            return content;
+        }
+
+        /**
+         * Gets the MIME type.
+         * @return The MIME type.
+         */
+        public MimeType mimeType() {
+            return mimeType;
+        }
+
+        /**
+         * Gets the file name.
+         * @return The file name.
+         */
+        public String fileName() {
+            return fileName;
+        }
+
+        /**
+         * Gets the additional provider-specific metadata.
+         * @return An unmodifiable map of metadata.
+         */
+        public Map<String, String> metadata() {
+            return metadata;
         }
 
         /**
