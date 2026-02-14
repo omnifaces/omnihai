@@ -133,7 +133,7 @@ abstract class BaseAIServiceTextHandlerIT extends AIServiceIT {
 
         if (options.getHistory().get(0).uploadedFiles().isEmpty()) {
             switch (getProvider()) {
-                case OPENAI, ANTHROPIC, GOOGLE: fail(getProvider() + " is supposed to support files API!");
+                case OPENAI, ANTHROPIC, GOOGLE, MISTRAL, XAI: fail(getProvider() + " is supposed to support files API!");
                 default: throw new TestAbortedException("Not supported by " + getProvider());
             }
         }
