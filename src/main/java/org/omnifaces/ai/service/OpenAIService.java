@@ -92,7 +92,7 @@ public class OpenAIService extends BaseAIService {
             case IMAGE_ANALYSIS -> currentModelVersion.gte(GPT_4) || fullModelName.contains("vision");
             case IMAGE_GENERATION -> currentModelVersion.gte(DALL_E) || fullModelName.contains("image");
             case AUDIO_ANALYSIS -> currentModelVersion.gte(GPT_4) || fullModelName.contains("transcribe");
-            case AUDIO_GENERATION -> currentModelVersion.gte(GPT_4) || fullModelName.contains("tts");
+            case AUDIO_GENERATION -> fullModelName.contains("tts");
             case VIDEO_ANALYSIS -> currentModelVersion.gte(GPT_5);
             case VIDEO_GENERATION -> false;
         };
@@ -112,8 +112,8 @@ public class OpenAIService extends BaseAIService {
     }
 
     /**
-     * Returns whether this OpenAI based service supports native transcription.
-     * When {@code true}, {@link #transcribeAsync(byte[])} will use OpenAI's transcription API.
+     * Returns whether this OpenAI based service supports the OpenAI native transcription API.
+     * When {@code true}, {@link #transcribeAsync(byte[])} will use OpenAI native transcription API.
      * When {@code false}, it falls back to the chat-based transcription in {@link BaseAIService}.
      *
      * @implNote The default implementation returns true.
@@ -124,23 +124,32 @@ public class OpenAIService extends BaseAIService {
     }
 
     /**
-     * Returns whether this OpenAI based service implementation supports the {@code responses} API as replacement for the legacy {@code chat/completions} API.
+     * Returns whether this OpenAI based service implementation supports the OpenAI {@code responses} API as replacement for the legacy {@code chat/completions} API.
      * @implNote The default implementation returns true if {@link #getModelVersion()} is at least {@code GPT-4}.
-     * @return Whether this OpenAI based service implementation supports the {@code responses} API as replacement for the legacy {@code chat/completions} API.
+     * @return Whether this OpenAI based service implementation supports the OpenAI {@code responses} API as replacement for the legacy {@code chat/completions} API.
      */
     public boolean supportsOpenAIResponsesApi() {
         return getModelVersion().gte(GPT_4);
     }
 
     /**
-     * Returns whether this OpenAI based service implementation supports the {@code files} API for file attachments.
+     * Returns whether this OpenAI based service implementation supports the OpenAI {@code files} API for file attachments.
      * @implNote The default implementation delegates to {@link #supportsOpenAIResponsesApi()}.
-     * @return Whether this OpenAI based service implementation supports the {@code files} API for file attachments.
+     * @return Whether this OpenAI based service implementation supports the OpenAI {@code files} API for file attachments.
      */
     public boolean supportsOpenAIFilesApi() {
         return supportsOpenAIResponsesApi();
     }
 
+//    /**
+//     * Returns whether this OpenAI based service implementation supports the OpenAI {@code audio} API for text-to-speech.
+//     * @implNote The default implementation returns true.
+//     * @return Whether this OpenAI based service implementation supports the OpenAI {@code audio} API for text-to-speech.
+//     */
+//    public boolean supportsOpenAIAudioApi() {
+//        return true;
+//    }
+//
     @Override
     public boolean supportsStreaming() {
         return supportsOpenAIResponsesApi();

@@ -53,7 +53,7 @@ To enable verbose logging during integration tests, use the `--verbose` flag:
 ./it.sh --verbose
 ```
 
-This will log request bodies, response bodies, SSE stream events, and unknown SSE lines.
+This will log request bodies, response headers, response bodies, SSE stream events, and unknown SSE lines.
 
 This can be combined with other arguments:
 

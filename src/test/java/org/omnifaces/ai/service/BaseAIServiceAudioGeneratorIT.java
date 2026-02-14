@@ -38,6 +38,7 @@ abstract class BaseAIServiceAudioGeneratorIT extends AIServiceIT {
         Files.write(tempFilePath, response);
         log("saved in " + tempFilePath.toString());
 
+        assertTrue(mimeType.isAudio(), "Mime type is audio");
         // TODO: how to assert content .. ?? :P
     }
 }

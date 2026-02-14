@@ -533,12 +533,12 @@ public abstract class BaseAIService implements AIService {
 
     /**
      * Returns the path of the audio generation (text-to-speech) endpoint.
-     * @implNote The default implementation throws UnsupportedOperationException.
+     * @implNote The default implementation delegates to {@link #getChatPath(boolean)} with {@code false}.
      * @return the path of the audio generation endpoint.
      * @since 1.2
      */
     protected String getGenerateAudioPath() {
-        throw new UnsupportedOperationException("Please implement getGenerateAudioPath() method in class " + getClass().getSimpleName());
+        return getChatPath(false);
     }
 
     @Override
@@ -577,7 +577,7 @@ public abstract class BaseAIService implements AIService {
      * @since 1.2
      */
     protected <R> CompletableFuture<R> asyncPostAndStreamResponseBody(String text, GenerateAudioOptions options, Function<InputStream, R> responseStreamHandler) throws AIException {
-        return HTTP_CLIENT.stream(this, getGenerateAudioPath(), audioHandler.buildGenerateAudioPayload(this, requireNonBlank(text, "text"), options)).thenApply(responseStreamHandler::apply);
+        return HTTP_CLIENT.stream(this, getGenerateAudioPath(), audioHandler.buildGenerateAudioPayload(this, requireNonBlank(text, "text"), options)).thenApply(response -> responseStreamHandler.apply(response.body()));
     }
 
 

@@ -41,6 +41,7 @@ abstract class BaseAIServiceImageGeneratorIT extends AIServiceIT {
         Files.write(tempFilePath, response);
         log("saved in " + tempFilePath.toString());
 
+        assertTrue(mimeType.isImage(), "Mime type is image");
         var image = ImageIO.read(new ByteArrayInputStream(response));
         var size = image.getWidth() + "x" + image.getHeight();
         assertTrue(image.getWidth() >= 512 && image.getHeight() >= 512, "Image size should be at least 512x512: " + size);
