@@ -14,6 +14,8 @@ package org.omnifaces.ai.service;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.logging.Logger;
 
 import org.junit.jupiter.api.AfterEach;
@@ -72,9 +74,21 @@ abstract class AIServiceIT {
         logger.info(String.format("%s %s: %s: %s", getProvider(), getModel(), currentTestMethod.get(), message));
     }
 
-    byte[] readAllBytes(String resource) {
+    static byte[] readAllBytes(String resource) {
         try {
-            return getClass().getResourceAsStream(resource).readAllBytes();
+            return AIServiceIT.class.getResourceAsStream(resource).readAllBytes();
+        }
+        catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    static Path getPath(String resource) {
+        try {
+            var tempFile = Files.createTempFile("omnihai.AIServiceIT.", ".tmp");
+            tempFile.toFile().deleteOnExit();
+            Files.write(tempFile, readAllBytes(resource));
+            return tempFile;
         }
         catch (IOException e) {
             throw new UncheckedIOException(e);

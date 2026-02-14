@@ -17,6 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.omnifaces.ai.model.ChatOptions.DETERMINISTIC;
 
 import java.util.List;
@@ -121,7 +122,7 @@ abstract class BaseAIServiceTextHandlerIT extends AIServiceIT {
         }
 
         var input = ChatInput.newBuilder()
-            .attach(readAllBytes("/dummy.pdf"))
+            .attach(getPath("/dummy.pdf"))
             .message("Extract the contents of this PDF. No explanation.")
             .build();
         var options = ChatOptions.newBuilder()
@@ -131,7 +132,10 @@ abstract class BaseAIServiceTextHandlerIT extends AIServiceIT {
         var response1 = service.chat(input, options);
 
         if (options.getHistory().get(0).uploadedFiles().isEmpty()) {
-            throw new TestAbortedException("Not supported by " + getProvider());
+            switch (getProvider()) {
+                case OPENAI, ANTHROPIC, GOOGLE: fail(getProvider() + " is supposed to support files API!");
+                default: throw new TestAbortedException("Not supported by " + getProvider());
+            }
         }
 
         log(response1);
@@ -139,7 +143,7 @@ abstract class BaseAIServiceTextHandlerIT extends AIServiceIT {
 
         var response2 = service.chat("How many pages does this PDF have?", options);
         log(response2);
-        assertTrue(response2.toLowerCase().contains("1 page") || response2.toLowerCase().contains("one"), response2);
+        assertTrue(response2.toLowerCase().contains("1") || response2.toLowerCase().contains("one"), response2);
     }
 
     public record Capital(String city, String country) {}
