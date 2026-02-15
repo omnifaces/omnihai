@@ -476,7 +476,7 @@ private AIService trackedService;
 | **Injection Style** | `@Inject @AI(...)` | `@Inject` + config | `@Autowired` + beans |
 | **Qualifier-based** | ✅ | ❌ | ❌ |
 | **EL Support** | ✅ `#{...}`, `${...}` | ❌ | ❌ (SpEL, different) |
-| **MP Config Support** | ✅ `${config:...}` | ❌ | ❌ (SpEL, different) |
+| **MP Config Support** | ✅ `${config:...}` | ✅ (properties-based) | ❌ (SpEL, different) |
 
 ### Where OmniHai Shines
 
