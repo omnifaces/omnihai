@@ -46,7 +46,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
-import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.logging.Logger;
 
@@ -543,7 +542,7 @@ public abstract class BaseAIService implements AIService {
 
     @Override
     public CompletableFuture<byte[]> generateAudioAsync(String text, GenerateAudioOptions options) {
-        return asyncPostAndStreamResponseBody(text, options, stream -> {
+        return asyncPostAndStreamAudioContent(getGenerateAudioPath(), audioHandler.buildGenerateAudioPayload(this, requireNonBlank(text, "text"), options)).thenApply(stream -> {
             try {
                 return stream.readAllBytes();
             }
@@ -555,7 +554,7 @@ public abstract class BaseAIService implements AIService {
 
     @Override
     public CompletableFuture<Void> generateAudioAsync(String text, Path path, GenerateAudioOptions options) {
-        return asyncPostAndStreamResponseBody(text, options, stream -> {
+        return asyncPostAndStreamAudioContent(getGenerateAudioPath(), audioHandler.buildGenerateAudioPayload(this, requireNonBlank(text, "text"), options)).thenApply(stream -> {
             try {
                 Files.copy(stream, path, StandardCopyOption.REPLACE_EXISTING);
                 return null;
@@ -564,20 +563,6 @@ public abstract class BaseAIService implements AIService {
                 throw new CompletionException("Cannot stream response body to path " + path, e);
             }
         });
-    }
-
-    /**
-     * Sends a POST request to the audio generation endpoint and streams the response body.
-     * @param text The text to convert to audio.
-     * @param options Audio generation options (voice, speed, output format, etc.).
-     * @param responseStreamHandler The handler to process the response stream.
-     * @param <R> The return type of the response body handler.
-     * @return A CompletableFuture containing the result of the response stream handler.
-     * @throws AIException if the request fails.
-     * @since 1.2
-     */
-    protected <R> CompletableFuture<R> asyncPostAndStreamResponseBody(String text, GenerateAudioOptions options, Function<InputStream, R> responseStreamHandler) throws AIException {
-        return HTTP_CLIENT.stream(this, getGenerateAudioPath(), audioHandler.buildGenerateAudioPayload(this, requireNonBlank(text, "text"), options)).thenApply(response -> responseStreamHandler.apply(response.body()));
     }
 
 
@@ -655,4 +640,18 @@ public abstract class BaseAIService implements AIService {
     protected CompletableFuture<Void> asyncPostAndProcessStreamEvents(String path, JsonObject payload, Predicate<Event> eventProcessor) throws AIException {
         return HTTP_CLIENT.stream(this, path, payload, eventProcessor);
     }
+
+    /**
+     * Send POST request to API at given path with given payload along with request headers obtained from {@link #getRequestHeaders()}, and parse
+     * image content from the POST response with help of {@link AIImageHandler#parseImageContent(String)}.
+     * @param path API path, relative to {@link #endpoint}.
+     * @param payload POST request payload.
+     * @return The image content of the POST request.
+     * @throws AIException if anything fails during the process.
+     * @since 1.2
+     */
+    protected CompletableFuture<InputStream> asyncPostAndStreamAudioContent(String path, JsonObject payload) throws AIException {
+        return HTTP_CLIENT.stream(this, path, payload).thenApply(audioHandler::parseAudioContent);
+    }
+
 }

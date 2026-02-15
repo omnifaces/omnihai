@@ -163,8 +163,8 @@ final class AIHttpClient {
      * @throws AIHttpException if the request fails
      * @since 1.2
      */
-    public CompletableFuture<HttpResponse<InputStream>> stream(BaseAIService service, String path, JsonObject payload) throws AIHttpException {
-        return sendWithRetryAsync(service, path, payload, newJsonRequest(service, path, payload, APPLICATION_JSON), identity());
+    public CompletableFuture<InputStream> stream(BaseAIService service, String path, JsonObject payload) throws AIHttpException {
+        return sendWithRetryAsync(service, path, payload, newJsonRequest(service, path, payload, APPLICATION_JSON), AIHttpClient::decompressIfNeeded);
     }
 
     /**
@@ -368,9 +368,15 @@ final class AIHttpClient {
         }
     }
 
-    private static InputStream decompressIfNeeded(HttpResponse<InputStream> response) throws IOException {
+    private static InputStream decompressIfNeeded(HttpResponse<InputStream> response) {
         var encoding = response.headers().firstValue("Content-Encoding").orElse("");
-        return "gzip".equalsIgnoreCase(encoding) ? new GZIPInputStream(response.body()) : response.body();
+
+        try {
+            return "gzip".equalsIgnoreCase(encoding) ? new GZIPInputStream(response.body()) : response.body();
+        }
+        catch (IOException e) {
+            throw new AIException("Cannot decompress response body", e);
+        }
     }
 
     private static String readBody(HttpResponse<InputStream> response) {

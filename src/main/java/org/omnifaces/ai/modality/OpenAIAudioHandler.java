@@ -12,10 +12,13 @@
  */
 package org.omnifaces.ai.modality;
 
+import java.io.InputStream;
+
 import jakarta.json.Json;
 import jakarta.json.JsonObject;
 
 import org.omnifaces.ai.AIService;
+import org.omnifaces.ai.exception.AIResponseException;
 import org.omnifaces.ai.model.GenerateAudioOptions;
 import org.omnifaces.ai.service.OpenAIService;
 
@@ -46,5 +49,13 @@ public class OpenAIAudioHandler extends DefaultAIAudioHandler {
         }
 
         return payload.build();
+    }
+
+    /**
+     * In OpenAI, the response body already represents the entire audio stream.
+     */
+    @Override
+    public InputStream parseAudioContent(InputStream responseBody) throws AIResponseException {
+        return responseBody;
     }
 }
