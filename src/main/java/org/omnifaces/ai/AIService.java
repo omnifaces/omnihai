@@ -318,7 +318,7 @@ public interface AIService extends Serializable {
      * @throws IllegalArgumentException if message is blank.
      * @throws AIException if the chat request fails.
      */
-    default CompletableFuture<String> chatAsync(String message) {
+    default CompletableFuture<String> chatAsync(String message) throws AIException {
         return chatAsync(ChatInput.newBuilder().message(message).build());
     }
 
@@ -344,7 +344,7 @@ public interface AIService extends Serializable {
      * @throws IllegalArgumentException if input message is blank.
      * @throws AIException if the chat request fails.
      */
-    default CompletableFuture<String> chatAsync(ChatInput input) {
+    default CompletableFuture<String> chatAsync(ChatInput input) throws AIException {
         return chatAsync(input, DEFAULT.withSystemPrompt(getChatPrompt()));
     }
 
@@ -364,7 +364,7 @@ public interface AIService extends Serializable {
      * @see JsonSchemaHelper#buildJsonSchema(Class)
      * @see JsonSchemaHelper#fromJson(String, Class)
      */
-    default <T> CompletableFuture<T> chatAsync(String message, Class<T> type) {
+    default <T> CompletableFuture<T> chatAsync(String message, Class<T> type) throws AIException {
         return chatAsync(message, DEFAULT.withSystemPrompt(getChatPrompt()), type);
     }
 
@@ -384,7 +384,7 @@ public interface AIService extends Serializable {
      * @see JsonSchemaHelper#buildJsonSchema(Class)
      * @see JsonSchemaHelper#fromJson(String, Class)
      */
-    default <T> CompletableFuture<T> chatAsync(ChatInput input, Class<T> type) {
+    default <T> CompletableFuture<T> chatAsync(ChatInput input, Class<T> type) throws AIException {
         return chatAsync(input, DEFAULT.withSystemPrompt(getChatPrompt()), type);
     }
 
@@ -409,7 +409,7 @@ public interface AIService extends Serializable {
      * @throws IllegalArgumentException if message is blank.
      * @throws AIException if the chat request fails.
      */
-    default CompletableFuture<String> chatAsync(String message, ChatOptions options) {
+    default CompletableFuture<String> chatAsync(String message, ChatOptions options) throws AIException {
         return chatAsync(ChatInput.newBuilder().message(message).build(), options);
     }
 
@@ -434,7 +434,7 @@ public interface AIService extends Serializable {
      * @see JsonSchemaHelper#buildJsonSchema(Class)
      * @see JsonSchemaHelper#fromJson(String, Class)
      */
-    default <T> CompletableFuture<T> chatAsync(String message, ChatOptions options, Class<T> type) {
+    default <T> CompletableFuture<T> chatAsync(String message, ChatOptions options, Class<T> type) throws AIException {
         return chatAsync(message, options.withJsonSchema(buildJsonSchema(type))).thenApply(json -> fromJson(json, type));
     }
 
@@ -459,7 +459,7 @@ public interface AIService extends Serializable {
      * @see JsonSchemaHelper#buildJsonSchema(Class)
      * @see JsonSchemaHelper#fromJson(String, Class)
      */
-    default <T> CompletableFuture<T> chatAsync(ChatInput input, ChatOptions options, Class<T> type) {
+    default <T> CompletableFuture<T> chatAsync(ChatInput input, ChatOptions options, Class<T> type) throws AIException {
         return chatAsync(input, options.withJsonSchema(buildJsonSchema(type))).thenApply(json -> fromJson(json, type));
     }
 
@@ -493,7 +493,7 @@ public interface AIService extends Serializable {
      * @throws IllegalArgumentException if input message is blank.
      * @throws AIException if the chat request fails.
      */
-    CompletableFuture<String> chatAsync(ChatInput input, ChatOptions options);
+    CompletableFuture<String> chatAsync(ChatInput input, ChatOptions options) throws AIException;
 
 
     // Chat Streaming capabilities -------------------------------------------------------------------------------------
@@ -520,7 +520,7 @@ public interface AIService extends Serializable {
      * @throws UnsupportedOperationException if chat streaming is not supported by the implementation.
      * @throws AIException if the chat request fails.
      */
-    default CompletableFuture<Void> chatStream(String message, Consumer<String> onToken) {
+    default CompletableFuture<Void> chatStream(String message, Consumer<String> onToken) throws AIException {
         return chatStream(ChatInput.newBuilder().message(message).build(), onToken);
     }
 
@@ -550,7 +550,7 @@ public interface AIService extends Serializable {
      * @throws UnsupportedOperationException if chat streaming is not supported by the implementation.
      * @throws AIException if the chat request fails.
      */
-    default CompletableFuture<Void> chatStream(ChatInput input, Consumer<String> onToken) {
+    default CompletableFuture<Void> chatStream(ChatInput input, Consumer<String> onToken) throws AIException {
         return chatStream(input, DEFAULT.withSystemPrompt(getChatPrompt()), onToken);
     }
 
@@ -579,7 +579,7 @@ public interface AIService extends Serializable {
      * @throws UnsupportedOperationException if chat streaming is not supported by the implementation.
      * @throws AIException if the chat request fails.
      */
-    default CompletableFuture<Void> chatStream(String message, ChatOptions options, Consumer<String> onToken) {
+    default CompletableFuture<Void> chatStream(String message, ChatOptions options, Consumer<String> onToken) throws AIException {
         return chatStream(ChatInput.newBuilder().message(message).build(), options, onToken);
     }
 
@@ -617,7 +617,7 @@ public interface AIService extends Serializable {
      * @throws UnsupportedOperationException if chat streaming is not supported by the implementation.
      * @throws AIException if the chat request fails.
      */
-    CompletableFuture<Void> chatStream(ChatInput input, ChatOptions options, Consumer<String> onToken);
+    CompletableFuture<Void> chatStream(ChatInput input, ChatOptions options, Consumer<String> onToken) throws AIException ;
 
 
     // File Attachment Capabilities -----------------------------------------------------------------------------------
@@ -704,7 +704,7 @@ public interface AIService extends Serializable {
      * @throws UnsupportedOperationException if key point extraction is not supported by the implementation.
      * @throws AIException if extraction fails.
      */
-    CompletableFuture<List<String>> extractKeyPointsAsync(String text, int maxPoints);
+    CompletableFuture<List<String>> extractKeyPointsAsync(String text, int maxPoints) throws AIException;
 
 
     // Text Translation Capabilities --------------------------------------------------------------------------------------
@@ -738,7 +738,7 @@ public interface AIService extends Serializable {
      * @throws UnsupportedOperationException if language detection is not supported by the implementation.
      * @throws AIException if language detection fails.
      */
-    CompletableFuture<String> detectLanguageAsync(String text);
+    CompletableFuture<String> detectLanguageAsync(String text) throws AIException;
 
     /**
      * Translates text from source language to target language while preserving any markup and placeholders.
@@ -773,7 +773,7 @@ public interface AIService extends Serializable {
      * @throws UnsupportedOperationException if translation is not supported by the implementation.
      * @throws AIException if translation fails.
      */
-    CompletableFuture<String> translateAsync(String text, String sourceLang, String targetLang);
+    CompletableFuture<String> translateAsync(String text, String sourceLang, String targetLang) throws AIException;
 
 
     // Text Proofreading Capabilities ---------------------------------------------------------------------------------
@@ -807,7 +807,7 @@ public interface AIService extends Serializable {
      * @throws UnsupportedOperationException if proofreading is not supported by the implementation.
      * @throws AIException if proofreading fails.
      */
-    CompletableFuture<String> proofreadAsync(String text);
+    CompletableFuture<String> proofreadAsync(String text) throws AIException;
 
 
     // Text Moderation Capabilities -----------------------------------------------------------------------------------
@@ -839,7 +839,7 @@ public interface AIService extends Serializable {
      * @throws UnsupportedOperationException if content moderation is not supported by the implementation.
      * @throws AIException if moderation fails.
      */
-    default CompletableFuture<ModerationResult> moderateContentAsync(String content) {
+    default CompletableFuture<ModerationResult> moderateContentAsync(String content) throws AIException {
         return moderateContentAsync(content, ModerationOptions.DEFAULT);
     }
 
@@ -874,7 +874,7 @@ public interface AIService extends Serializable {
      * @throws UnsupportedOperationException if content moderation is not supported by the implementation.
      * @throws AIException if moderation fails.
      */
-    CompletableFuture<ModerationResult> moderateContentAsync(String content, ModerationOptions options);
+    CompletableFuture<ModerationResult> moderateContentAsync(String content, ModerationOptions options) throws AIException;
 
 
     // Image Analysis Capabilities ------------------------------------------------------------------------------------
@@ -916,7 +916,7 @@ public interface AIService extends Serializable {
      * @throws UnsupportedOperationException if image analysis is not supported by the implementation.
      * @throws AIException if image analysis fails.
      */
-    CompletableFuture<String> analyzeImageAsync(byte[] image, String prompt);
+    CompletableFuture<String> analyzeImageAsync(byte[] image, String prompt) throws AIException;
 
     /**
      * Generates alt text for an image suitable for accessibility purposes.
@@ -945,7 +945,7 @@ public interface AIService extends Serializable {
      * @throws UnsupportedOperationException if image analysis is not supported by the implementation.
      * @throws AIException if image analysis fails.
      */
-    CompletableFuture<String> generateAltTextAsync(byte[] image);
+    CompletableFuture<String> generateAltTextAsync(byte[] image) throws AIException;
 
 
     // Image Generation Capabilities ----------------------------------------------------------------------------------
@@ -979,7 +979,7 @@ public interface AIService extends Serializable {
      * @throws UnsupportedOperationException if image generation is not supported by the implementation.
      * @throws AIException if image generation fails.
      */
-    default CompletableFuture<byte[]> generateImageAsync(String prompt) {
+    default CompletableFuture<byte[]> generateImageAsync(String prompt) throws AIException {
         return generateImageAsync(prompt, GenerateImageOptions.DEFAULT);
     }
 
@@ -1014,7 +1014,7 @@ public interface AIService extends Serializable {
      * @throws UnsupportedOperationException if image generation is not supported by the implementation.
      * @throws AIException if image generation fails.
      */
-    CompletableFuture<byte[]> generateImageAsync(String prompt, GenerateImageOptions options);
+    CompletableFuture<byte[]> generateImageAsync(String prompt, GenerateImageOptions options) throws AIException;
 
 
     // Audio Transcription Capabilities ---------------------------------------------------------------------------------
