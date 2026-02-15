@@ -55,7 +55,7 @@ public interface AIAudioHandler extends Serializable {
      * @throws AIResponseException If the response cannot be parsed as JSON, contains an error object, or is missing expected transcription text.
      */
     default String parseTranscribeResponse(String responseBody) throws AIResponseException {
-        throw new UnsupportedOperationException("Please implement parseTranscribeResponse(String responseBody) method in class " + getClass().getSimpleName());
+        throw new UnsupportedOperationException("Please implement parseTranscribeResponse(String responseBody) for this AI provider");
     }
 
     /**
@@ -68,7 +68,7 @@ public interface AIAudioHandler extends Serializable {
      * @since 1.2
      */
     default JsonObject buildGenerateAudioPayload(AIService service, String text, GenerateAudioOptions options) {
-        throw new UnsupportedOperationException("Please implement buildGenerateAudioPayload(AIService service, String text, GenerateAudioOptions options) method in class " + getClass().getSimpleName());
+        throw new UnsupportedOperationException("Please implement buildGenerateAudioPayload(AIService service, String text, GenerateAudioOptions options) for this AI provider");
     }
 
     /**

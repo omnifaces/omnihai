@@ -64,7 +64,7 @@ public interface AIImageHandler extends Serializable {
      * @return The JSON request payload.
      */
     default JsonObject buildGenerateImagePayload(AIService service, String prompt, GenerateImageOptions options) {
-        throw new UnsupportedOperationException("Please implement buildGenerateImagePayload(AIService service, String prompt, GenerateImageOptions options) method in class " + getClass().getSimpleName());
+        throw new UnsupportedOperationException("Please implement buildGenerateImagePayload(AIService service, String prompt, GenerateImageOptions options) for this AI provider");
     }
 
     /**
@@ -75,6 +75,6 @@ public interface AIImageHandler extends Serializable {
      * @throws AIResponseException If the response cannot be parsed as JSON, contains an error object, or is missing expected image content.
      */
     default byte[] parseImageContent(String responseBody) throws AIResponseException {
-        throw new UnsupportedOperationException("Please implement parseImageContent(String responseBody) method in class " + getClass().getSimpleName());
+        throw new UnsupportedOperationException("Please implement parseImageContent(String responseBody) for this AI provider");
     }
 }

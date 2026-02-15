@@ -63,7 +63,7 @@ public interface AITextHandler extends Serializable {
      * or if structured output is requested but not supported as per {@link AIService#supportsStructuredOutput()}.
      */
     default JsonObject buildChatPayload(AIService service, ChatInput input, ChatOptions options, boolean streaming) {
-        throw new UnsupportedOperationException("Please implement buildChatPayload(AIService service, ChatInput input, ChatOptions options, boolean streaming) method in class " + getClass().getSimpleName());
+        throw new UnsupportedOperationException("Please implement buildChatPayload(AIService service, ChatInput input, ChatOptions options, boolean streaming) for this AI provider");
     }
 
     /**
@@ -75,7 +75,7 @@ public interface AITextHandler extends Serializable {
      * @return {@code true} to continue processing the stream, or {@code false} when end of stream is reached.
      */
     default boolean processChatStreamEvent(AIService service, Event event, Consumer<String> onToken) {
-        throw new UnsupportedOperationException("Please implement processStreamEvent(AIService service, Event event, Consumer<String> onToken) method in class " + getClass().getSimpleName());
+        throw new UnsupportedOperationException("Please implement processStreamEvent(AIService service, Event event, Consumer<String> onToken) for this AI provider");
     }
 
     /**
@@ -158,7 +158,7 @@ public interface AITextHandler extends Serializable {
      * @throws AIResponseException If the response cannot be parsed as JSON, contains an error object, or is missing expected file ID.
      */
     default String parseFileResponse(String responseBody) throws AIResponseException {
-        throw new UnsupportedOperationException("Please implement parseFileResponse(String responseBody) method in class " + getClass().getSimpleName());
+        throw new UnsupportedOperationException("Please implement parseFileResponse(String responseBody) for this AI provider");
     }
 
     /**
