@@ -26,7 +26,7 @@ import org.omnifaces.ai.mime.MimeType;
 /**
  * Base class for IT on image-generator-related methods of AI service.
  *
- * NOTE: this is a separate class because image generation might require a different model than e.g. image analysis.
+ * NOTE: this is a separate class from {@link BaseAIServiceImageHandlerIT} because image generation might require a different model than even image analysis.
  */
 abstract class BaseAIServiceImageGeneratorIT extends AIServiceIT {
 
