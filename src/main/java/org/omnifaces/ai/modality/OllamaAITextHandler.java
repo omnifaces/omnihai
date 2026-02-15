@@ -36,6 +36,9 @@ public class OllamaAITextHandler extends DefaultAITextHandler {
 
     private static final long serialVersionUID = 1L;
 
+    /**
+     * @see <a href="https://ollama.readthedocs.io/en/api/#generate-a-chat-completion">API Reference</a>
+     */
     @Override
     public JsonObject buildChatPayload(AIService service, ChatInput input, ChatOptions options, boolean streaming) {
         var messages = Json.createArrayBuilder();

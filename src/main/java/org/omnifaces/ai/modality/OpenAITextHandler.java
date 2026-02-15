@@ -50,6 +50,10 @@ public class OpenAITextHandler extends DefaultAITextHandler {
 
     private static final AIModelVersion GPT_5 = AIModelVersion.of("gpt", 5);
 
+    /**
+     * @see <a href="https://developers.openai.com/api/reference/chat-completions/overview">Chat Completions API Reference</a>
+     * @see <a href="https://developers.openai.com/api/reference/resources/responses/methods/create">Responses API Reference</a>
+     */
     @Override
     public JsonObject buildChatPayload(AIService service, ChatInput input, ChatOptions options, boolean streaming) {
         var currentModelVersion = service.getModelVersion();

@@ -31,7 +31,7 @@ public class OpenAIAudioHandler extends DefaultAIAudioHandler {
     private static final long serialVersionUID = 1L;
 
     /**
-     * @see <a href="https://developers.openai.com/api/reference/resources/audio/subresources/speech/methods/create">API reference</a>
+     * @see <a href="https://developers.openai.com/api/reference/resources/audio/subresources/speech/methods/create">API Reference</a>
      */
     @Override
     public JsonObject buildGenerateAudioPayload(AIService service, String text, GenerateAudioOptions options) {

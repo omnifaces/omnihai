@@ -44,7 +44,7 @@ public class GoogleAIAudioHandler extends DefaultAIAudioHandler {
     private static final long serialVersionUID = 1L;
 
     /**
-     * @see <a href="https://ai.google.dev/gemini-api/docs/speech-generation">API reference</a>
+     * @see <a href="https://ai.google.dev/gemini-api/docs/speech-generation">API Reference</a>
      */
     @Override
     public JsonObject buildGenerateAudioPayload(AIService service, String text, GenerateAudioOptions options) {

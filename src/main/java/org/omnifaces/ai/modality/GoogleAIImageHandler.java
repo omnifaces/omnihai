@@ -32,6 +32,9 @@ public class GoogleAIImageHandler extends DefaultAIImageHandler {
 
     private static final long serialVersionUID = 1L;
 
+    /**
+     * @see <a href="https://ai.google.dev/gemini-api/docs/image-generation">API Reference</a>
+     */
     @Override
     public JsonObject buildGenerateImagePayload(AIService service, String prompt, GenerateImageOptions options) {
         var generationConfig = Json.createObjectBuilder()

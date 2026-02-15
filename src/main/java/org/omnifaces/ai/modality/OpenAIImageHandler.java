@@ -32,6 +32,9 @@ public class OpenAIImageHandler extends DefaultAIImageHandler {
 
     private static final long serialVersionUID = 1L;
 
+    /**
+     * @see <a href="https://developers.openai.com/api/reference/resources/images/methods/generate">API Reference</a>
+     */
     @Override
     public JsonObject buildGenerateImagePayload(AIService service, String prompt, GenerateImageOptions options) {
         return Json.createObjectBuilder()

@@ -30,6 +30,9 @@ public class XAIImageHandler extends OpenAIImageHandler {
 
     private static final long serialVersionUID = 1L;
 
+    /**
+     * @see <a href="https://docs.x.ai/developers/rest-api-reference/inference/chat#image-generations">API Reference</a>
+     */
     @Override
     public JsonObject buildGenerateImagePayload(AIService service, String prompt, GenerateImageOptions options) {
         return Json.createObjectBuilder()

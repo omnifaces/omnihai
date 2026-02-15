@@ -41,6 +41,9 @@ public class GoogleAITextHandler extends DefaultAITextHandler {
 
     private static final long serialVersionUID = 1L;
 
+    /**
+     * @see <a href="https://ai.google.dev/gemini-api/docs/text-generation">API Reference</a>
+     */
     @Override
     public JsonObject buildChatPayload(AIService service, ChatInput input, ChatOptions options, boolean streaming) {
         var payload = Json.createObjectBuilder();

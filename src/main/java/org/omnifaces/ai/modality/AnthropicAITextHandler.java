@@ -50,6 +50,9 @@ public class AnthropicAITextHandler extends DefaultAITextHandler {
     private static final int DEFAULT_MAX_TOKENS_CLAUDE_3_0 = 4096;
     private static final int DEFAULT_MAX_TOKENS_CLAUDE_3_X = 8192;
 
+    /**
+     * @see <a href="https://platform.claude.com/docs/en/api/messages">API Reference</a>
+     */
     @Override
     public JsonObject buildChatPayload(AIService service, ChatInput input, ChatOptions options, boolean streaming) {
         var payload = Json.createObjectBuilder()
