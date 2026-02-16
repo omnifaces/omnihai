@@ -275,7 +275,7 @@ public abstract class BaseAIService implements AIService {
 
     /**
      * Describes the JSON structure of the file listing response, used by the clean up task of
-     * {@link BaseAIService#upload(Attachment)} to identify and delete stale uploads.
+     * {@link BaseAIService#upload(Attachment, ChatOptions)} to identify and delete stale uploads.
      *
      * @param filesArrayProperty JSON property name of the array containing file objects.
      * @param fileNameProperty JSON property name of the file name within each file object.
