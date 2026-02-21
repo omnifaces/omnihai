@@ -5,6 +5,8 @@
 
 # OmniHai
 
+*One API, any AI*
+
 A unified Java AI utility library for Jakarta EE or MicroProfile applications.
 
 ## Overview
