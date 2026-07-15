@@ -219,6 +219,70 @@ public class AnthropicAITextHandler extends DefaultAITextHandler {
             payload.add("stream", true);
         }
 
+        if (usesAdaptiveThinking(service)) {
+            buildAdaptiveThinkingConfig(service, payload, options);
+        }
+        else {
+            buildLegacyThinkingConfig(service, payload, options);
+        }
+
+        if (options.getJsonSchema() != null) {
+            checkSupportsStructuredOutput(service);
+            payload.add(
+                "output_format", Json.createObjectBuilder()
+                    .add("type", "json_schema")
+                    .add("schema", addStrictAdditionalProperties(options.getJsonSchema()))
+            );
+        }
+    }
+
+    /**
+     * Whether the model uses adaptive thinking (with {@code output_config.effort}) instead of the legacy fixed {@code thinking.budget_tokens}. This is the same
+     * model generation (Opus 4.7+, Sonnet 5+, Fable 5+) that dropped sampling parameters, so it keys off {@link AIService#supportsSamplingParameters()}: those
+     * models reject both {@code thinking.type.enabled} and {@code temperature}. Older models (Opus 4.6, Sonnet 4.6 and below) keep the legacy behavior.
+     *
+     * @param service The visiting AI service.
+     * @return Whether the model expects adaptive thinking rather than an explicit thinking budget.
+     * @since 1.5
+     */
+    protected boolean usesAdaptiveThinking(AIService service) {
+        return !service.supportsSamplingParameters();
+    }
+
+    /**
+     * Adds adaptive thinking config for models that reject {@code thinking.budget_tokens}. Maps the requested reasoning effort to {@code output_config.effort};
+     * {@link ReasoningEffort#NONE} disables thinking, {@link ReasoningEffort#AUTO} omits the field so the model applies its own default. Sampling parameters
+     * are intentionally not emitted, as these models reject them.
+     *
+     * @param service The visiting AI service.
+     * @param payload The payload builder.
+     * @param options The chat options.
+     * @since 1.5
+     */
+    protected void buildAdaptiveThinkingConfig(AIService service, JsonObjectBuilder payload, ChatOptions options) {
+        var effort = getEffectiveReasoningEffort(service, options);
+
+        switch (effort) {
+            case NONE -> payload.add("thinking", Json.createObjectBuilder().add("type", "disabled"));
+            case AUTO -> {
+                /* Omit thinking; the model applies its own adaptive default. */ }
+            case LOW, MEDIUM, HIGH, XHIGH -> {
+                payload.add("thinking", Json.createObjectBuilder().add("type", "adaptive"));
+                payload.add("output_config", Json.createObjectBuilder().add("effort", effort.name().toLowerCase()));
+            }
+        }
+    }
+
+    /**
+     * Adds legacy thinking config for models that still accept {@code thinking.budget_tokens} (Opus 4.6, Sonnet 4.6 and below). Falls back to sampling
+     * parameters ({@code temperature}, {@code top_p}) when no thinking budget applies; these models accept them.
+     *
+     * @param service The visiting AI service.
+     * @param payload The payload builder.
+     * @param options The chat options.
+     * @since 1.5
+     */
+    protected void buildLegacyThinkingConfig(AIService service, JsonObjectBuilder payload, ChatOptions options) {
         var thinkingBudget = resolveThinkingBudget(service, options);
 
         if (thinkingBudget > 0) {
@@ -235,15 +299,19 @@ public class AnthropicAITextHandler extends DefaultAITextHandler {
                 payload.add("top_p", options.getTopP());
             }
         }
+    }
 
-        if (options.getJsonSchema() != null) {
-            checkSupportsStructuredOutput(service);
-            payload.add(
-                "output_format", Json.createObjectBuilder()
-                    .add("type", "json_schema")
-                    .add("schema", addStrictAdditionalProperties(options.getJsonSchema()))
-            );
-        }
+    /**
+     * Returns the reasoning effort the server will effectively apply, after accounting for model capability. Anthropic natively supports all levels (including
+     * {@code xhigh}), so no capping is needed; an unsupported model resolves to {@link ReasoningEffort#NONE}.
+     *
+     * @param service The visiting AI service.
+     * @param options The chat options.
+     * @return The reasoning effort the server will effectively apply; never {@code null}.
+     * @since 1.5
+     */
+    protected ReasoningEffort getEffectiveReasoningEffort(AIService service, ChatOptions options) {
+        return service.supportsReasoningEffort() ? options.getReasoningEffort() : ReasoningEffort.NONE;
     }
 
     /**
@@ -270,11 +338,7 @@ public class AnthropicAITextHandler extends DefaultAITextHandler {
      * @since 1.4
      */
     protected int resolveThinkingBudget(AIService service, ChatOptions options) {
-        if (!service.supportsReasoningEffort()) {
-            return 0;
-        }
-
-        return (int) (computeEffectiveMaxTokens(service, options) * toBudgetRatio(options.getReasoningEffort()));
+        return (int) (computeEffectiveMaxTokens(service, options) * toBudgetRatio(getEffectiveReasoningEffort(service, options)));
     }
 
     /**
@@ -326,7 +390,7 @@ public class AnthropicAITextHandler extends DefaultAITextHandler {
      */
     @Override
     public String parseChatResponse(JsonObject responseJson) throws AIResponseException {
-        if ("server_tool_use".equals(findByPath(responseJson, "content[0].type").orElse(null))) {
+        if (findAllByPath(responseJson, "content[*].type").contains("server_tool_use")) { // Not just content[0]; newer models may lead with a thinking block.
             checkErrors(responseJson, getTextResponseErrorMessagePaths());
             var messageContentPaths = getChatResponseContentPaths();
 

@@ -61,6 +61,8 @@ public class AnthropicAIService extends BaseAIService {
     private static final AIModelVersion CLAUDE_4 = AIModelVersion.of("claude", 4);
     private static final AIModelVersion CLAUDE_OPUS_4_1 = AIModelVersion.of("claude-opus", 4, 1);
     private static final AIModelVersion CLAUDE_SONNET_4_5 = AIModelVersion.of("claude-sonnet", 4, 5);
+    private static final AIModelVersion CLAUDE_OPUS_4_7 = AIModelVersion.of("claude-opus", 4, 7);
+    private static final AIModelVersion CLAUDE_5 = AIModelVersion.of("claude", 5);
 
     /**
      * Constructs an Anthropic AI service with the specified configuration.
@@ -103,6 +105,11 @@ public class AnthropicAIService extends BaseAIService {
     @Override
     public boolean supportsReasoningEffort() {
         return getModelVersion().gte(CLAUDE_3_7);
+    }
+
+    @Override
+    public boolean supportsSamplingParameters() {
+        return !getModelVersion().gte(CLAUDE_OPUS_4_7, CLAUDE_5);
     }
 
     @Override

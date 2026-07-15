@@ -1579,6 +1579,19 @@ public interface AIService extends Serializable {
     }
 
     /**
+     * Checks whether this AI service implementation accepts sampling parameters such as {@code temperature} and {@code top_p}, which is usually determined by
+     * {@link #getModelName()} or {@link #getModelVersion()}. When {@code false}, the provider-specific handler omits these from the request payload, as some
+     * newer models reject them (e.g. they return an HTTP 400 for a non-default {@code temperature}) in favor of prompt-based steering.
+     *
+     * @implNote The default implementation returns true.
+     * @return Whether this AI service implementation accepts sampling parameters.
+     * @since 1.5
+     */
+    default boolean supportsSamplingParameters() {
+        return true;
+    }
+
+    /**
      * Checks whether the given modality is supported by this AI service, which is usually determined by {@link #getModelName()} or {@link #getModelVersion()}.
      * <p>
      * <strong>Important:</strong> This method provides a <em>hint</em> rather than a strict guarantee. Implementations are <em>not required</em> to enforce
