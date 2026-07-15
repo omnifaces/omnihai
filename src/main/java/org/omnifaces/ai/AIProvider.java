@@ -75,7 +75,7 @@ public enum AIProvider {
     /**
      * OpenAI: GPT, GPT mini, GPT nano, etc.
      * <p>
-     * Defaults currently to model {@code gpt-5.4-mini} at endpoint {@code https://api.openai.com/v1}.
+     * Defaults currently to model {@code gpt-5.6-terra} at endpoint {@code https://api.openai.com/v1}.
      *
      * @see OpenAIService
      * @see OpenAITextHandler
@@ -85,14 +85,14 @@ public enum AIProvider {
      * @see <a href="https://platform.openai.com/docs/models">Available OpenAI Models</a>
      */
     OPENAI(
-        "OpenAI", OpenAIService.class, true, "gpt-5.4-mini", "https://api.openai.com/v1", OpenAITextHandler.class, OpenAIImageHandler.class,
+        "OpenAI", OpenAIService.class, true, "gpt-5.6-terra", "https://api.openai.com/v1", OpenAITextHandler.class, OpenAIImageHandler.class,
         OpenAIAudioHandler.class
     ),
 
     /**
      * Anthropic: Claude Opus, Claude Sonnet, Claude Haiku, etc.
      * <p>
-     * Defaults currently to model {@code claude-sonnet-4-6} at endpoint {@code https://api.anthropic.com/v1}.
+     * Defaults currently to model {@code claude-sonnet-5} at endpoint {@code https://api.anthropic.com/v1}.
      *
      * @see AnthropicAIService
      * @see AnthropicAITextHandler
@@ -102,14 +102,14 @@ public enum AIProvider {
      * @see <a href="https://platform.claude.com/docs/en/about-claude/models/overview">Available Anthropic AI Models</a>
      */
     ANTHROPIC(
-        "Anthropic", AnthropicAIService.class, true, "claude-sonnet-4-6", "https://api.anthropic.com/v1", AnthropicAITextHandler.class,
+        "Anthropic", AnthropicAIService.class, true, "claude-sonnet-5", "https://api.anthropic.com/v1", AnthropicAITextHandler.class,
         DefaultAIImageHandler.class, DefaultAIAudioHandler.class
     ),
 
     /**
      * Google AI: Gemini Pro, Gemini Flash, Gemini Flash Lite, etc.
      * <p>
-     * Defaults currently to model {@code gemini-3-flash-preview} at endpoint {@code https://generativelanguage.googleapis.com/v1beta}.
+     * Defaults currently to model {@code gemini-3.5-flash} at endpoint {@code https://generativelanguage.googleapis.com/v1beta}.
      *
      * @see GoogleAIService
      * @see GoogleAITextHandler
@@ -119,14 +119,14 @@ public enum AIProvider {
      * @see <a href="https://ai.google.dev/gemini-api/docs/models">Available Google AI Models</a>
      */
     GOOGLE(
-        "Google AI", GoogleAIService.class, true, "gemini-3-flash-preview", "https://generativelanguage.googleapis.com/v1beta", GoogleAITextHandler.class,
+        "Google AI", GoogleAIService.class, true, "gemini-3.5-flash", "https://generativelanguage.googleapis.com/v1beta", GoogleAITextHandler.class,
         GoogleAIImageHandler.class, GoogleAIAudioHandler.class
     ),
 
     /**
      * xAI: Grok Fast Reasoning, Grok Non Reasoning, Grok Code, etc.
      * <p>
-     * Defaults currently to model {@code grok-4-1-fast-reasoning} at endpoint {@code https://api.x.ai/v1}.
+     * Defaults currently to model {@code grok-4.5} at endpoint {@code https://api.x.ai/v1}.
      *
      * @see XAIService
      * @see OpenAITextHandler
@@ -136,14 +136,14 @@ public enum AIProvider {
      * @see <a href="https://docs.x.ai/developers/models">Available xAI Models</a>
      */
     XAI(
-        "xAI", XAIService.class, true, "grok-4-1-fast-reasoning", "https://api.x.ai/v1", OpenAITextHandler.class, XAIImageHandler.class,
+        "xAI", XAIService.class, true, "grok-4.5", "https://api.x.ai/v1", OpenAITextHandler.class, XAIImageHandler.class,
         DefaultAIAudioHandler.class
     ),
 
     /**
      * Mistral AI: Mistral Large, Mistral Medium, Mistral Small, etc.
      * <p>
-     * Defaults currently to model {@code mistral-medium-2508} at endpoint {@code https://api.mistral.ai/v1}.
+     * Defaults currently to model {@code mistral-medium-3-5} at endpoint {@code https://api.mistral.ai/v1}.
      *
      * @see MistralAIService
      * @see MistralAITextHandler
@@ -153,7 +153,7 @@ public enum AIProvider {
      * @see <a href="https://docs.mistral.ai/getting-started/models/">Available Mistral AI Models</a>
      */
     MISTRAL(
-        "Mistral AI", MistralAIService.class, true, "mistral-medium-2508", "https://api.mistral.ai/v1", MistralAITextHandler.class, OpenAIImageHandler.class,
+        "Mistral AI", MistralAIService.class, true, "mistral-medium-3-5", "https://api.mistral.ai/v1", MistralAITextHandler.class, OpenAIImageHandler.class,
         DefaultAIAudioHandler.class
     ),
 
@@ -177,7 +177,7 @@ public enum AIProvider {
     /**
      * Azure OpenAI: Aggregates a broad range of AI models via a unified OpenAI-compatible API.
      * <p>
-     * Defaults currently to model {@code gpt-5.4-mini} at endpoint {@code https://{org.omnifaces.ai.AZURE_RESOURCE}.openai.azure.com/openai/v1}.
+     * Defaults currently to model {@code gpt-5.5} at endpoint {@code https://{org.omnifaces.ai.AZURE_RESOURCE}.openai.azure.com/openai/v1}.
      *
      * @see AzureAIService
      * @see AzureAITextHandler
@@ -187,14 +187,14 @@ public enum AIProvider {
      * @see <a href="https://ai.azure.com/catalog">Available Azure OpenAI Models</a>
      */
     AZURE(
-        "Azure OpenAI", AzureAIService.class, true, "gpt-5.4-mini", "https://{org.omnifaces.ai.AZURE_RESOURCE}.openai.azure.com/openai/v1",
+        "Azure OpenAI", AzureAIService.class, true, "gpt-5.5", "https://{org.omnifaces.ai.AZURE_RESOURCE}.openai.azure.com/openai/v1",
         AzureAITextHandler.class, OpenAIImageHandler.class, DefaultAIAudioHandler.class
     ),
 
     /**
      * OpenRouter: Aggregates a broad range of AI models via a unified OpenAI-compatible API.
      * <p>
-     * Defaults currently to model {@code deepseek/deepseek-v3.2} at endpoint {@code https://openrouter.ai/api/v1}.
+     * Defaults currently to model {@code deepseek/deepseek-v4-flash} at endpoint {@code https://openrouter.ai/api/v1}.
      *
      * @see OpenRouterAIService
      * @see OpenRouterAITextHandler
@@ -204,14 +204,14 @@ public enum AIProvider {
      * @see <a href="https://openrouter.ai/models">Available OpenRouter Models</a>
      */
     OPENROUTER(
-        "OpenRouter", OpenRouterAIService.class, true, "deepseek/deepseek-v3.2", "https://openrouter.ai/api/v1", OpenRouterAITextHandler.class,
+        "OpenRouter", OpenRouterAIService.class, true, "deepseek/deepseek-v4-pro", "https://openrouter.ai/api/v1", OpenRouterAITextHandler.class,
         OpenAIImageHandler.class, DefaultAIAudioHandler.class
     ),
 
     /**
      * Hugging Face: Aggregates a broad range of AI models via a unified OpenAI-compatible API.
      * <p>
-     * Defaults currently to model {@code google/gemma-4-26B-A4B-it} at endpoint {@code https://router.huggingface.co/v1}.
+     * Defaults currently to model {@code google/gemma-4-31B-it} at endpoint {@code https://router.huggingface.co/v1}.
      *
      * @see HuggingFaceAIService
      * @see OpenAITextHandler
@@ -221,7 +221,7 @@ public enum AIProvider {
      * @see <a href="https://huggingface.co/models">Available Hugging Face Models</a>
      */
     HUGGINGFACE(
-        "Hugging Face", HuggingFaceAIService.class, true, "google/gemma-4-26B-A4B-it", "https://router.huggingface.co/v1", OpenAITextHandler.class,
+        "Hugging Face", HuggingFaceAIService.class, true, "google/gemma-4-31B-it", "https://router.huggingface.co/v1", OpenAITextHandler.class,
         OpenAIImageHandler.class, DefaultAIAudioHandler.class
     ),
 
