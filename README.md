@@ -799,6 +799,7 @@ Bottom line: If you need a lightweight utility for AI chat/text operations in Ja
 - [Blog post: OmniHai 1.2: OmniHai finds its voice](https://balusc.omnifaces.org/2026/02/omnihai-finds-its-voice.html)
 - [Blog post: OmniHai 1.3: OmniHai goes online](https://balusc.omnifaces.org/2026/03/omnihai-goes-online.html)
 - [Blog post: OmniHai 1.4: OmniHai counts the cost](https://balusc.omnifaces.org/2026/04/omnihai-counts-cost.html)
+- [Blog post: OmniHai 1.5: OmniHai grows a backbone](https://balusc.omnifaces.org/2026/07/omnihai-grows-backbone.html)
 
 ## Credits
 
