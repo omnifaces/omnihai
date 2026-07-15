@@ -23,7 +23,6 @@ import org.omnifaces.ai.modality.DefaultAITextHandler;
 import org.omnifaces.ai.modality.GoogleAIAudioHandler;
 import org.omnifaces.ai.modality.GoogleAIImageHandler;
 import org.omnifaces.ai.modality.GoogleAITextHandler;
-import org.omnifaces.ai.modality.MetaAITextHandler;
 import org.omnifaces.ai.modality.MistralAITextHandler;
 import org.omnifaces.ai.modality.OllamaAITextHandler;
 import org.omnifaces.ai.modality.OpenAIAudioHandler;
@@ -159,19 +158,19 @@ public enum AIProvider {
     ),
 
     /**
-     * Meta AI: Llama Maverick, Llama Scout, Llama default, etc.
+     * Meta AI: Muse Spark, accessed via the OpenAI-compatible Meta Model API.
      * <p>
-     * Defaults currently to model {@code Llama-4-Maverick-17B-128E-Instruct-FP8} at endpoint {@code https://api.llama.com/v1}.
+     * Defaults currently to model {@code muse-spark-1.1} at endpoint {@code https://api.meta.ai/v1}.
      *
      * @see MetaAIService
-     * @see MetaAITextHandler
+     * @see OpenAITextHandler
      * @see OpenAIImageHandler
      * @see DefaultAIAudioHandler
-     * @see <a href="https://llama.developer.meta.com/docs/api-keys/">Manage Meta AI API Keys</a>
-     * @see <a href="https://llama.developer.meta.com/docs/models/">Available Meta AI Models</a>
+     * @see <a href="https://developer.meta.com/ai/products/meta-model-api/">Manage Meta AI API Keys</a>
+     * @see <a href="https://dev.meta.ai/docs/getting-started/overview/">Available Meta AI Models</a>
      */
     META(
-        "Meta AI", MetaAIService.class, true, "Llama-4-Maverick-17B-128E-Instruct-FP8", "https://api.llama.com/v1", MetaAITextHandler.class,
+        "Meta AI", MetaAIService.class, true, "muse-spark-1.1", "https://api.meta.ai/v1", OpenAITextHandler.class,
         OpenAIImageHandler.class, DefaultAIAudioHandler.class
     ),
 

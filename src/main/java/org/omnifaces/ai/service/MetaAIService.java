@@ -43,7 +43,7 @@ import org.omnifaces.ai.AIService;
  * @see OpenAIService
  * @see BaseAIService
  * @see AIService
- * @see <a href="https://llama.developer.meta.com/docs/overview/">API Reference</a>
+ * @see <a href="https://dev.meta.ai/docs/getting-started/overview/">API Reference</a>
  */
 public class MetaAIService extends OpenAIService {
 
@@ -61,7 +61,7 @@ public class MetaAIService extends OpenAIService {
 
     @Override
     public boolean supportsOpenAIResponsesApi() {
-        return false;
+        return true;
     }
 
     @Override
