@@ -23,6 +23,7 @@ import java.util.concurrent.CompletionException;
  * <li>{@link AIResponseException} - Response content errors (parsing, missing content)
  * <li>{@link AITokenLimitExceededException} - Token limit exceeded error
  * <li>{@link AIBudgetExceededException} - Cumulative cost cap exceeded
+ * <li>{@link AIStreamAbortedException} - Stream failed after already emitting tokens
  * </ul>
  *
  * @author Bauke Scholtz
@@ -31,6 +32,7 @@ import java.util.concurrent.CompletionException;
  * @see AIResponseException
  * @see AITokenLimitExceededException
  * @see AIBudgetExceededException
+ * @see AIStreamAbortedException
  */
 public class AIException extends RuntimeException {
 

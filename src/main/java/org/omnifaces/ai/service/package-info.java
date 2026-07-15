@@ -31,7 +31,11 @@
  * {@link java.net.http.HttpClient}.
  * <p>
  * {@link org.omnifaces.ai.service.AIServiceWrapper} is an abstract decorator that allows wrapping any {@link org.omnifaces.ai.AIService} instance to add or
- * override behaviour without modifying the underlying service.
+ * override behaviour without modifying the underlying service. {@link org.omnifaces.ai.service.InterceptingAIServiceWrapper} builds on it to funnel every
+ * operation through a single interception hook, which the ready-to-use resilience decorators {@link org.omnifaces.ai.service.RetryingAIService} and
+ * {@link org.omnifaces.ai.service.FailoverAIService} use to apply retry and failover uniformly across the entire service surface. Being pure decorators, they
+ * compose freely. When such a decorator re-attempts a streaming operation, a {@link org.omnifaces.ai.service.ResettableConsumer} lets the caller opt into
+ * restarting a partially consumed stream rather than aborting it.
  *
  * @see org.omnifaces.ai.AIProvider
  */
