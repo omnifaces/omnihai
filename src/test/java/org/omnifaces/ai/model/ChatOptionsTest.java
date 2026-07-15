@@ -713,6 +713,57 @@ class ChatOptionsTest {
     }
 
     // =================================================================================================================
+    // recordMessage / discardPendingUserMessage
+    // =================================================================================================================
+
+    @Test
+    void recordMessage_identicalConsecutiveUserMessages_appendsBoth() {
+        var options = ChatOptions.newBuilder().withMemory().build();
+
+        options.recordMessage(Role.USER, "yes");
+        options.recordMessage(Role.USER, "yes");
+
+        assertEquals(2, options.getHistory().size());
+    }
+
+    @Test
+    void discardPendingUserMessage_trailingUserMessage_removesIt() {
+        var options = ChatOptions.newBuilder().withMemory().build();
+        options.recordMessage(Role.USER, "yes");
+
+        options.discardPendingUserMessage();
+
+        assertTrue(options.getHistory().isEmpty());
+    }
+
+    @Test
+    void discardPendingUserMessage_trailingAssistantMessage_isNoOp() {
+        var options = ChatOptions.newBuilder().withMemory().build();
+        options.recordMessage(Role.USER, "yes");
+        options.recordMessage(Role.ASSISTANT, "Got it");
+
+        options.discardPendingUserMessage();
+
+        assertEquals(2, options.getHistory().size());
+    }
+
+    @Test
+    void discardPendingUserMessage_emptyHistory_isNoOp() {
+        var options = ChatOptions.newBuilder().withMemory().build();
+
+        options.discardPendingUserMessage();
+
+        assertTrue(options.getHistory().isEmpty());
+    }
+
+    @Test
+    void discardPendingUserMessage_nonMemoryOptions_throwsException() {
+        var options = ChatOptions.newBuilder().build();
+
+        assertThrows(IllegalStateException.class, options::discardPendingUserMessage);
+    }
+
+    // =================================================================================================================
     // getHistory - uploaded files inline
     // =================================================================================================================
 

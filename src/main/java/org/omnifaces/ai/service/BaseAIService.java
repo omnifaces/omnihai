@@ -64,6 +64,7 @@ import org.omnifaces.ai.helper.JsonHelper;
 import org.omnifaces.ai.helper.TextHelper;
 import org.omnifaces.ai.model.ChatInput;
 import org.omnifaces.ai.model.ChatInput.Attachment;
+import org.omnifaces.ai.model.ChatInput.Message;
 import org.omnifaces.ai.model.ChatInput.Message.Role;
 import org.omnifaces.ai.model.ChatOptions;
 import org.omnifaces.ai.model.ChatUsage;
@@ -185,10 +186,12 @@ public abstract class BaseAIService implements AIService {
     @Override
     public CompletableFuture<String> chatAsync(ChatInput input, ChatOptions options) throws AIException {
         options.checkBudget();
-        var effectiveInput = options.hasMemory() ? input.withHistory(options.getHistory()) : input;
+        var effectiveInput = options.hasMemory() ? input.withHistory(precedingHistory(options, input.getMessage())) : input;
 
+        // The user message must be recorded before the payload is built, because building it uploads any file attachments, and upload() anchors each file ID to
+        // the most recent user message.
         if (options.hasMemory()) {
-            options.recordMessage(Role.USER, input.getMessage());
+            recordUserMessage(options, input.getMessage());
         }
 
         var payload = textHandler.buildChatPayload(this, effectiveInput, options, false);
@@ -211,10 +214,11 @@ public abstract class BaseAIService implements AIService {
         }
 
         options.checkBudget();
-        var effectiveInput = options.hasMemory() ? input.withHistory(options.getHistory()) : input;
+        var effectiveInput = options.hasMemory() ? input.withHistory(precedingHistory(options, input.getMessage())) : input;
 
+        // See chatAsync(ChatInput, ChatOptions) for why the user message is recorded before the payload is built.
         if (options.hasMemory()) {
-            options.recordMessage(Role.USER, input.getMessage());
+            recordUserMessage(options, input.getMessage());
         }
 
         var payload = textHandler.buildChatPayload(this, effectiveInput, options, true);
@@ -238,6 +242,49 @@ public abstract class BaseAIService implements AIService {
 
                 throw AIException.asyncRequestFailed(exception, callerStackTrace);
             });
+    }
+
+    /**
+     * Records the current turn's user message, first discarding an identical one left behind by a failed prior attempt of the same request.
+     * <p>
+     * A re-attempt resends the identical message, so without this a retried or failed-over request would record the user message once per attempt and
+     * accumulate the file references each attempt anchored to it. The identity is decided on content, so a trailing user message recorded by an unrelated call
+     * or seeded manually is never mistaken for the current one and is left in place.
+     */
+    private static void recordUserMessage(ChatOptions options, String message) {
+        var history = options.getHistory();
+
+        if (!history.isEmpty()) {
+            var last = history.get(history.size() - 1);
+
+            if (last.role() == Role.USER && last.content().equals(message)) {
+                options.discardPendingUserMessage();
+            }
+        }
+
+        options.recordMessage(Role.USER, message);
+    }
+
+    /**
+     * Returns the conversation history preceding the current turn, i.e. everything recorded before the given user message.
+     * <p>
+     * The payload carries the prior turns while the text handler adds the current user message separately, so carrying the current user message here as well
+     * would make the request contain it twice. A trailing user message with the same content is such a current message, left behind by an attempt that failed
+     * before it could record an assistant response, and is therefore excluded. The comparison is on content rather than on position, so that a message recorded
+     * by an unrelated call is never mistaken for the current one.
+     */
+    private static List<Message> precedingHistory(ChatOptions options, String currentMessage) {
+        var history = options.getHistory();
+
+        if (!history.isEmpty()) {
+            var last = history.get(history.size() - 1);
+
+            if (last.role() == Role.USER && last.content().equals(currentMessage)) {
+                return List.copyOf(history.subList(0, history.size() - 1));
+            }
+        }
+
+        return List.copyOf(history);
     }
 
     // Files Implementation (for attaching files to chat) -------------------------------------------------------------

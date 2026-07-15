@@ -552,8 +552,10 @@ public interface AIService extends Serializable {
      * <p>
      * This is the core method for chat-based AI interactions.
      * <p>
-     * If the options are {@link ChatOptions#hasMemory() memory-enabled}, the conversation history will be automatically included in the request and updated
-     * with the user message and assistant response.
+     * If the options are {@link ChatOptions#hasMemory() memory-enabled}, the conversation history preceding this input is automatically included in the
+     * request, and the history is updated with the user message before the request is sent and with the assistant response upon successful completion.
+     * Re-attempting a failed request (e.g. via a resilience decorator) discards the identical user message the failed attempt left behind, so the user message
+     * is recorded only once.
      *
      * @param input The user's input containing message and file attachments.
      * @param options Chat options (system prompt, temperature, max tokens, memory, etc.).
@@ -680,8 +682,9 @@ public interface AIService extends Serializable {
      * <p>
      * This is the core method for streaming chat-based AI interactions with images.
      * <p>
-     * If the options are {@link ChatOptions#hasMemory() memory-enabled}, the conversation history will be automatically included in the request and updated
-     * with the user message and the accumulated assistant response upon completion.
+     * If the options are {@link ChatOptions#hasMemory() memory-enabled}, the conversation history preceding this input is automatically included in the
+     * request, and the history is updated with the user message before the request is sent and with the accumulated assistant response upon successful
+     * completion.
      * <p>
      * When {@link ChatOptions#useWebSearch() web search} is enabled, streaming is supported but intermediate tool-use activity (e.g., the model fetching search
      * results) produces no tokens in the {@code onToken} callback. The stream will appear paused during that phase and resume once the model begins writing its

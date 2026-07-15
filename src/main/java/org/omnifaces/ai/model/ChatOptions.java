@@ -45,6 +45,10 @@ import org.omnifaces.ai.model.ChatInput.UploadedFile;
  * <p>
  * This class provides configuration options for AI chat operations, including system prompt, JSON schema for structured output, temperature, max tokens, and
  * various sampling parameters.
+ * <p>
+ * <strong>Threading:</strong> a plain instance carries only configuration and may be freely shared. A {@link #hasMemory() memory-enabled} instance additionally
+ * carries mutable conversation state, and models exactly one sequential conversation: it must not be shared across concurrent chat calls. The conversation
+ * history is neither synchronized nor able to tell one caller's turn from another's, so concurrent use corrupts it. Give each conversation its own instance.
  *
  * @author Bauke Scholtz
  * @since 1.0
@@ -703,8 +707,8 @@ public class ChatOptions implements Serializable {
     /**
      * Records a message in the conversation history for this memory-enabled instance.
      * <p>
-     * This is automatically called by the AI service to record user messages before the API call and assistant responses after a successful response. It can
-     * also be called manually to seed the conversation with prior context.
+     * This is automatically called by the AI service to record assistant responses after a successful response. It can also be called manually to seed the
+     * conversation with prior context.
      * <p>
      * When the history exceeds the configured maximum (default {@value #DEFAULT_MAX_HISTORY} messages, counting both sent and received), the oldest messages
      * are automatically discarded to maintain the sliding window.
@@ -712,6 +716,7 @@ public class ChatOptions implements Serializable {
      * @param role The role of the message.
      * @param message The message content.
      * @throws IllegalStateException if this instance is not {@link #hasMemory() memory-enabled}.
+     * @see #discardPendingUserMessage()
      */
     public void recordMessage(Role role, String message) {
         if (!hasMemory()) {
@@ -722,6 +727,28 @@ public class ChatOptions implements Serializable {
 
         while (history.size() > maxHistory) {
             history.remove(0);
+        }
+    }
+
+    /**
+     * Discards a pending user message from the end of the conversation history, if there is one.
+     * <p>
+     * A pending user message is a trailing user message not yet followed by an assistant response. Since an assistant message is only recorded after a
+     * successful response, such a message marks a request that failed before completing. The AI service calls this before re-recording the user message of a
+     * re-attempted request, so that the request is not recorded once per attempt and the file references the failed attempt anchored to it are dropped. When
+     * the history is empty or ends in an assistant message, this does nothing.
+     *
+     * @throws IllegalStateException if this instance is not {@link #hasMemory() memory-enabled}.
+     * @since 1.5
+     * @see #recordMessage(Role, String)
+     */
+    public void discardPendingUserMessage() {
+        if (!hasMemory()) {
+            throw new IllegalStateException("Cannot discard message on non-memory ChatOptions; use withMemory() method to create a memory-enabled instance");
+        }
+
+        if (!history.isEmpty() && history.get(history.size() - 1).role() == Role.USER) {
+            history.remove(history.size() - 1);
         }
     }
 
