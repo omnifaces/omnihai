@@ -194,7 +194,7 @@ public enum AIProvider {
     /**
      * OpenRouter: Aggregates a broad range of AI models via a unified OpenAI-compatible API.
      * <p>
-     * Defaults currently to model {@code deepseek/deepseek-v4-flash} at endpoint {@code https://openrouter.ai/api/v1}.
+     * Defaults currently to model {@code deepseek/deepseek-v4-pro} at endpoint {@code https://openrouter.ai/api/v1}.
      *
      * @see OpenRouterAIService
      * @see OpenRouterAITextHandler
