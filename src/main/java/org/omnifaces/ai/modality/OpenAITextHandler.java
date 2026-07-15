@@ -170,16 +170,12 @@ public class OpenAITextHandler extends DefaultAITextHandler {
         addHistoryMessages(service, messages, input, false);
     }
 
-    private static void addHistoryMessages(AIService service, JsonArrayBuilder messages, ChatInput input, boolean supportsResponsesApi) {
+    private void addHistoryMessages(AIService service, JsonArrayBuilder messages, ChatInput input, boolean supportsResponsesApi) {
         for (var historyMessage : input.getHistory()) {
             if (supportsFilesApi(service)) {
                 var content = Json.createArrayBuilder();
                 for (var uploadedFile : historyMessage.uploadedFiles()) {
-                    content.add(
-                        Json.createObjectBuilder()
-                            .add("type", supportsResponsesApi ? "input_file" : "file")
-                            .add("file_id", uploadedFile.id())
-                    );
+                    addUploadedFileContent(service, content, uploadedFile.id(), supportsResponsesApi);
                 }
                 content.add(
                     Json.createObjectBuilder()
@@ -200,6 +196,24 @@ public class OpenAITextHandler extends DefaultAITextHandler {
                 );
             }
         }
+    }
+
+    /**
+     * Adds a content block referencing an already-uploaded file by id. Providers that do not accept a bare {@code file_id} content block can override this to
+     * emit their own shape (e.g. a signed {@code document_url}).
+     *
+     * @param service The visiting AI service.
+     * @param content The content array builder to add the block to.
+     * @param fileId The uploaded file id.
+     * @param supportsResponsesApi Whether the Responses API is active.
+     * @since 1.5
+     */
+    protected void addUploadedFileContent(AIService service, JsonArrayBuilder content, String fileId, boolean supportsResponsesApi) {
+        content.add(
+            Json.createObjectBuilder()
+                .add("type", supportsResponsesApi ? "input_file" : "file")
+                .add("file_id", fileId)
+        );
     }
 
     /**
@@ -228,7 +242,7 @@ public class OpenAITextHandler extends DefaultAITextHandler {
         addUserContent(service, messages, input, options, file -> getFileUploadMetadata(service, file), false);
     }
 
-    private static void addUserContent(
+    private void addUserContent(
         AIService service, JsonArrayBuilder messages, ChatInput input, ChatOptions options, Function<Attachment, Map<String, String>> getFileUploadMetadata,
         boolean supportsResponsesApi
     )
@@ -267,12 +281,7 @@ public class OpenAITextHandler extends DefaultAITextHandler {
             for (var file : remainingFiles) {
                 if (supportsFilesApi(service)) {
                     var fileId = service.upload(file.withMetadata(getFileUploadMetadata.apply(file)), options);
-
-                    content.add(
-                        Json.createObjectBuilder()
-                            .add("type", supportsResponsesApi ? "input_file" : "file")
-                            .add("file_id", fileId)
-                    );
+                    addUploadedFileContent(service, content, fileId, supportsResponsesApi);
                 }
                 else if (supportsResponsesApi) {
                     content.add(

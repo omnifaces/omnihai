@@ -51,8 +51,12 @@ public class MistralAIService extends OpenAIService {
 
     private static final long serialVersionUID = 1L;
 
+    // Mistral mixes two id schemes: legacy dated (YYMM, e.g. mistral-medium-2508) and semantic (e.g. mistral-medium-3-5).
+    // A dated major dwarfs a semantic one numerically, so each id must be gated against the floor of its own scheme.
+    private static final int MIN_DATED_MAJOR_VERSION = 100;
     private static final AIModelVersion MISTRAL_2402 = AIModelVersion.of("mistral", 2402);
     private static final AIModelVersion MISTRAL_2603 = AIModelVersion.of("mistral", 2603);
+    private static final AIModelVersion MISTRAL_3_5 = AIModelVersion.of("mistral", 3, 5);
     private static final AIModelVersion VOXTRAL = AIModelVersion.of("voxtral");
     private static final AIModelVersion VOXTRAL_MINI = AIModelVersion.of("voxtral-mini");
 
@@ -79,7 +83,7 @@ public class MistralAIService extends OpenAIService {
 
     @Override
     public boolean supportsStreaming() {
-        return getModelVersion().gte(MISTRAL_2402) || getModelName().toLowerCase().endsWith("latest");
+        return isAtLeast(MISTRAL_2402, MISTRAL_3_5) || getModelName().toLowerCase().endsWith("latest");
     }
 
     @Override
@@ -94,7 +98,7 @@ public class MistralAIService extends OpenAIService {
 
     @Override
     public boolean supportsReasoningEffort() {
-        return getModelVersion().gte(MISTRAL_2603) || getModelName().toLowerCase().endsWith("latest");
+        return isAtLeast(MISTRAL_2603, MISTRAL_3_5) || getModelName().toLowerCase().endsWith("latest");
     }
 
     @Override
@@ -115,6 +119,42 @@ public class MistralAIService extends OpenAIService {
     @Override
     public boolean supportsOpenAITranscriptionCapability() {
         return getModelVersion().gte(VOXTRAL_MINI);
+    }
+
+    /**
+     * Fetches a short-lived signed URL for an uploaded file. Mistral chat models reference uploaded documents by signed {@code document_url} rather than by a
+     * bare file id.
+     *
+     * @param fileId The uploaded file id.
+     * @return A signed, fetchable URL for the file.
+     * @since 1.5
+     */
+    public String getSignedUrl(String fileId) {
+        return HTTP_CLIENT.get(this, getFilesPath() + "/" + fileId + "/url").join().getString("url");
+    }
+
+    /**
+     * Whether this model references an uploaded document by a signed {@code document_url} (semantic-versioned models such as {@code mistral-medium-3-5}) rather
+     * than by a bare {@code file_id} content block (legacy dated models such as {@code mistral-medium-2508}, which reject {@code document_url}).
+     *
+     * @return Whether uploaded documents are referenced by signed URL.
+     * @since 1.5
+     */
+    public boolean supportsSignedUrl() {
+        return getModelVersion().majorVersion() < MIN_DATED_MAJOR_VERSION;
+    }
+
+    /**
+     * Gates the current model against the appropriate floor for its id scheme: {@code datedFloor} for legacy dated ids (YYMM major), {@code semanticFloor} for
+     * semantic ids. This avoids a semantic floor (small major) spuriously matching every dated id, or vice versa.
+     *
+     * @param datedFloor the minimum version for dated ids.
+     * @param semanticFloor the minimum version for semantic ids.
+     * @return whether the current model version is at least the floor of its own scheme.
+     */
+    private boolean isAtLeast(AIModelVersion datedFloor, AIModelVersion semanticFloor) {
+        var version = getModelVersion();
+        return version.majorVersion() >= MIN_DATED_MAJOR_VERSION ? version.gte(datedFloor) : version.gte(semanticFloor);
     }
 
 }

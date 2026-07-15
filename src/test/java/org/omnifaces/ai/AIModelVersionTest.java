@@ -97,6 +97,22 @@ class AIModelVersionTest {
         assertEquals(0, version.minorVersion());
     }
 
+    @Test
+    void ofFullModelName_mistralMediumSemantic() {
+        var version = AIModelVersion.of("mistral-medium-3-5");
+        assertEquals("mistral-medium", version.modelName());
+        assertEquals(3, version.majorVersion());
+        assertEquals(5, version.minorVersion());
+    }
+
+    @Test
+    void ofFullModelName_mistralMediumDated() {
+        var version = AIModelVersion.of("mistral-medium-2508");
+        assertEquals("mistral-medium", version.modelName());
+        assertEquals(2508, version.majorVersion());
+        assertEquals(0, version.minorVersion());
+    }
+
     // =================================================================================================================
     // Test factory method of(String modelName, int majorVersion, int minorVersion)
     // =================================================================================================================
