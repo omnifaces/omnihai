@@ -550,34 +550,28 @@ private AIService trackedService;
 
 ## Service Wrapper
 
-`AIServiceWrapper` is an abstract decorator base class that lets you wrap any `AIService` and intercept specific methods. All methods delegate to the wrapped service by default, so you only override what you need.
+`AIServiceWrapper` is an abstract decorator base class that lets you wrap any `AIService` and intercept specific methods. All methods delegate to the wrapped service by default, so you only override what you need — useful for cost tracking, caching, auditing, or A/B testing between providers.
 
-A practical example is a provider fallback: if the primary service is rate-limited or temporarily unavailable, transparently retry on a backup provider:
+Note that `AIServiceWrapper` delegates each overload straight to the identical overload on the wrapped service, so overriding a single method (e.g. `chatAsync(ChatInput, ChatOptions)`) intercepts *only* that exact overload — calls made through other overloads (`chat(String)`, `summarize(...)`, the image/audio methods, …) bypass it. To intercept every operation uniformly, extend `InterceptingAIServiceWrapper` and implement its two `intercept` / `interceptAsync` hooks instead.
+
+### Resilience
+
+OmniHai ships two ready-to-use resilience decorators built on `InterceptingAIServiceWrapper`, so they apply across the entire service surface — chat, image, audio, moderation, etc. — synchronous and asynchronous alike.
+
+**Retry.** `RetryingAIService` retries transient failures (HTTP 429 rate limit, HTTP 503 unavailable, transient I/O) with exponential backoff and full jitter:
 
 ```java
-public class FallbackAIService extends AIServiceWrapper {
+AIService resilient = new RetryingAIService(service); // 3 attempts, sensible defaults
 
-    private final AIService fallback;
-
-    public FallbackAIService(AIService primary, AIService fallback) {
-        super(primary);
-        this.fallback = fallback;
-    }
-
-    @Override
-    public CompletableFuture<String> chatAsync(ChatInput input, ChatOptions options) throws AIException {
-        return super.chatAsync(input, options).exceptionallyCompose(exception -> {
-            var cause = exception instanceof CompletionException ? exception.getCause() : exception;
-            if (cause instanceof AIRateLimitExceededException || cause instanceof AIServiceUnavailableException) {
-                return fallback.chatAsync(input, options);
-            }
-            return CompletableFuture.failedFuture(exception);
-        });
-    }
-}
+AIService tuned = RetryingAIService.newBuilder(service)
+    .maxAttempts(5)
+    .initialBackoff(Duration.ofSeconds(1))
+    .maxBackoff(Duration.ofSeconds(20))
+    .maxDuration(Duration.ofMinutes(1))
+    .build();
 ```
 
-Wire it up by composing two injected services:
+**Failover.** `FailoverAIService` tries a primary service, then falls back to alternates in order on those same transient failures:
 
 ```java
 @Inject @AI(apiKey = "#{keys.openai}")
@@ -586,11 +580,42 @@ private AIService gpt;
 @Inject @AI(provider = ANTHROPIC, apiKey = "#{keys.anthropic}")
 private AIService claude;
 
-AIService resilient = new FallbackAIService(gpt, claude);
+AIService resilient = new FailoverAIService(gpt, claude);
 String response = resilient.chat("Explain the Jakarta EE security model.");
 ```
 
-From the caller's perspective it is just an `AIService`. Other use cases include rate limiting, caching, cost tracking, or A/B testing between providers.
+Being pure decorators, they compose — retry each provider before failing over to the next:
+
+```java
+AIService resilient = new FailoverAIService(
+    new RetryingAIService(gpt),
+    new RetryingAIService(claude));
+```
+
+By default both trigger on rate limiting, service unavailability, and transient I/O, but never on deterministic errors such as a bad request or authentication failure (an alternate provider or a retry would fail the same way). Customize the condition via `RetryingAIService.Builder.retryOn(...)` or `FailoverAIService.Builder.failoverOn(...)`.
+
+From the caller's perspective each is just an `AIService`.
+
+#### Streaming
+
+Re-attempting a `chatStream(…)` replays it from the start, which would leave the token consumer holding a duplicated prefix. Both decorators therefore re-attempt a stream only while it is safe to do so:
+
+- Fails **before** any token was emitted → retried or failed over transparently. Nothing was delivered, so nothing can be duplicated.
+- Fails **after** one or more tokens were emitted → the operation is abandoned with a terminal `AIStreamAbortedException` (the original failure is its cause), rather than silently corrupting what you accumulated.
+
+To opt into restarting a partially consumed stream, pass a `ResettableConsumer` instead of a plain `Consumer<String>`. It is notified right before each new attempt, so it can discard the stale prefix:
+
+```java
+StringBuilder response = new StringBuilder();
+
+service.chatStream(message, ResettableConsumer.of(
+    token -> response.append(token),
+    (cause, attempt) -> response.setLength(0))); // previous attempt's tokens are stale
+```
+
+Note that `chatStream` is the only operation with this hazard; every other operation delivers its result once, atomically, on completion.
+
+Conversation memory composes safely with both decorators: a memory-enabled `ChatOptions` records the user message before the request is sent (file attachments are uploaded and anchored to it while the payload is built), but re-recording the same user message replaces it rather than appending. A retried or failed-over chat therefore leaves exactly one user message in the history, and only the successful attempt's file references survive.
 
 ## OmniHai vs LangChain4J vs Spring AI vs Jakarta Agentic
 
