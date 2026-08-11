@@ -24,6 +24,8 @@ import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
 
+import jakarta.json.JsonObject;
+
 import org.junit.jupiter.api.Test;
 import org.omnifaces.ai.AIConfig;
 import org.omnifaces.ai.AIProvider;
@@ -32,8 +34,6 @@ import org.omnifaces.ai.model.ChatInput;
 import org.omnifaces.ai.model.ChatInput.Attachment;
 import org.omnifaces.ai.model.ChatInput.Message.Role;
 import org.omnifaces.ai.model.ChatOptions;
-
-import jakarta.json.JsonObject;
 
 /**
  * Validates the conversation-memory recording contract of {@link BaseAIService}:
