@@ -838,6 +838,8 @@ Reach for LangChain4J or Spring AI when you need native function calling with pe
 
 No tools, embeddings, RAG, or agents. This isn't a gap - it's a design choice. OmniHai is a utility library, not a framework.
 
+Tool use does not require native function calling, though: provider-enforced structured outputs are enough to let the model pick a tool and let your own code execute it. See [Tool Use Without Function Calling](#tool-use-without-function-calling).
+
 ### Positioning
 
 | Library | Analogy |
