@@ -24,7 +24,7 @@ OmniHai provides a single, consistent API to interact with multiple AI providers
 <dependency>
     <groupId>org.omnifaces</groupId>
     <artifactId>omnihai</artifactId>
-    <version>1.5-SNAPSHOT</version>
+    <version>1.6</version>
 </dependency>
 ```
 That's all for Jakarta EE / MicroProfile runtimes. No additional dependencies needed.
@@ -36,7 +36,7 @@ On non-Jakarta EE / non-MicroProfile runtimes such as Tomcat, you'll need to man
 <dependency>
     <groupId>org.eclipse.parsson</groupId>
     <artifactId>parsson</artifactId>
-    <version>1.1.7</version>
+    <version>1.1.9</version>
 </dependency>
 
 <!-- CDI implementation (optional, for @AI injection) -->
@@ -50,7 +50,7 @@ On non-Jakarta EE / non-MicroProfile runtimes such as Tomcat, you'll need to man
 <dependency>
     <groupId>smallrye.config</groupId>
     <artifactId>smallrye-config</artifactId>
-    <version>3.15.1</version>
+    <version>3.18.1</version>
 </dependency>
 ```
 
