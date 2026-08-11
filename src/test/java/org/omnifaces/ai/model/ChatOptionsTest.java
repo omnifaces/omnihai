@@ -20,8 +20,6 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.util.List;
-
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.ObjectInputStream;
@@ -29,6 +27,7 @@ import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.util.Currency;
+import java.util.List;
 
 import jakarta.json.Json;
 
@@ -1838,6 +1837,74 @@ class ChatOptionsTest {
         var restored = ChatOptions.fromJson(json);
 
         assertNull(restored.getMaxTotalCost());
+    }
+
+    // Accounting shared across derived instances -----------------------------------------------------------------------
+
+    /**
+     * A {@code withXxx} method derives another view on the same conversation, so usage recorded through the derived instance is visible on the original. This
+     * is what keeps token and cost tracking working when a decorator has to derive an instance to make the call, such as to impose a JSON schema.
+     */
+    @Test
+    void withJsonSchema_sharesUsageWithTheOriginal() {
+        var options = ChatOptions.newBuilder().build();
+        var derived = options.withJsonSchema(Json.createObjectBuilder().add("type", "object").build());
+
+        derived.recordUsage(new ChatUsage(10, 20, 0, 0));
+
+        assertEquals(options.getLastUsage(), derived.getLastUsage());
+        assertNotNull(options.getLastUsage());
+    }
+
+    /**
+     * A budget cap bounds the conversation, not the instance, so spending through a derived instance counts towards the original's cap.
+     */
+    @Test
+    void withJsonSchema_accumulatesTotalCostOnTheOriginal() {
+        var pricing = ChatPricing.of(new BigDecimal("1000000"), new BigDecimal("1000000"));
+        var options = ChatOptions.newBuilder().pricing(pricing, new BigDecimal("100")).build();
+        var derived = options.withJsonSchema(Json.createObjectBuilder().add("type", "object").build());
+
+        derived.recordUsage(new ChatUsage(10, 20, 0, 0));
+
+        assertEquals(options.getTotalCost(), derived.getTotalCost());
+        assertEquals(0, options.getTotalCost().compareTo(new BigDecimal("30")));
+    }
+
+    /**
+     * Setting a new cap starts a new budget window, as documented, rather than inheriting what was already spent.
+     */
+    @Test
+    void withPricing_andCap_startsAFreshTotalCost() {
+        var pricing = ChatPricing.of(new BigDecimal("1000000"), new BigDecimal("1000000"));
+        var options = ChatOptions.newBuilder().pricing(pricing).build();
+        options.recordUsage(new ChatUsage(10, 20, 0, 0));
+
+        var recapped = options.withPricing(pricing, new BigDecimal("100"));
+
+        assertEquals(BigDecimal.ZERO, recapped.getTotalCost());
+    }
+
+    /**
+     * The shared constants are one instance serving every caller, so each instance derived from one is a conversation of its own.
+     */
+    @Test
+    void withSystemPrompt_onSharedDefault_doesNotShareAccountingBetweenDerivedInstances() {
+        var one = ChatOptions.DEFAULT.withSystemPrompt("one");
+        var other = ChatOptions.DEFAULT.withSystemPrompt("other");
+
+        one.recordUsage(new ChatUsage(10, 20, 0, 0));
+
+        assertNotNull(one.getLastUsage());
+        assertNull(other.getLastUsage());
+    }
+
+    @Test
+    void copy_startsAFreshAccounting() {
+        var options = ChatOptions.newBuilder().build();
+        options.recordUsage(new ChatUsage(10, 20, 0, 0));
+
+        assertNull(options.copy().getLastUsage());
     }
 
 }

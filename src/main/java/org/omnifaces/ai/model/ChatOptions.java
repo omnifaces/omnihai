@@ -46,9 +46,12 @@ import org.omnifaces.ai.model.ChatInput.UploadedFile;
  * This class provides configuration options for AI chat operations, including system prompt, JSON schema for structured output, temperature, max tokens, and
  * various sampling parameters.
  * <p>
- * <strong>Threading:</strong> a plain instance carries only configuration and may be freely shared. A {@link #hasMemory() memory-enabled} instance additionally
- * carries mutable conversation state, and models exactly one sequential conversation: it must not be shared across concurrent chat calls. The conversation
- * history is neither synchronized nor able to tell one caller's turn from another's, so concurrent use corrupts it. Give each conversation its own instance.
+ * <strong>Threading:</strong> a plain instance carries only configuration and may be freely shared, except that it shares its {@link #getLastUsage() usage} and
+ * {@link #getTotalCost() cost} accounting with every instance derived from it via a {@code withXxx} method, as those model one and the same conversation.
+ * Recording is atomic, but a budget cap therefore bounds the conversation as a whole; give each conversation its own instance via {@link #copy()} when you want
+ * separate bills. A {@link #hasMemory() memory-enabled} instance additionally carries mutable conversation state, and models exactly one sequential
+ * conversation: it must not be shared across concurrent chat calls. The conversation history is neither synchronized nor able to tell one caller's turn from
+ * another's, so concurrent use corrupts it. Give each conversation its own instance.
  *
  * @author Bauke Scholtz
  * @since 1.0
@@ -187,12 +190,56 @@ public class ChatOptions implements Serializable {
     private final List<Message> history;
     /** The maximum number of messages retained in the conversation history. */
     private final int maxHistory;
-    /** The token usage recorded for the most recent chat call made with this instance. */
-    private transient ChatUsage lastUsage;
-    /** The cumulative cost across all calls made with this instance. */
-    private transient BigDecimal totalCost = BigDecimal.ZERO;
+    /** The token usage and cumulative cost, shared with the instances derived from this one via a {@code withXxx} method. */
+    private transient volatile Accounting accounting = new Accounting();
     /** Whether this instance is a shared default constant and therefore immutable. */
     private boolean immutable;
+
+    /**
+     * The runtime accounting of a conversation: the usage of its most recent call and the cumulative cost of all of them.
+     * <p>
+     * A {@code withXxx} method derives a new {@code ChatOptions} for the same conversation, which therefore keeps one bill rather than starting a new one.
+     */
+    private static final class Accounting {
+
+        private ChatUsage lastUsage;
+        private BigDecimal totalCost = BigDecimal.ZERO;
+
+        private synchronized void record(ChatUsage usage, ChatPricing pricing) {
+            lastUsage = usage;
+
+            if (pricing != null && usage != null) {
+                var cost = usage.calculateCost(pricing);
+
+                if (cost != null) {
+                    totalCost = totalCost.add(cost.totalCost());
+                }
+            }
+        }
+
+        private synchronized ChatUsage getLastUsage() {
+            return lastUsage;
+        }
+
+        private synchronized BigDecimal getTotalCost() {
+            return totalCost;
+        }
+
+        private synchronized void reset() {
+            totalCost = BigDecimal.ZERO;
+        }
+
+    }
+
+    /**
+     * Returns the accounting to hand to an instance derived from this one. A shared default constant hands out a fresh one, as every instance derived from it
+     * is a conversation of its own.
+     *
+     * @return The accounting to hand to an instance derived from this one.
+     */
+    private Accounting sharedAccounting() {
+        return isDefault() ? new Accounting() : accounting;
+    }
 
     private ChatOptions(Builder builder) {
         this.systemPrompt = builder.systemPrompt;
@@ -220,7 +267,7 @@ public class ChatOptions implements Serializable {
 
     private ChatOptions(
         String systemPrompt, JsonObject jsonSchema, double temperature, Integer maxTokens, ReasoningEffort reasoningEffort, double topP,
-        Location webSearchLocation, ChatPricing pricing, BigDecimal maxTotalCost, List<Message> history, int maxHistory
+        Location webSearchLocation, ChatPricing pricing, BigDecimal maxTotalCost, List<Message> history, int maxHistory, Accounting accounting
     )
     {
         this.systemPrompt = systemPrompt;
@@ -234,6 +281,7 @@ public class ChatOptions implements Serializable {
         this.maxTotalCost = maxTotalCost;
         this.history = history;
         this.maxHistory = maxHistory;
+        this.accounting = accounting;
     }
 
     private ChatOptions(ChatOptions source) {
@@ -274,7 +322,7 @@ public class ChatOptions implements Serializable {
         if (jsonSchemaString != null) {
             jsonSchema = parseJson(jsonSchemaString);
         }
-        this.totalCost = BigDecimal.ZERO;
+        this.accounting = new Accounting();
     }
 
     /**
@@ -324,19 +372,22 @@ public class ChatOptions implements Serializable {
     }
 
     /**
-     * Returns a copy of this instance with the given JSON schema set, preserving all other options including any shared {@link #hasMemory() memory} state.
+     * Returns a copy of this instance with the given JSON schema set, preserving all other options including any shared {@link #hasMemory() memory} state and
+     * the usage and cost accounting.
      *
      * @param jsonSchema The JSON schema to use for structured output.
      * @return A new {@code ChatOptions} instance with the specified JSON schema.
      */
     public ChatOptions withJsonSchema(JsonObject jsonSchema) {
         return new ChatOptions(
-            systemPrompt, jsonSchema, temperature, maxTokens, reasoningEffort, topP, webSearchLocation, pricing, maxTotalCost, history, maxHistory
+            systemPrompt, jsonSchema, temperature, maxTokens, reasoningEffort, topP, webSearchLocation, pricing, maxTotalCost, history, maxHistory,
+            sharedAccounting()
         );
     }
 
     /**
-     * Returns a copy of this instance with the given system prompt set, preserving all other options including any shared {@link #hasMemory() memory} state.
+     * Returns a copy of this instance with the given system prompt set, preserving all other options including any shared {@link #hasMemory() memory} state and
+     * the usage and cost accounting.
      *
      * @param systemPrompt The system prompt to use for providing high-level instructions to the model.
      * @return A new {@code ChatOptions} instance with the specified system prompt.
@@ -344,13 +395,14 @@ public class ChatOptions implements Serializable {
      */
     public ChatOptions withSystemPrompt(String systemPrompt) {
         return new ChatOptions(
-            systemPrompt, jsonSchema, temperature, maxTokens, reasoningEffort, topP, webSearchLocation, pricing, maxTotalCost, history, maxHistory
+            systemPrompt, jsonSchema, temperature, maxTokens, reasoningEffort, topP, webSearchLocation, pricing, maxTotalCost, history, maxHistory,
+            sharedAccounting()
         );
     }
 
     /**
      * Returns a copy of this instance with web search enabled for the given location, preserving all other options including any shared {@link #hasMemory()
-     * memory} state.
+     * memory} state and the usage and cost accounting.
      * <p>
      * Pass {@link Location#GLOBAL} to enable web search without restricting it to a specific region. Pass {@code null} to disable web search.
      *
@@ -361,11 +413,14 @@ public class ChatOptions implements Serializable {
      * @see #getWebSearchLocation()
      */
     public ChatOptions withWebSearch(Location location) {
-        return new ChatOptions(systemPrompt, jsonSchema, temperature, maxTokens, reasoningEffort, topP, location, pricing, maxTotalCost, history, maxHistory);
+        return new ChatOptions(
+            systemPrompt, jsonSchema, temperature, maxTokens, reasoningEffort, topP, location, pricing, maxTotalCost, history, maxHistory, sharedAccounting()
+        );
     }
 
     /**
-     * Returns a copy of this instance with the given reasoning effort set, preserving all other options including any shared {@link #hasMemory() memory} state.
+     * Returns a copy of this instance with the given reasoning effort set, preserving all other options including any shared {@link #hasMemory() memory} state
+     * and the usage and cost accounting.
      *
      * @param reasoningEffort The reasoning effort to use. Must not be {@code null}; use {@link ReasoningEffort#AUTO} to defer to the provider default.
      * @return A new {@code ChatOptions} instance with the specified reasoning effort.
@@ -376,13 +431,14 @@ public class ChatOptions implements Serializable {
     public ChatOptions withReasoningEffort(ReasoningEffort reasoningEffort) {
         return new ChatOptions(
             systemPrompt, jsonSchema, temperature, maxTokens, requireNonNull(reasoningEffort, "reasoningEffort"), topP, webSearchLocation, pricing,
-            maxTotalCost, history, maxHistory
+            maxTotalCost, history, maxHistory, sharedAccounting()
         );
     }
 
     /**
-     * Returns a copy of this instance with the given pricing set, preserving all other options including any shared {@link #hasMemory() memory} state. Any
-     * previously configured {@link #getMaxTotalCost() budget cap} is cleared; use {@link #withPricing(ChatPricing, BigDecimal)} to set both at once.
+     * Returns a copy of this instance with the given pricing set, preserving all other options including any shared {@link #hasMemory() memory} state and the
+     * usage and cost accounting. Any previously configured {@link #getMaxTotalCost() budget cap} is cleared; use {@link #withPricing(ChatPricing, BigDecimal)}
+     * to set both at once.
      *
      * @param pricing The pricing configuration to use for cost calculations, or {@code null} to clear pricing.
      * @return A new {@code ChatOptions} instance with the specified pricing.
@@ -391,12 +447,15 @@ public class ChatOptions implements Serializable {
      * @see #getLastCost()
      */
     public ChatOptions withPricing(ChatPricing pricing) {
-        return new ChatOptions(systemPrompt, jsonSchema, temperature, maxTokens, reasoningEffort, topP, webSearchLocation, pricing, null, history, maxHistory);
+        return new ChatOptions(
+            systemPrompt, jsonSchema, temperature, maxTokens, reasoningEffort, topP, webSearchLocation, pricing, null, history, maxHistory, sharedAccounting()
+        );
     }
 
     /**
      * Returns a copy of this instance with the given pricing and cumulative-cost cap set, preserving all other options including any shared {@link #hasMemory()
-     * memory} state. The returned instance starts with a fresh zero {@link #getTotalCost() total cost} counter.
+     * memory} state. Unlike the other {@code withXxx} methods it starts a fresh accounting, so both the {@link #getTotalCost() total cost} counter and the
+     * {@link #getLastUsage() last usage} begin empty, as a new cap opens a new budget window.
      *
      * @param pricing The pricing configuration. Must not be {@code null}.
      * @param maxTotalCost The cumulative-cost cap. Must not be {@code null} and must be strictly positive.
@@ -418,13 +477,15 @@ public class ChatOptions implements Serializable {
         }
 
         return new ChatOptions(
-            systemPrompt, jsonSchema, temperature, maxTokens, reasoningEffort, topP, webSearchLocation, pricing, maxTotalCost, history, maxHistory
+            systemPrompt, jsonSchema, temperature, maxTokens, reasoningEffort, topP, webSearchLocation, pricing, maxTotalCost, history, maxHistory,
+            new Accounting()
         );
     }
 
     /**
      * Returns a mutable copy of this instance, preserving all options and any shared {@link #hasMemory() memory} state, but starting with no
-     * {@link #getLastUsage() last usage} recorded.
+     * {@link #getLastUsage() last usage} recorded and a zero {@link #getTotalCost() total cost}. Any {@link #getMaxTotalCost() budget cap} is preserved, so a
+     * copy starts a fresh budget window under the same cap.
      * <p>
      * This is the recommended way to obtain a dedicated, mutable instance from one of the shared constants ({@link #DEFAULT}, {@link #CREATIVE},
      * {@link #DETERMINISTIC}) when you want to track token usage:
@@ -565,7 +626,7 @@ public class ChatOptions implements Serializable {
      * @see AIBudgetExceededException
      */
     public BigDecimal getTotalCost() {
-        return totalCost;
+        return accounting.getTotalCost();
     }
 
     /**
@@ -584,7 +645,7 @@ public class ChatOptions implements Serializable {
             );
         }
 
-        this.totalCost = BigDecimal.ZERO;
+        accounting.reset();
     }
 
     /**
@@ -595,6 +656,8 @@ public class ChatOptions implements Serializable {
      * @since 1.4
      */
     public void checkBudget() {
+        var totalCost = accounting.getTotalCost();
+
         if (maxTotalCost != null && totalCost.compareTo(maxTotalCost) >= 0) {
             throw new AIBudgetExceededException(totalCost, maxTotalCost, pricing != null ? pricing.currency() : null);
         }
@@ -665,7 +728,7 @@ public class ChatOptions implements Serializable {
             );
         }
 
-        return lastUsage;
+        return accounting.getLastUsage();
     }
 
     /**
@@ -801,15 +864,7 @@ public class ChatOptions implements Serializable {
             );
         }
 
-        this.lastUsage = usage;
-
-        if (pricing != null && usage != null) {
-            var cost = usage.calculateCost(pricing);
-
-            if (cost != null) {
-                this.totalCost = this.totalCost.add(cost.totalCost());
-            }
-        }
+        accounting.record(usage, pricing);
     }
 
     /**
