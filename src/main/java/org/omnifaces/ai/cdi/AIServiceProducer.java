@@ -12,6 +12,7 @@
  */
 package org.omnifaces.ai.cdi;
 
+import static java.util.Arrays.stream;
 import static java.util.Collections.emptyMap;
 import static org.omnifaces.ai.cdi.BaseExpressionResolver.looksLikeExpression;
 import static org.omnifaces.ai.cdi.BaseExpressionResolver.looksLikeMicroProfileConfigExpression;
@@ -19,6 +20,7 @@ import static org.omnifaces.ai.cdi.ELExpressionResolver.resolveELExpression;
 import static org.omnifaces.ai.cdi.MicroProfileConfigExpressionResolver.resolveMicroProfileConfigExpression;
 import static org.omnifaces.ai.helper.TextHelper.stripToNull;
 
+import java.lang.annotation.Annotation;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -36,6 +38,8 @@ import org.omnifaces.ai.AIService;
 import org.omnifaces.ai.AIStrategy;
 import org.omnifaces.ai.AITextHandler;
 import org.omnifaces.ai.service.RetryingAIService;
+import org.omnifaces.ai.service.ToolCallingAIService;
+import org.omnifaces.ai.tool.ToolRegistry;
 
 /**
  * CDI producer for {@link AIService} instances based on the {@link AI} qualifier annotation.
@@ -97,7 +101,56 @@ class AIServiceProducer {
         var config = new AIConfig(provider, apiKey, model, endpoint, prompt, AIStrategy.of(textHandler, imageHandler, audioHandler), emptyMap());
         var service = serviceCache.computeIfAbsent(config, AIConfig::createService);
 
-        return annotation.maxAttempts() > 1 ? RetryingAIService.newBuilder(service).maxAttempts(annotation.maxAttempts()).build() : service;
+        if (annotation.maxAttempts() > 1) {
+            service = RetryingAIService.newBuilder(service).maxAttempts(annotation.maxAttempts()).build();
+        }
+
+        if (annotation.tools().length > 0) {
+            service = new ToolCallingAIService(service, resolveTools(annotation, beanManager), annotation.maxToolCalls(), null);
+        }
+
+        return service;
+    }
+
+    /**
+     * Resolves the {@link AI#tools()} classes as CDI beans and registers their tools.
+     *
+     * @param annotation The AI qualifier annotation.
+     * @param beanManager The CDI bean manager.
+     * @return The registry of the tools the AI may call.
+     * @throws IllegalArgumentException If a tool class has no CDI bean, or resolves to a {@link Dependent} one.
+     */
+    private static ToolRegistry resolveTools(AI annotation, BeanManager beanManager) {
+        var group = annotation.toolGroup() == Annotation.class ? null : annotation.toolGroup();
+        var builder = ToolRegistry.newBuilder();
+        stream(annotation.tools()).forEach(type -> builder.add(group, type, resolveBean(type, beanManager)));
+        return builder.build();
+    }
+
+    /**
+     * Resolves the given type as a contextual reference, insisting on a normal scope so that the tools observe their own scope and interceptors on every call
+     * rather than being pinned to the lifecycle of the injection point.
+     *
+     * @param type The tool class to resolve.
+     * @param beanManager The CDI bean manager.
+     * @return The contextual reference.
+     * @throws IllegalArgumentException If the type has no CDI bean, or resolves to a {@link Dependent} one.
+     */
+    private static Object resolveBean(Class<?> type, BeanManager beanManager) {
+        var bean = beanManager.resolve(beanManager.getBeans(type));
+
+        if (bean == null) {
+            throw new IllegalArgumentException("The tool class " + type.getName() + " of an @AI annotation is not a CDI bean.");
+        }
+
+        if (bean.getScope() == Dependent.class) {
+            throw new IllegalArgumentException(
+                "The tool class " + type.getName() + " of an @AI annotation must be normal-scoped, e.g. @ApplicationScoped or @RequestScoped,"
+                    + " but it was @Dependent."
+            );
+        }
+
+        return beanManager.getReference(bean, type, beanManager.createCreationalContext(bean));
     }
 
     /**

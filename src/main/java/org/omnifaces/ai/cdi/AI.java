@@ -19,6 +19,7 @@ import static java.lang.annotation.ElementType.PARAMETER;
 import static java.lang.annotation.ElementType.TYPE;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
+import java.lang.annotation.Annotation;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 
@@ -32,6 +33,9 @@ import org.omnifaces.ai.AIService;
 import org.omnifaces.ai.AITextHandler;
 import org.omnifaces.ai.model.ChatOptions;
 import org.omnifaces.ai.service.RetryingAIService;
+import org.omnifaces.ai.service.ToolCallingAIService;
+import org.omnifaces.ai.tool.AITool;
+import org.omnifaces.ai.tool.AIToolGroup;
 
 /**
  * CDI qualifier annotation for injecting configured {@link AIService} instances.
@@ -193,5 +197,39 @@ public @interface AI {
      */
     @Nonbinding
     int maxAttempts() default 1;
+
+    /**
+     * The classes declaring the {@link AITool} annotated methods the AI may call before it answers. Each is resolved as a CDI bean, which must be normal-scoped
+     * so that its own scope and interceptors apply on every call.
+     * <p>
+     * The produced service composes tool calling around retrying, so that a {@link #maxAttempts() retry} re-attempts a single provider call rather than
+     * replaying the whole tool loop and every side effect it already caused.
+     *
+     * @return The classes declaring the tools the AI may call.
+     * @since 1.6
+     * @see AIService#withTools(Object...)
+     */
+    @Nonbinding
+    Class<?>[] tools() default {};
+
+    /**
+     * The group to narrow {@link #tools()} to, itself annotated with {@link AIToolGroup}. Defaults to {@link Annotation} to signify no narrowing.
+     *
+     * @return The group to narrow the tools to.
+     * @since 1.6
+     * @see AIToolGroup
+     */
+    @Nonbinding
+    Class<? extends Annotation> toolGroup() default Annotation.class;
+
+    /**
+     * The maximum number of tool calls before the AI must answer. Exceeding it throws {@link org.omnifaces.ai.exception.AIToolIterationException} on the
+     * untyped chat methods, and forces the typed answer on the typed ones. Ignored when {@link #tools()} is empty.
+     *
+     * @return The maximum number of tool calls before the AI must answer, at least 1.
+     * @since 1.6
+     */
+    @Nonbinding
+    int maxToolCalls() default ToolCallingAIService.DEFAULT_MAX_TOOL_CALLS;
 
 }

@@ -629,178 +629,235 @@ Note that `chatStream` is the only operation with this hazard; every other opera
 
 Conversation memory composes safely with both decorators: a memory-enabled `ChatOptions` records the user message before the request is sent (file attachments are uploaded and anchored to it while the payload is built), but re-recording the same user message replaces it rather than appending. A retried or failed-over chat therefore leaves exactly one user message in the history, and only the successful attempt's file references survive.
 
-## Recipes
+## Tool Use
 
-### Tool Use Without Function Calling
-
-OmniHai has no function calling, but structured outputs are enforced provider-side (OpenAI `response_format`, Anthropic `output_format`, Google `responseSchema`, Ollama `format`), so the model's reply is reliably parseable.
-That is enough to run a tool-use loop against your own beans: let the model pick a tool, execute it yourself, feed the result back as the next turn.
-
-The example below answers customer questions over an existing order repository.
+Let the AI call your own methods before it answers. Annotate them with `@AITool` and hand the object over:
 
 ```java
 @ApplicationScoped
-public class SupportAgent {
-
-    private static final int MAX_ITERATIONS = 6;
-
-    private static final String TOOL_MANIFEST = """
-        You are a support agent for an online shop. Answer the customer's question.
-        Call exactly one tool per turn, or answer directly once you have enough information.
-
-        Available tools:
-        - FIND_ORDER(orderId)          -> status, date, total, items
-        - FIND_ORDERS_BY_EMAIL(email)  -> the customer's 5 most recent orders
-        - REFUND_WINDOW(orderId)       -> whether the order is still refundable
-
-        Never invent order data. If a tool returns nothing, say so.
-        To propose a refund, answer with the amount and the reason; a human approves it.
-        """;
-
-    public enum Action { CALL_TOOL, ANSWER }
-
-    public enum Tool { FIND_ORDER, FIND_ORDERS_BY_EMAIL, REFUND_WINDOW }
-
-    public record AgentStep(Action action, Optional<Tool> tool, Map<String, String> arguments, Optional<String> answer) {}
-
-    @Inject @AI(provider = ANTHROPIC, apiKey = "${keys.anthropic}")
-    private AIService ai;
+public class OrderTools {
 
     @Inject
     private OrderRepository orders;
 
-    public String handle(String question) {
-        ChatOptions options = ChatOptions.newBuilder()
-            .systemPrompt(TOOL_MANIFEST)
-            .withMemory(60)
-            .temperature(0)
-            .pricing(ChatPricing.of(new BigDecimal("3.00"), new BigDecimal("15.00")), new BigDecimal("0.25"))
-            .build();
-
-        String input = question;
-
-        for (int iteration = 0; iteration < MAX_ITERATIONS; iteration++) {
-            AgentStep step = ai.chat(input, options, AgentStep.class);
-
-            if (step.action() == ANSWER) {
-                return step.answer().orElseThrow();
-            }
-
-            input = "TOOL RESULT (%s): %s".formatted(step.tool().orElseThrow(), invoke(step));
-        }
-
-        throw new IllegalStateException("Agent did not converge within " + MAX_ITERATIONS + " turns");
+    @ReadOnly
+    @AITool("Looks up a single order by id")
+    public String findOrder(@AIToolParam(value = "The order id", name = "orderId") long orderId) {
+        return orders.findById(orderId).map(Order::toSummary).orElse("No order found with that id.");
     }
 
-    private String invoke(AgentStep step) {
-        try {
-            return switch (step.tool().orElseThrow()) {
-                case FIND_ORDER -> orders.findById(Long.valueOf(step.arguments().get("orderId")))
-                    .map(Order::toSummary)
-                    .orElse("No order found with that id.");
-                case FIND_ORDERS_BY_EMAIL -> orders.findByEmail(step.arguments().get("email"), Limit.of(5))
-                    .stream()
-                    .map(Order::toSummary)
-                    .collect(joining("\n"));
-                case REFUND_WINDOW -> orders.findById(Long.valueOf(step.arguments().get("orderId")))
-                    .map(order -> order.isRefundable() ? "Refundable until " + order.getRefundDeadline() : "Refund window expired.")
-                    .orElse("No order found with that id.");
-            };
-        }
-        catch (Exception e) {
-            return "Tool failed: " + e.getMessage();
-        }
+    @AITool("Lists the orders placed by a customer")
+    public String listOrdersByEmail(@AIToolParam(value = "The customer email", name = "email") String email) {
+        return orders.findByEmail(email).stream().map(Order::toSummary).collect(joining("\n"));
     }
+
+    @AITool("Issues a refund for an order")
+    public Refund refund(@AIToolParam(value = "The order id", name = "orderId") long orderId) {
+        return orders.refund(orderId);
+    }
+
 }
 ```
 
-Five details that make this work in production:
-
-- **Declare the tool set as an enum.** It becomes a JSON `enum` constraint in the generated schema, so the model cannot name a tool that does not exist, and the `switch` stays exhaustive when you add one.
-- **Feed failures back instead of throwing.** A malformed id or a missing row returns a message the model can read, and it retries with a corrected argument. This self-correction is the main thing the loop buys you over a single call.
-- **Cap the iterations.** The loop bounds latency; `pricing(…, maxTotalCost)` bounds spend and raises `AIBudgetExceededException` rather than running away.
-- **Keep writes out of the tool set.** The agent reads and proposes; a human commits. Reversibility is what makes the accuracy acceptable.
-- **Size the memory window for tool traffic.** Tool results are messages too, so the 20-message default is quickly consumed.
-
-#### What You Gain
-
-The loop is ordinary Java in your own bean, which puts the orchestration entirely under your control.
-
-Tools execute on the calling thread, so they run inside your transaction with CDI, JNDI and security context already in scope.
-There is no callback executor to configure and no context to propagate.
-
-Cost and model choice are per turn, not per session.
-A cheap model can drive tool selection while an expensive one writes the final answer:
-
 ```java
-AgentStep step = router.chat(input, options, AgentStep.class);         // cheap model picks the tool
-...
-return writer.chat("Answer the customer.", options);                   // capable model composes the reply
+@Inject @AI(apiKey = "#{keys.openai}")
+private AIService gpt;
+
+AIService agent = gpt.withTools(orderTools);
+String answer = agent.chat("Where is order 42?");
 ```
 
-Because conversation state lives in `ChatOptions` rather than in a session object, a run can be suspended and resumed elsewhere.
-That makes human-in-the-loop approval a persistence problem instead of a threading problem:
+On the CDI path the tools are named on the qualifier itself, and the classes are resolved as beans:
 
 ```java
-if (step.action() == ANSWER && needsApproval(step)) {
-    approvals.save(ticketId, options.toJson()); // park it; no thread or session is held
-    return "Escalated for approval.";
-}
+@Inject
+@AI(apiKey = "#{keys.openai}", tools = OrderTools.class, toolGroup = ReadOnly.class,
+    maxToolCalls = 4, maxAttempts = 3)
+private AIService agent;
+```
 
-// later, in another request, possibly on another node
+The tool beans must be normal-scoped, e.g. `@ApplicationScoped` or `@RequestScoped`, so that they observe their own scope and their own interceptors on every call; a `@Dependent` one is rejected at injection time. Retrying and tool calling compose in the order described under [bounding the loop](#bounding-and-observing-the-loop) regardless of the order you write the attributes in. The observer is not expressible as an annotation constant, so it remains programmatic.
+
+Each turn the AI either names a tool or answers. A named tool is invoked with its arguments converted to the declared parameter types, the return value is fed back, and the next turn begins, until the AI answers or the tool call cap is exhausted. Tools work the same on every provider, as they ride on the same provider-enforced structured outputs as `chat(message, MyRecord.class)` rather than on provider-native function calling.
+
+The tool name is derived from the method name in upper snake case, so `findOrder` becomes `FIND_ORDER`, and the manifest handed to the AI is generated from the descriptions. A tool may return anything; what the AI is handed is its `toString()`, so return something which reads as an answer. A record does nicely, a bare `true` does not. Tools are listed in a stable order, so that the manifest is identical from one call to the next and the provider's prompt cache keeps hitting.
+
+The declaring class must be `public`, and `@AIToolParam` needs an explicit `name` unless you compile with `-parameters`. Both are checked when the tools are registered, not when the AI first calls one. An injected bean is a container proxy whose methods carry no parameter names of their own, so the class behind the proxy is what gets scanned; hand `ToolRegistry.newBuilder().add(group, declaringClass, instance)` the class explicitly if your container's proxies are not recognised.
+
+Providers differ in how strictly they enforce the schema, so whatever shape the AI puts its arguments in is accepted as long as it unambiguously carries a name and a value.
+
+### Declaring Tools Programmatically
+
+`ToolRegistry` is the programmatic counterpart of the `@AITool` annotation, in the same way `AIConfig` is the programmatic counterpart of the `@AI` qualifier. A method reference cannot carry a name, a description or its parameter names, as those are erased, so state them:
+
+```java
+ToolRegistry tools = ToolRegistry.newBuilder()
+    .add("FIND_ORDER", "Looks up a single order by id", orders::findById, ToolParam.of(long.class, "orderId", "The order id"))
+    .add("LIST_OPEN_ORDERS", "Lists all open orders", orders::findOpen) // no arguments to describe
+    .add(shippingTools)                                                 // mixes fine with annotated objects
+    .build();
+
+AIService agent = aiService.withTools(tools);
+```
+
+A tool taking one or two parameters keeps their Java types, so the lambda receives a real `Long` rather than a string. For three or more, pass the parameters as a list and a function taking an `Object[]`, whose values arrive in the order you declared them.
+
+### Grouping Tools
+
+The unit of grouping is the object you hand over, and `withTools` is varargs, so a class is a toolset. For subsets which cut across classes, such as read-only versus mutating, tag the methods with your own annotation declared as an `@AIToolGroup`:
+
+```java
+@AIToolGroup
+@Retention(RUNTIME)
+@Target(METHOD)
+public @interface ReadOnly {}
+```
+
+```java
+AIService tier1      = aiService.withTools(ReadOnly.class, orderTools); // FIND_ORDER only
+AIService supervisor = aiService.withTools(orderTools, shippingTools);  // everything
+```
+
+Narrowing applies to the generated response schema rather than to a check afterwards, so `tier1` cannot name `REFUND` at all: the token is not in the grammar the model decodes against.
+
+### Bounding and Observing the Loop
+
+The tool call cap bounds latency and spend, and defaults to five. The turn after the last permitted call is offered no tool at all: the schema for that turn enumerates only the answer, so a model which keeps reaching for tools is denied the tokens to name one rather than merely asked to stop, which is what a weaker model ignores. `AIToolIterationException` is therefore the backstop for a provider which does not enforce the schema, and means the conversation is not converging rather than that a tool failed. On the typed methods the cap forces the typed answer instead of throwing, as the call which produces it carries your own schema and offers no tool to begin with. An observer receives every tool call after it ran, which is the audit point for logging and metrics. It cannot gate a call, as the tool has already executed by then; see [owning the loop](#owning-the-loop) when you need approval before a tool runs:
+
+```java
+AIService agent = new ToolCallingAIService(aiService, ToolRegistry.of(orderTools), 4, invocation -> {
+    if (invocation.hasFailed()) {
+        log.warn("Tool {} failed: {}", invocation.toolName(), invocation.failure().getMessage());
+    }
+    else {
+        log.info("Tool {} called with {}", invocation.toolName(), invocation.arguments());
+    }
+});
+```
+
+A tool which throws, or whose arguments cannot be converted, is reported back to the AI rather than aborting the call, so it can correct itself and try again. This self-correction is the main thing the loop buys you over a single call. An `Error` is not reported back but rethrown, as it is not something the AI can work around. What the AI is told about a failure is deliberately bounded: an argument it got wrong is quoted back verbatim, while an exception thrown by the tool itself is reduced to "the call did not complete" and logged, so that a stack trace, a SQL error or a constraint message cannot reach the AI and be repeated to a user. The observer still receives the exception.
+
+The synchronous `chat` methods invoke tools on the calling thread, so they observe its transaction, scope and security context. The asynchronous ones invoke them on whichever thread completes the provider call, where none of that applies — use the synchronous ones for tools which touch a database or a scoped bean.
+
+Two things to know before pointing this at a memory-enabled `ChatOptions`. Every turn is a chat call of its own, so each tool call and result lands in the conversation history, and one tool-heavy question can fill the sliding window; give the loop its own options when the history should hold only questions and answers. And whatever a tool returns is fed to the AI as text, so a tool returning user-supplied data — an order note, a ticket body — is an indirect prompt-injection channel like any other untrusted input. Keep tools which act on the world out of the set, and let a human confirm what the AI proposes.
+
+Compose with the resilience decorators in this order, so that a retry re-attempts a single provider call rather than replaying the whole loop and every side effect it already caused:
+
+```java
+AIService agent = new RetryingAIService(aiService).withTools(orderTools);
+```
+
+Tool use and a typed result each want the one response schema a provider call carries, so they take a turn each. The loop runs on its own schema, and the turn which would have answered is asked again for your type instead, with every tool result still in front of it:
+
+```java
+public record Delivery(String carrier, LocalDate estimated) {}
+
+Delivery delivery = agent.chat("Where is order 42?", Delivery.class);
+```
+
+That costs one extra call, and only when you ask for a type: five tool calls take six provider calls untyped and seven typed. Streaming cannot be combined with tools at all, as the tool the AI picks is only known once its reply is complete, so `chatStream(...)` on a tool calling service throws `UnsupportedOperationException` rather than quietly answering without the tools.
+
+Other limits: the AI calls one tool per turn rather than several at once, there is no way to force a specific tool, and arguments are converted from strings rather than typed per tool on the wire. Reach for LangChain4J or Spring AI when you need native function calling with per-tool argument schemas.
+
+### Owning the Loop
+
+The loop above runs to completion inside `chat(...)`, which leaves three things out of reach: approving a tool call *before* it runs, suspending a run and resuming it elsewhere, and using a different model for different turns. The observer cannot do the first, as it is notified once the tool has already executed.
+
+Writing the loop yourself gets all three, at the cost of the prompt handling the built-in one does for you. Structured outputs are enforced provider-side, so the model's choice is reliably parseable:
+
+```java
+public enum Action { FIND_ORDER, REFUND, ANSWER }
+
+public record AgentStep(Action action, Map<String, String> arguments, Optional<String> answer) {}
+
+public String handle(String question, ChatOptions options) {
+    String input = question;
+
+    for (int iteration = 0; iteration < MAX_ITERATIONS; iteration++) {
+        AgentStep step = ai.chat(input, options, AgentStep.class);
+
+        if (step.action() == ANSWER) {
+            return step.answer().orElseThrow();
+        }
+
+        if (needsApproval(step)) {
+            approvals.save(ticketId, options.toJson()); // Park it; no thread and no session is held.
+            return "Escalated for approval.";
+        }
+
+        input = "TOOL RESULT (%s): %s".formatted(step.action(), execute(step));
+    }
+
+    throw new IllegalStateException("Did not converge within " + MAX_ITERATIONS + " turns");
+}
+```
+
+Because the conversation lives in `ChatOptions` rather than in the service, the parked run resumes in another request, on another node:
+
+```java
 ChatOptions resumed = ChatOptions.fromJson(approvals.load(ticketId));
 String reply = ai.chat("The supervisor approved. Send the reply.", resumed);
 ```
 
-Every turn is also a natural audit point: inspect `options.getLastUsage()` and `options.getLastCost()` after each call, log the chosen tool and its arguments, or reject a step before executing it.
+The same shape lets a cheap model pick the tool and a capable one write the final answer, by calling a different `AIService` per turn.
 
-#### What You Give Up
+What you give up is everything `@AITool` does for you: the manifest is prose which drifts from the methods it describes, arguments arrive as strings you convert and validate yourself, and the instructions which keep a weaker model from re-calling a tool it already called, or from spending its last turn on another call, are yours to write. Prefer `withTools(...)` unless you need to interrupt the loop.
 
-Control over orchestration is finer here; control over the model's tool interface is coarser.
-
-One schema serves every turn, so arguments arrive as strings rather than per-tool typed values, and validation is yours to write.
-The model calls one tool per turn where native function calling can request several at once, and there is no equivalent of forcing a specific tool.
-The manifest also occupies the system prompt on every turn instead of a dedicated `tools` field, though a stable prefix means providers with prompt caching charge little for it.
-
-The pattern therefore covers small tool sets with simple arguments, which is the common case in business applications.
-Reach for LangChain4J or Spring AI when you need native function calling with per-tool argument validation.
-
-## OmniHai vs LangChain4J vs Spring AI vs Jakarta Agentic
+## OmniHai vs LangChain4J vs Spring AI vs Jakarta Agentic AI
 
 ### Philosophy
 
 | Aspect | OmniHai | LangChain4J | Spring AI | Jakarta Agentic |
 |--------|--------|-------------|-----------|-----------------|
 | **Target Runtime** | Jakarta EE / MicroProfile | Any Java | Spring | Jakarta EE |
-| **Philosophy** | Minimal, focused utility | Comprehensive toolkit | Spring integration | Standard specification |
-| **Dependencies** | JSON-P only (CDI/EL/MP-config optional) | Multiple modules | Spring framework | TBD (in development) |
-| **Learning Curve** | Low | Medium-High | Medium (if Spring-familiar) | TBD |
+| **Philosophy** | Minimal, focused utility | Comprehensive toolkit | Spring integration | Standard specification for agent workflows |
+| **Dependencies** | JSON-P only (CDI/EL/MP-config optional) | Multiple modules | Spring framework | `jakarta.ai.agent` API plus an implementation |
+| **Learning Curve** | Low | Medium-High | Medium (if Spring-familiar) | Medium (workflow annotations) |
 
 ### Feature Comparison
 
-| Feature | OmniHai | LangChain4J | Spring AI | Jakarta Agentic |
-|---------|--------|-------------|-----------|-----------------|
-| **Chat/Completion** | ✅ | ✅ | ✅ | ✅ (planned) |
-| **Streaming** | ✅ | ✅ | ✅ | TBD |
-| **Structured Outputs** | ✅ | ✅ | ✅ | TBD |
-| **File Attachments** | ✅ | ✅ | ✅ | TBD |
-| **Function Calling** | ❌ ([recipe](#tool-use-without-function-calling)) | ✅ | ✅ | TBD |
-| **RAG Support** | ❌ | ✅ (extensive) | ✅ | TBD |
-| **Vector Stores** | ❌ | ✅ (many) | ✅ (many) | TBD |
-| **Embeddings** | ❌ | ✅ | ✅ | TBD |
-| **Image Analysis** | ✅ | ✅ | ✅ | TBD |
-| **Image Generation** | ✅ | ✅ | ✅ | TBD |
-| **Audio Transcription** | ✅ (native + fallback) | ✅ | ✅ | TBD |
-| **Audio Generation (TTS)** | ✅ | ✅ | ✅ | TBD |
-| **Content Moderation** | ✅ (native + fallback) | ❌ (via chat) | ❌ (via chat) | TBD |
-| **Translation** | ✅ | ❌ (via chat) | ❌ (via chat) | TBD |
-| **Proofreading** | ✅ | ❌ (via chat) | ❌ (via chat) | TBD |
-| **Summarization** | ✅ | ❌ (via chat) | ❌ (via chat) | TBD |
-| **Memory/History** | ✅ | ✅ | ✅ | TBD |
-| **Token Usage Tracking** | ✅ | ✅ | ✅ | TBD |
-| **Web Search** | ✅ (built-in) | ✅ | ✅ | TBD |
-| **Agents** | ❌ | ✅ | ✅ | ✅ (core focus) |
-| **Prompt Templates** | ❌ | ✅ | ✅ | TBD |
+| Feature | OmniHai | LangChain4J | Spring AI |
+|---------|--------|-------------|-----------|
+| **Chat/Completion** | ✅ | ✅ | ✅ |
+| **Streaming** | ✅ | ✅ | ✅ |
+| **Structured Outputs** | ✅ | ✅ | ✅ |
+| **File Attachments** | ✅ | ✅ | ✅ |
+| **Function Calling** | ✅ (schema-based) | ✅ | ✅ |
+| **RAG Support** | ❌ | ✅ (extensive) | ✅ |
+| **Vector Stores** | ❌ | ✅ (many) | ✅ (many) |
+| **Embeddings** | ❌ | ✅ | ✅ |
+| **Image Analysis** | ✅ | ✅ | ✅ |
+| **Image Generation** | ✅ | ✅ | ✅ |
+| **Audio Transcription** | ✅ (native + fallback) | ✅ | ✅ |
+| **Audio Generation (TTS)** | ✅ | ✅ | ✅ |
+| **Content Moderation** | ✅ (native + fallback) | ❌ (via chat) | ❌ (via chat) |
+| **Translation** | ✅ | ❌ (via chat) | ❌ (via chat) |
+| **Proofreading** | ✅ | ❌ (via chat) | ❌ (via chat) |
+| **Summarization** | ✅ | ❌ (via chat) | ❌ (via chat) |
+| **Memory/History** | ✅ | ✅ | ✅ |
+| **Token Usage Tracking** | ✅ | ✅ | ✅ |
+| **Web Search** | ✅ (built-in) | ✅ | ✅ |
+| **Agents** | ❌ | ✅ | ✅ |
+| **Prompt Templates** | ❌ | ✅ | ✅ |
+
+Jakarta Agentic AI is deliberately absent from that table: it standardizes the workflow around an AI call rather than the call itself, so a feature-by-feature comparison would be comparing different layers. See below.
+
+### Jakarta Agentic AI
+
+Jakarta Agentic AI standardizes the shape of an agent workflow, not the provider call.
+
+An agent is a CDI bean annotated `@Agent` in package `jakarta.ai.agent`. A `@Trigger` method starts the workflow from a CDI event, `@Decision` methods determine how it progresses, `@Action` methods carry out a step, `@Outcome` marks completion, `@HandleException` handles failures, and `@WorkflowScoped` gives one CDI context per execution. The AI itself is reached through an injectable `LargeLanguageModel` facade, described by the specification as deliberately minimal, with parameterized queries in the style of Jakarta Persistence. Version 1.0.0-M1 supports linear workflows; conditional ones are planned. It does not initially seek inclusion in the Jakarta EE Platform or any profile.
+
+That makes it complementary to OmniHai rather than an alternative to it:
+
+| Aspect | OmniHai | Jakarta Agentic AI |
+|--------|---------|--------------------|
+| **Layer** | The provider call | The workflow around it |
+| **Who decides the next step** | The AI, from the tools you registered | You, in `@Decision` and `@Action` methods |
+| **LLM surface** | Ten providers, streaming, attachments, cost, moderation, transcription | Minimal facade by design |
+| **Form** | A library you depend on | A specification you code against, plus an implementation |
+
+An `@Action` method is free to call an injected OmniHai `AIService`, which is probably the most useful way to read the two together: the specification decides which step runs, OmniHai performs the call that step needs.
 
 ### Provider Support
 
@@ -844,13 +901,14 @@ Reach for LangChain4J or Spring AI when you need native function calling with pe
 - 10 providers out of the box - Including Ollama for local/offline
 - Caller-owned conversation memory - History lives in `ChatOptions`, not in the service. No server-side session state, no memory leaks, no lifecycle management. The caller controls it. Sliding window keeps context manageable, and uploaded file references are tracked across turns.
 - Automatic file cleanup - Uploaded files on provider servers are cleaned up after 2 days in a fire-and-forget background task, preventing stale file accumulation.
+- Tool use on every provider - Annotate a method with `@AITool`, hand the object to `ai.withTools(...)`, and the AI can call it. Rides on structured output, so it behaves identically on all ten providers, groups narrow the schema itself, and tools run on your thread inside your transaction.
 - Clean exception hierarchy - Specific exceptions per HTTP status
 
 ### Where OmniHai is Intentionally Simpler
 
-No tools, embeddings, RAG, or agents. This isn't a gap - it's a design choice. OmniHai is a utility library, not a framework.
+No embeddings, RAG, vector stores, or agent orchestration. This isn't a gap - it's a design choice. OmniHai is a utility library, not a framework.
 
-Tool use does not require native function calling, though: provider-enforced structured outputs are enough to let the model pick a tool and let your own code execute it. See [Tool Use Without Function Calling](#tool-use-without-function-calling).
+[Tool use](#tool-use) is the one thing on that list which turned out not to be framework territory: it rides on structured output, so it costs no per-provider machinery and works everywhere. Native function calling with per-tool argument schemas, parallel tool calls and forced tool choice remains out.
 
 ### Positioning
 
@@ -858,7 +916,7 @@ Tool use does not require native function calling, though: provider-enforced str
 |---------|---------|
 | **LangChain4J** | Full kitchen with every appliance |
 | **Spring AI** | Full kitchen, Spring-branded appliances |
-| **Jakarta Agentic** | Kitchen building code (specification) |
+| **Jakarta Agentic AI** | Kitchen building code, for the order of the steps |
 | **OmniHai** | Sharp chef's knife - does a few things very well |
 
 OmniHai fills a different niche. For apps that need:
@@ -874,13 +932,13 @@ OmniHai fills a different niche. For apps that need:
 
 ...without needing RAG pipelines, agent frameworks, or vector stores, OmniHai is arguably the better choice. Less to learn, less to break, fewer dependencies.
 
-If Jakarta Agentic matures, OmniHai could potentially be a lightweight implementation of parts of that spec, or remain a complementary "just the essentials" alternative.
+Jakarta Agentic AI standardizes a layer above this one, so the two compose rather than compete; its `@Action` methods can call an OmniHai `AIService`.
 
 ### Is OmniHai smaller than e.g. LangChain4J?
 
 Yes, significantly:
-- OmniHai JAR: ~230 KB vs LangChain4J: ~5-10 MB (*per* AI provider!) — at least 25x smaller when using only one AI provider
-- 85 source files, ~16,000 lines of code (\~7,000 actual code, rest is javadoc)
+- OmniHai JAR: ~275 KB vs LangChain4J: ~5-10 MB (*per* AI provider!) — at least 18x smaller when using only one AI provider
+- 102 source files, ~19,500 lines (\~8,400 actual code, rest is javadoc and blank lines)
 - Zero external runtime dependencies — uses JDK's native `java.net.http.HttpClient` directly without any SDKs
 - Only one required dependency: Jakarta JSON-P (which Jakarta EE and MicroProfile runtimes already have)
 - Other dependencies are optional: CDI, EL and/or MP Config APIs (which Jakarta EE resp. MicroProfile runtimes already have)
@@ -923,11 +981,11 @@ The design strongly suggests yes:
 - You want auto-configuration and starters
 - Your team is Spring-proficient
 
-**Choose Jakarta Agentic when:**
-- You need a standard specification (once finalized)
-- You want vendor-neutral portability
-- You're building agentic workflows
-- You can wait for the specification to mature
+**Choose Jakarta Agentic AI when:**
+- You want the workflow itself standardized, with vendor-neutral portability across implementations
+- Your steps are authored by you rather than chosen by the AI
+- You want a per-execution CDI scope around the whole workflow
+- You can live with a milestone specification and its implementations still settling
 
 As said, OmniHai is "a sharp chef's knife — does a few things very well" rather than being a full framework.
 
