@@ -35,6 +35,7 @@ import org.omnifaces.ai.AIProvider;
 import org.omnifaces.ai.AIService;
 import org.omnifaces.ai.AIStrategy;
 import org.omnifaces.ai.AITextHandler;
+import org.omnifaces.ai.service.RetryingAIService;
 
 /**
  * CDI producer for {@link AIService} instances based on the {@link AI} qualifier annotation.
@@ -59,7 +60,8 @@ class AIServiceProducer {
      * @param injectionPoint The injection point.
      * @param beanManager The CDI bean manager.
      * @return The configured AI service instance.
-     * @throws IllegalArgumentException If {@link AIProvider#CUSTOM} is used via {@code @AI} annotation (use {@code serviceClass} instead).
+     * @throws IllegalArgumentException If {@link AIProvider#CUSTOM} is used via {@code @AI} annotation (use {@code serviceClass} instead), or if
+     * {@link AI#maxAttempts()} is less than 1.
      * @throws UnsupportedOperationException If a required runtime dependency is not available (jakarta.json-api, jakarta.enterprise.cdi-el-api, or
      * jakarta.el-api).
      */
@@ -71,6 +73,10 @@ class AIServiceProducer {
 
         if (annotation.provider() == AIProvider.CUSTOM) {
             throw new IllegalArgumentException("AIProvider.CUSTOM is not supported via @AI annotation. Use serviceClass instead of provider.");
+        }
+
+        if (annotation.maxAttempts() < 1) {
+            throw new IllegalArgumentException("The maxAttempts of an @AI annotation must be at least 1, but it was " + annotation.maxAttempts() + ".");
         }
 
         if (!isJsonAvailable()) {
@@ -89,8 +95,9 @@ class AIServiceProducer {
         var imageHandler = annotation.imageHandler() == AIImageHandler.class ? null : annotation.imageHandler();
         var audioHandler = annotation.audioHandler() == AIAudioHandler.class ? null : annotation.audioHandler();
         var config = new AIConfig(provider, apiKey, model, endpoint, prompt, AIStrategy.of(textHandler, imageHandler, audioHandler), emptyMap());
+        var service = serviceCache.computeIfAbsent(config, AIConfig::createService);
 
-        return serviceCache.computeIfAbsent(config, AIConfig::createService);
+        return annotation.maxAttempts() > 1 ? RetryingAIService.newBuilder(service).maxAttempts(annotation.maxAttempts()).build() : service;
     }
 
     /**

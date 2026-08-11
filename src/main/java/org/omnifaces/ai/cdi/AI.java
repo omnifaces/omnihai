@@ -31,6 +31,7 @@ import org.omnifaces.ai.AIProvider;
 import org.omnifaces.ai.AIService;
 import org.omnifaces.ai.AITextHandler;
 import org.omnifaces.ai.model.ChatOptions;
+import org.omnifaces.ai.service.RetryingAIService;
 
 /**
  * CDI qualifier annotation for injecting configured {@link AIService} instances.
@@ -70,6 +71,15 @@ import org.omnifaces.ai.model.ChatOptions;
  *
  * &#64;Inject
  * &#64;AI(provider = OPENAI, apiKey = "#{config.openaiApiKey}", textHandler = TrackingTextHandler.class)
+ * private AIService ai;
+ * </pre>
+ *
+ * Usage example with retry on transient failures:
+ *
+ * <pre>
+ *
+ * &#64;Inject
+ * &#64;AI(provider = OPENAI, apiKey = "#{config.openaiApiKey}", maxAttempts = 5)
  * private AIService ai;
  * </pre>
  * <p>
@@ -169,5 +179,19 @@ public @interface AI {
      */
     @Nonbinding
     Class<? extends AIAudioHandler> audioHandler() default AIAudioHandler.class;
+
+    /**
+     * The maximum number of attempts, counting the initial attempt plus retries. Anything above 1 decorates the produced service with a
+     * {@link RetryingAIService}, which transparently re-attempts a call that failed with a {@link RetryingAIService#DEFAULT_RETRY_ON retryable} error, using
+     * exponential backoff with full jitter. The default of 1 means a single attempt, hence no retrying.
+     * <p>
+     * Backoff, maximum duration and the retry condition are not expressible as annotation constants. Use {@link RetryingAIService#newBuilder(AIService)} when
+     * you need to tune those.
+     *
+     * @return The maximum number of attempts, at least 1.
+     * @since 1.6
+     */
+    @Nonbinding
+    int maxAttempts() default 1;
 
 }

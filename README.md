@@ -571,7 +571,19 @@ AIService tuned = RetryingAIService.newBuilder(service)
     .build();
 ```
 
-**Failover.** `FailoverAIService` tries a primary service, then falls back to alternates in order on those same transient failures:
+On the CDI path the same policy is available on the qualifier itself:
+
+```java
+@Inject @AI(apiKey = "#{keys.openai}", maxAttempts = 3)
+private AIService gpt;
+```
+
+`maxAttempts` counts the initial attempt plus retries, exactly as on the builder, so the default of 1 means a single attempt and hence no retrying.
+Anything below 1 is rejected at injection time rather than silently producing a service that never retries.
+Backoff, duration and the retry condition are not expressible as annotation constants, so reach for the builder when you need to tune those.
+Injection points sharing the same provider configuration still share one underlying service; only the decorator around it differs.
+
+**Failover.** `FailoverAIService` tries a primary service, then falls back to alternates in order on those same transient failures. It has no annotation form, as it needs several fully configured services rather than a single value:
 
 ```java
 @Inject @AI(apiKey = "#{keys.openai}")
