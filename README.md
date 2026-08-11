@@ -637,9 +637,9 @@ public class SupportAgent {
         Call exactly one tool per turn, or answer directly once you have enough information.
 
         Available tools:
-        - find_order(orderId)         -> status, date, total, items
-        - find_orders_by_email(email) -> the customer's 5 most recent orders
-        - refund_window(orderId)      -> whether the order is still refundable
+        - FIND_ORDER(orderId)          -> status, date, total, items
+        - FIND_ORDERS_BY_EMAIL(email)  -> the customer's 5 most recent orders
+        - REFUND_WINDOW(orderId)       -> whether the order is still refundable
 
         Never invent order data. If a tool returns nothing, say so.
         To propose a refund, answer with the amount and the reason; a human approves it.
@@ -647,7 +647,9 @@ public class SupportAgent {
 
     public enum Action { CALL_TOOL, ANSWER }
 
-    public record AgentStep(Action action, Optional<String> tool, Map<String, String> arguments, Optional<String> answer) {}
+    public enum Tool { FIND_ORDER, FIND_ORDERS_BY_EMAIL, REFUND_WINDOW }
+
+    public record AgentStep(Action action, Optional<Tool> tool, Map<String, String> arguments, Optional<String> answer) {}
 
     @Inject @AI(provider = ANTHROPIC, apiKey = "${keys.anthropic}")
     private AIService ai;
@@ -681,17 +683,16 @@ public class SupportAgent {
     private String invoke(AgentStep step) {
         try {
             return switch (step.tool().orElseThrow()) {
-                case "find_order" -> orders.findById(Long.valueOf(step.arguments().get("orderId")))
+                case FIND_ORDER -> orders.findById(Long.valueOf(step.arguments().get("orderId")))
                     .map(Order::toSummary)
                     .orElse("No order found with that id.");
-                case "find_orders_by_email" -> orders.findByEmail(step.arguments().get("email"), Limit.of(5))
+                case FIND_ORDERS_BY_EMAIL -> orders.findByEmail(step.arguments().get("email"), Limit.of(5))
                     .stream()
                     .map(Order::toSummary)
                     .collect(joining("\n"));
-                case "refund_window" -> orders.findById(Long.valueOf(step.arguments().get("orderId")))
+                case REFUND_WINDOW -> orders.findById(Long.valueOf(step.arguments().get("orderId")))
                     .map(order -> order.isRefundable() ? "Refundable until " + order.getRefundDeadline() : "Refund window expired.")
                     .orElse("No order found with that id.");
-                default -> "Unknown tool. Pick one from the manifest.";
             };
         }
         catch (Exception e) {
@@ -701,8 +702,9 @@ public class SupportAgent {
 }
 ```
 
-Four details that make this work in production:
+Five details that make this work in production:
 
+- **Declare the tool set as an enum.** It becomes a JSON `enum` constraint in the generated schema, so the model cannot name a tool that does not exist, and the `switch` stays exhaustive when you add one.
 - **Feed failures back instead of throwing.** A malformed id or a missing row returns a message the model can read, and it retries with a corrected argument. This self-correction is the main thing the loop buys you over a single call.
 - **Cap the iterations.** The loop bounds latency; `pricing(…, maxTotalCost)` bounds spend and raises `AIBudgetExceededException` rather than running away.
 - **Keep writes out of the tool set.** The agent reads and proposes; a human commits. Reversibility is what makes the accuracy acceptable.
