@@ -755,7 +755,7 @@ public record Delivery(String carrier, LocalDate estimated) {}
 Delivery delivery = agent.chat("Where is order 42?", Delivery.class);
 ```
 
-That costs one extra call, and only when you ask for a type: five tool calls take six provider calls untyped and seven typed. Streaming cannot be combined with tools at all, as the tool the AI picks is only known once its reply is complete, so `chatStream(...)` on a tool calling service throws `UnsupportedOperationException` rather than quietly answering without the tools.
+That costs one extra call, and only when you ask for a type: five tool calls take six provider calls, and seven when the conversation has memory, as the answer it records is then a call of its own. Streaming cannot be combined with tools at all, as the tool the AI picks is only known once its reply is complete, so `chatStream(...)` on a tool calling service throws `UnsupportedOperationException` rather than quietly answering without the tools.
 
 Other limits: the AI calls one tool per turn rather than several at once, there is no way to force a specific tool, and arguments are converted from strings rather than typed per tool on the wire. Reach for LangChain4J or Spring AI when you need native function calling with per-tool argument schemas.
 
