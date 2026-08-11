@@ -638,7 +638,7 @@ Let the AI call your own methods before it answers. Annotate them with `@AITool`
 public class OrderTools {
 
     @Inject
-    private OrderRepository orders;
+    private OrderService orders;
 
     @ReadOnly
     @AITool("Looks up a single order by id")
@@ -1008,6 +1008,7 @@ Bottom line: If you need a lightweight utility for AI chat/text operations in Ja
 - [Blog post: OmniHai 1.3: OmniHai goes online](https://balusc.omnifaces.org/2026/03/omnihai-goes-online.html)
 - [Blog post: OmniHai 1.4: OmniHai counts the cost](https://balusc.omnifaces.org/2026/04/omnihai-counts-cost.html)
 - [Blog post: OmniHai 1.5: OmniHai grows a backbone](https://balusc.omnifaces.org/2026/07/omnihai-grows-backbone.html)
+- [Blog post: OmniHai 1.6: OmniHai gets hands](https://balusc.omnifaces.org/2026/08/omnihai-gets-hands.html)
 
 ## Credits
 
