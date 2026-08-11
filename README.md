@@ -617,6 +617,140 @@ Note that `chatStream` is the only operation with this hazard; every other opera
 
 Conversation memory composes safely with both decorators: a memory-enabled `ChatOptions` records the user message before the request is sent (file attachments are uploaded and anchored to it while the payload is built), but re-recording the same user message replaces it rather than appending. A retried or failed-over chat therefore leaves exactly one user message in the history, and only the successful attempt's file references survive.
 
+## Recipes
+
+### Tool Use Without Function Calling
+
+OmniHai has no function calling, but structured outputs are enforced provider-side (OpenAI `response_format`, Anthropic `output_format`, Google `responseSchema`, Ollama `format`), so the model's reply is reliably parseable.
+That is enough to run a tool-use loop against your own beans: let the model pick a tool, execute it yourself, feed the result back as the next turn.
+
+The example below answers customer questions over an existing order repository.
+
+```java
+@ApplicationScoped
+public class SupportAgent {
+
+    private static final int MAX_ITERATIONS = 6;
+
+    private static final String TOOL_MANIFEST = """
+        You are a support agent for an online shop. Answer the customer's question.
+        Call exactly one tool per turn, or answer directly once you have enough information.
+
+        Available tools:
+        - find_order(orderId)         -> status, date, total, items
+        - find_orders_by_email(email) -> the customer's 5 most recent orders
+        - refund_window(orderId)      -> whether the order is still refundable
+
+        Never invent order data. If a tool returns nothing, say so.
+        To propose a refund, answer with the amount and the reason; a human approves it.
+        """;
+
+    public enum Action { CALL_TOOL, ANSWER }
+
+    public record AgentStep(Action action, Optional<String> tool, Map<String, String> arguments, Optional<String> answer) {}
+
+    @Inject @AI(provider = ANTHROPIC, apiKey = "${keys.anthropic}")
+    private AIService ai;
+
+    @Inject
+    private OrderRepository orders;
+
+    public String handle(String question) {
+        ChatOptions options = ChatOptions.newBuilder()
+            .systemPrompt(TOOL_MANIFEST)
+            .withMemory(60)
+            .temperature(0)
+            .pricing(ChatPricing.of(new BigDecimal("3.00"), new BigDecimal("15.00")), new BigDecimal("0.25"))
+            .build();
+
+        String input = question;
+
+        for (int iteration = 0; iteration < MAX_ITERATIONS; iteration++) {
+            AgentStep step = ai.chat(input, options, AgentStep.class);
+
+            if (step.action() == ANSWER) {
+                return step.answer().orElseThrow();
+            }
+
+            input = "TOOL RESULT (%s): %s".formatted(step.tool().orElseThrow(), invoke(step));
+        }
+
+        throw new IllegalStateException("Agent did not converge within " + MAX_ITERATIONS + " turns");
+    }
+
+    private String invoke(AgentStep step) {
+        try {
+            return switch (step.tool().orElseThrow()) {
+                case "find_order" -> orders.findById(Long.valueOf(step.arguments().get("orderId")))
+                    .map(Order::toSummary)
+                    .orElse("No order found with that id.");
+                case "find_orders_by_email" -> orders.findByEmail(step.arguments().get("email"), Limit.of(5))
+                    .stream()
+                    .map(Order::toSummary)
+                    .collect(joining("\n"));
+                case "refund_window" -> orders.findById(Long.valueOf(step.arguments().get("orderId")))
+                    .map(order -> order.isRefundable() ? "Refundable until " + order.getRefundDeadline() : "Refund window expired.")
+                    .orElse("No order found with that id.");
+                default -> "Unknown tool. Pick one from the manifest.";
+            };
+        }
+        catch (Exception e) {
+            return "Tool failed: " + e.getMessage();
+        }
+    }
+}
+```
+
+Four details that make this work in production:
+
+- **Feed failures back instead of throwing.** A malformed id or a missing row returns a message the model can read, and it retries with a corrected argument. This self-correction is the main thing the loop buys you over a single call.
+- **Cap the iterations.** The loop bounds latency; `pricing(…, maxTotalCost)` bounds spend and raises `AIBudgetExceededException` rather than running away.
+- **Keep writes out of the tool set.** The agent reads and proposes; a human commits. Reversibility is what makes the accuracy acceptable.
+- **Size the memory window for tool traffic.** Tool results are messages too, so the 20-message default is quickly consumed.
+
+#### What You Gain
+
+The loop is ordinary Java in your own bean, which puts the orchestration entirely under your control.
+
+Tools execute on the calling thread, so they run inside your transaction with CDI, JNDI and security context already in scope.
+There is no callback executor to configure and no context to propagate.
+
+Cost and model choice are per turn, not per session.
+A cheap model can drive tool selection while an expensive one writes the final answer:
+
+```java
+AgentStep step = router.chat(input, options, AgentStep.class);         // cheap model picks the tool
+...
+return writer.chat("Answer the customer.", options);                   // capable model composes the reply
+```
+
+Because conversation state lives in `ChatOptions` rather than in a session object, a run can be suspended and resumed elsewhere.
+That makes human-in-the-loop approval a persistence problem instead of a threading problem:
+
+```java
+if (step.action() == ANSWER && needsApproval(step)) {
+    approvals.save(ticketId, options.toJson()); // park it; no thread or session is held
+    return "Escalated for approval.";
+}
+
+// later, in another request, possibly on another node
+ChatOptions resumed = ChatOptions.fromJson(approvals.load(ticketId));
+String reply = ai.chat("The supervisor approved. Send the reply.", resumed);
+```
+
+Every turn is also a natural audit point: inspect `options.getLastUsage()` and `options.getLastCost()` after each call, log the chosen tool and its arguments, or reject a step before executing it.
+
+#### What You Give Up
+
+Control over orchestration is finer here; control over the model's tool interface is coarser.
+
+One schema serves every turn, so arguments arrive as strings rather than per-tool typed values, and validation is yours to write.
+The model calls one tool per turn where native function calling can request several at once, and there is no equivalent of forcing a specific tool.
+The manifest also occupies the system prompt on every turn instead of a dedicated `tools` field, though a stable prefix means providers with prompt caching charge little for it.
+
+The pattern therefore covers small tool sets with simple arguments, which is the common case in business applications.
+Reach for LangChain4J or Spring AI when you need native function calling with per-tool argument validation.
+
 ## OmniHai vs LangChain4J vs Spring AI vs Jakarta Agentic
 
 ### Philosophy
@@ -636,7 +770,7 @@ Conversation memory composes safely with both decorators: a memory-enabled `Chat
 | **Streaming** | ✅ | ✅ | ✅ | TBD |
 | **Structured Outputs** | ✅ | ✅ | ✅ | TBD |
 | **File Attachments** | ✅ | ✅ | ✅ | TBD |
-| **Function Calling** | ❌ | ✅ | ✅ | TBD |
+| **Function Calling** | ❌ ([recipe](#tool-use-without-function-calling)) | ✅ | ✅ | TBD |
 | **RAG Support** | ❌ | ✅ (extensive) | ✅ | TBD |
 | **Vector Stores** | ❌ | ✅ (many) | ✅ (many) | TBD |
 | **Embeddings** | ❌ | ✅ | ✅ | TBD |
