@@ -154,6 +154,11 @@ public class OpenAIService extends BaseAIService {
     }
 
     @Override
+    public boolean supportsFileAttachmentsInHistory() {
+        return supportsOpenAIFilesApi();
+    }
+
+    @Override
     public boolean supportsStructuredOutput() {
         return getModelVersion().gte(GPT_4);
     }

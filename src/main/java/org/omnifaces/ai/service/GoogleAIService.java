@@ -96,6 +96,11 @@ public class GoogleAIService extends BaseAIService {
     }
 
     @Override
+    public boolean supportsFileAttachmentsInHistory() {
+        return true;
+    }
+
+    @Override
     public boolean supportsStructuredOutput() {
         return getModelVersion().gte(GEMINI_2);
     }

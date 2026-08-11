@@ -492,6 +492,23 @@ public class ChatInput implements Serializable {
             return this;
         }
 
+        /**
+         * Attaches already processed attachments to this input, as obtained from {@link ChatInput#getImages()} or {@link ChatInput#getFiles()}.
+         * <p>
+         * They are classified by their own MIME type and are neither re-sanitized nor re-read, so that carrying them from one input to the next costs nothing.
+         *
+         * @param attachments The attachments to attach.
+         * @return This builder instance for chaining.
+         * @since 1.6
+         */
+        public Builder attach(Attachment... attachments) {
+            for (var attachment : attachments) {
+                (isSupportedAsImageAttachment(attachment.mimeType()) ? images : files).add(attachment);
+            }
+
+            return this;
+        }
+
         private void processAndAttach(byte[] content, Path source, MimeType mimeType) {
             var isImage = isSupportedAsImageAttachment(mimeType);
             var list = isImage ? this.images : this.files;

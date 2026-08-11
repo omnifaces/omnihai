@@ -421,6 +421,11 @@ public abstract class AIServiceWrapper implements AIService {
     }
 
     @Override
+    public boolean supportsFileAttachmentsInHistory() {
+        return getWrapped().supportsFileAttachmentsInHistory();
+    }
+
+    @Override
     public boolean supportsStructuredOutput() {
         return getWrapped().supportsStructuredOutput();
     }

@@ -48,7 +48,8 @@ class InterceptingAIServiceWrapperTest {
     /** The {@link AIServiceWrapper} methods that are intentionally not intercepted; they retain plain metadata pass-through. */
     private static final Set<String> METADATA_METHODS = Set.of(
         "getName", "getProviderName", "getModelName", "getChatPrompt", "getModelVersion",
-        "supportsStreaming", "supportsFileAttachments", "supportsStructuredOutput", "supportsWebSearch", "supportsReasoningEffort", "supportsModality"
+        "supportsStreaming", "supportsFileAttachments", "supportsStructuredOutput", "supportsWebSearch", "supportsReasoningEffort", "supportsModality",
+        "supportsFileAttachmentsInHistory"
     );
 
     @Test

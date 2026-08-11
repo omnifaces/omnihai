@@ -275,6 +275,23 @@ public final class JsonSchemaHelper {
         return parseValue(parseJson(json), type, type);
     }
 
+    /**
+     * Parses the given JSON value into an instance of the given type.
+     * <p>
+     * This is the counterpart of {@link #fromJson(String, Class)} for a value which has already been parsed, or for a scalar, which is not a JSON document in
+     * its own right.
+     *
+     * @param <T> The target type.
+     * @param value The JSON value to parse.
+     * @param type The target class.
+     * @return An instance of the target type populated from the JSON value.
+     * @throws IllegalArgumentException If the value cannot be converted to the target type.
+     * @since 1.6
+     */
+    public static <T> T fromJson(JsonValue value, Class<T> type) {
+        return parseValue(value, type, type);
+    }
+
     @SuppressWarnings({ "unchecked", "rawtypes" })
     private static <T> T parseValue(JsonValue value, Class<T> rawType, Type genericType) {
         if (value == null || value.getValueType() == JsonValue.ValueType.NULL) {

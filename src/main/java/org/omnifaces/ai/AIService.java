@@ -19,6 +19,7 @@ import static org.omnifaces.ai.model.ChatOptions.DEFAULT;
 import static org.omnifaces.ai.model.ChatOptions.Location.GLOBAL;
 
 import java.io.Serializable;
+import java.lang.annotation.Annotation;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -37,6 +38,9 @@ import org.omnifaces.ai.model.ModerationOptions;
 import org.omnifaces.ai.model.ModerationOptions.Category;
 import org.omnifaces.ai.model.ModerationResult;
 import org.omnifaces.ai.service.AIServiceWrapper;
+import org.omnifaces.ai.service.ToolCallingAIService;
+import org.omnifaces.ai.tool.AITool;
+import org.omnifaces.ai.tool.ToolRegistry;
 
 /**
  * Generic interface for AI service providers.
@@ -1489,6 +1493,80 @@ public interface AIService extends Serializable {
         return getClass().getSimpleName() + " (" + getProviderName() + " " + getModelName() + ")";
     }
 
+    // Tool calling capabilities ---------------------------------------------------------------------------------------
+
+    /**
+     * Returns a view on this service which lets the AI call the {@link AITool} annotated methods of the given objects before it answers.
+     * <p>
+     * Usage example:
+     *
+     * <pre>
+     *
+     * AIService agent = ai.withTools(orderTools);
+     * String answer = agent.chat("Where is order 42?");
+     * </pre>
+     * <p>
+     * There is no classpath scanning: only the methods of the objects passed here are offered to the AI.
+     *
+     * @param instances The objects declaring {@link AITool} annotated methods.
+     * @return A view on this service which offers the given tools to the AI, never {@code null}.
+     * @throws IllegalArgumentException If none of the given objects declares an {@link AITool} annotated method, or if two of them declare the same tool name.
+     * @since 1.6
+     * @see AITool
+     * @see ToolCallingAIService
+     */
+    default AIService withTools(Object... instances) {
+        return new ToolCallingAIService(this, ToolRegistry.of(instances));
+    }
+
+    /**
+     * Returns a view on this service which lets the AI call the {@link AITool} annotated methods of the given objects which are tagged with the given group.
+     * <p>
+     * Usage example:
+     *
+     * <pre>
+     *
+     * AIService tier1 = ai.withTools(ReadOnly.class, supportTools);
+     * </pre>
+     * <p>
+     * The group narrows the generated response schema rather than filtering afterwards, so the omitted tools are unreachable rather than merely unadvertised.
+     *
+     * @param group The tool group to narrow to, itself annotated with {@link org.omnifaces.ai.tool.AIToolGroup}.
+     * @param instances The objects declaring {@link AITool} annotated methods.
+     * @return A view on this service which offers the given tools to the AI, never {@code null}.
+     * @throws IllegalArgumentException If the group is not itself annotated with {@link org.omnifaces.ai.tool.AIToolGroup}, if none of the given objects
+     * declares a matching {@link AITool} annotated method, or if two of them declare the same tool name.
+     * @since 1.6
+     * @see org.omnifaces.ai.tool.AIToolGroup
+     */
+    default AIService withTools(Class<? extends Annotation> group, Object... instances) {
+        return new ToolCallingAIService(this, ToolRegistry.of(group, instances));
+    }
+
+    /**
+     * Returns a view on this service which offers the given tools to the AI before it answers.
+     * <p>
+     * Use this when the tools are declared programmatically rather than by annotation, or when both are mixed:
+     *
+     * <pre>
+     *
+     * ToolRegistry tools = ToolRegistry.newBuilder()
+     *     .add("FIND_ORDER", "Looks up a single order by id", orders::findById, ToolParam.of(long.class, "orderId", "The order id"))
+     *     .add(shippingTools)
+     *     .build();
+     *
+     * AIService agent = ai.withTools(tools);
+     * </pre>
+     *
+     * @param tools The tools to offer the AI.
+     * @return A view on this service which offers the given tools to the AI, never {@code null}.
+     * @since 1.6
+     * @see ToolRegistry#newBuilder()
+     */
+    default AIService withTools(ToolRegistry tools) {
+        return new ToolCallingAIService(this, tools);
+    }
+
     /**
      * Returns the AI provider name of this AI service.
      *
@@ -1538,6 +1616,18 @@ public interface AIService extends Serializable {
      * @return Whether this AI service implementation supports file attachments for chat.
      */
     default boolean supportsFileAttachments() {
+        return false;
+    }
+
+    /**
+     * Returns whether this AI service renders the files uploaded in earlier turns again when it replays a memory-enabled conversation's history, so that a
+     * caller need not attach them anew on every turn. Not to be confused with {@link #supportsFileAttachments()}, which is about the current turn.
+     *
+     * @implNote The default implementation returns false.
+     * @return Whether this AI service replays uploaded files from the conversation history.
+     * @since 1.6
+     */
+    default boolean supportsFileAttachmentsInHistory() {
         return false;
     }
 
