@@ -83,6 +83,20 @@ class ToolRegistryTest {
 
     }
 
+    /** Stands in for another package declaring a class of a name already taken. */
+    public static class Elsewhere {
+
+        public static class OrderTools {
+
+            @AITool("Looks up a single order by id")
+            public String findOrder(@AIToolParam(value = "The order id", name = "orderId") long orderId) {
+                return "other order " + orderId;
+            }
+
+        }
+
+    }
+
     public static class WithoutTools {
         //
     }
@@ -175,15 +189,16 @@ class ToolRegistryTest {
     // Registration ----------------------------------------------------------------------------------------------------
 
     @Test
-    void of_derivesUpperSnakeCaseNamesFromMethodNames() {
+    void of_derivesNamesFromTheClassAndMethodNames() {
         assertEquals(
-            Set.of("FIND_ORDER", "FIND_ORDERS_BY_DATE", "FIND_PERSON", "REFUND", "EXPLODE"), Set.copyOf(ToolRegistry.of(new OrderTools()).getToolNames())
+            Set.of("OrderTools#findOrder", "OrderTools#findOrdersByDate", "OrderTools#findPerson", "OrderTools#refund", "OrderTools#explode"),
+            Set.copyOf(ToolRegistry.of(new OrderTools()).getToolNames())
         );
     }
 
     @Test
     void of_withMultipleInstances_mergesTheirTools() {
-        assertTrue(ToolRegistry.of(new OrderTools(), new ShippingTools()).getToolNames().contains("FIND_SHIPMENT"));
+        assertTrue(ToolRegistry.of(new OrderTools(), new ShippingTools()).getToolNames().contains("ShippingTools#findShipment"));
     }
 
     /**
@@ -191,7 +206,9 @@ class ToolRegistryTest {
      */
     @Test
     void of_withGroup_narrowsToTaggedMethods() {
-        assertEquals(Set.of("FIND_ORDER", "FIND_ORDERS_BY_DATE"), Set.copyOf(ToolRegistry.of(ReadOnly.class, new OrderTools()).getToolNames()));
+        assertEquals(
+            Set.of("OrderTools#findOrder", "OrderTools#findOrdersByDate"), Set.copyOf(ToolRegistry.of(ReadOnly.class, new OrderTools()).getToolNames())
+        );
     }
 
     /**
@@ -201,16 +218,21 @@ class ToolRegistryTest {
     void of_withToolInheritedFromNonPublicClass_registersIt() {
         var registry = ToolRegistry.of(new VisibleTools());
 
-        assertEquals(Set.of("FIND_ORDER"), Set.copyOf(registry.getToolNames()));
-        assertEquals("hidden order 42", registry.invoke("FIND_ORDER", Map.of("orderId", "42")));
+        assertEquals(Set.of("VisibleTools#findOrder"), Set.copyOf(registry.getToolNames()));
+        assertEquals("hidden order 42", registry.invoke("VisibleTools#findOrder", Map.of("orderId", "42")));
     }
 
     /**
-     * Two methods of one name derive one tool name, so registering both must fail rather than let reflection order decide which of them the AI gets.
+     * Two methods of one name derive one tool name, so each overload is numbered to keep it a tool of its own, on the number its parameter types put it at
+     * rather than on the one reflection order happened to hand out.
      */
     @Test
-    void of_withOverloadedToolMethods_throws() {
-        assertThrows(IllegalArgumentException.class, () -> ToolRegistry.of(new OverloadedTools()));
+    void of_withOverloadedToolMethods_numbersThem() {
+        var registry = ToolRegistry.of(new OverloadedTools());
+
+        assertEquals(Set.of("OverloadedTools#findOrder1", "OverloadedTools#findOrder2"), Set.copyOf(registry.getToolNames()));
+        assertEquals("order ref-1", registry.invoke("OverloadedTools#findOrder1", Map.of("reference", "ref-1")));
+        assertEquals("order 42", registry.invoke("OverloadedTools#findOrder2", Map.of("orderId", "42")));
     }
 
     /**
@@ -220,16 +242,21 @@ class ToolRegistryTest {
     void of_withBridgeOnlyGenericImplementation_registersTheToolOnce() {
         var registry = ToolRegistry.of(new VisibleHandler());
 
-        assertEquals(Set.of("HANDLE"), Set.copyOf(registry.getToolNames()));
-        assertEquals("handled x", registry.invoke("HANDLE", Map.of("value", "x")));
+        assertEquals(Set.of("VisibleHandler#handle"), Set.copyOf(registry.getToolNames()));
+        assertEquals("handled x", registry.invoke("VisibleHandler#handle", Map.of("value", "x")));
     }
 
     /**
-     * An inherited tool and an overload of its name derive the one tool name, so registering both must fail rather than let either disappear.
+     * An inherited tool and an overload of its name derive the one tool name, and are numbered under the class handed over rather than under the one each of
+     * them happens to be declared by.
      */
     @Test
-    void of_withOverloadOfInheritedToolName_throws() {
-        assertThrows(IllegalArgumentException.class, () -> ToolRegistry.of(new OverloadingSub()));
+    void of_withOverloadOfInheritedToolName_numbersThem() {
+        var registry = ToolRegistry.of(new OverloadingSub());
+
+        assertEquals(Set.of("OverloadingSub#findOrder1", "OverloadingSub#findOrder2"), Set.copyOf(registry.getToolNames()));
+        assertEquals("order ref-1", registry.invoke("OverloadingSub#findOrder1", Map.of("reference", "ref-1")));
+        assertEquals("hidden order 42", registry.invoke("OverloadingSub#findOrder2", Map.of("orderId", "42")));
     }
 
     /**
@@ -240,8 +267,11 @@ class ToolRegistryTest {
     void of_withContainerProxy_scansTheClassBehindIt() {
         var registry = ToolRegistry.of(new OrderTools_ClientProxy());
 
-        assertEquals(Set.of("FIND_ORDER", "FIND_ORDERS_BY_DATE", "FIND_PERSON", "REFUND", "EXPLODE"), Set.copyOf(registry.getToolNames()));
-        assertEquals("proxied order 42", registry.invoke("FIND_ORDER", Map.of("orderId", "42")));
+        assertEquals(
+            Set.of("OrderTools#findOrder", "OrderTools#findOrdersByDate", "OrderTools#findPerson", "OrderTools#refund", "OrderTools#explode"),
+            Set.copyOf(registry.getToolNames())
+        );
+        assertEquals("proxied order 42", registry.invoke("OrderTools#findOrder", Map.of("orderId", "42")));
     }
 
     /**
@@ -266,12 +296,21 @@ class ToolRegistryTest {
     }
 
     /**
+     * A tool name carries the simple class name, so two classes of that name coming from different packages claim the one tool name and must be rejected rather
+     * than let the AI's choice land on either.
+     */
+    @Test
+    void of_withToolsOfEquallyNamedClasses_throws() {
+        assertThrows(IllegalArgumentException.class, () -> ToolRegistry.of(new OrderTools(), new Elsewhere.OrderTools()));
+    }
+
+    /**
      * The compiler copies the annotations onto the synthetic bridge method it generates for a generic override, so both would claim the same tool name.
      */
     @Test
     void of_withBridgeMethod_registersTheToolOnce() {
-        assertEquals(Set.of("HANDLE"), Set.copyOf(ToolRegistry.of(new GenericHandler()).getToolNames()));
-        assertEquals("handled x", ToolRegistry.of(new GenericHandler()).invoke("HANDLE", Map.of("value", "x")));
+        assertEquals(Set.of("GenericHandler#handle"), Set.copyOf(ToolRegistry.of(new GenericHandler()).getToolNames()));
+        assertEquals("handled x", ToolRegistry.of(new GenericHandler()).invoke("GenericHandler#handle", Map.of("value", "x")));
     }
 
     /**
@@ -295,7 +334,7 @@ class ToolRegistryTest {
             .getJsonObject("properties").getJsonObject("tool").getJsonArray("enum").getValuesAs(jakarta.json.JsonString.class)
             .stream().map(jakarta.json.JsonString::getString).toList();
 
-        assertEquals(List.of("FIND_ORDER", "FIND_ORDERS_BY_DATE", ToolRegistry.ANSWER), toolNames);
+        assertEquals(List.of("OrderTools#findOrder", "OrderTools#findOrdersByDate", ToolRegistry.ANSWER), toolNames);
     }
 
     /**
@@ -313,16 +352,16 @@ class ToolRegistryTest {
     void getManifest_listsEveryToolWithItsParameters() {
         var manifest = ToolRegistry.of(ReadOnly.class, new OrderTools()).getManifest();
 
-        assertTrue(manifest.contains("- FIND_ORDER(orderId: The order id) -> Looks up a single order by id"), manifest);
-        assertTrue(manifest.contains("- FIND_ORDERS_BY_DATE(date: The order date) -> Lists orders placed on a date"), manifest);
+        assertTrue(manifest.contains("- OrderTools#findOrder(orderId: The order id) -> Looks up a single order by id"), manifest);
+        assertTrue(manifest.contains("- OrderTools#findOrdersByDate(date: The order date) -> Lists orders placed on a date"), manifest);
     }
 
     // Invocation ------------------------------------------------------------------------------------------------------
 
     @Test
     void invoke_convertsArgumentsToTheDeclaredParameterTypes() {
-        assertEquals("order 42", ToolRegistry.of(new OrderTools()).invoke("FIND_ORDER", Map.of("orderId", "42")));
-        assertEquals("orders on 2026-08-11", ToolRegistry.of(new OrderTools()).invoke("FIND_ORDERS_BY_DATE", Map.of("date", "2026-08-11")));
+        assertEquals("order 42", ToolRegistry.of(new OrderTools()).invoke("OrderTools#findOrder", Map.of("orderId", "42")));
+        assertEquals("orders on 2026-08-11", ToolRegistry.of(new OrderTools()).invoke("OrderTools#findOrdersByDate", Map.of("date", "2026-08-11")));
     }
 
     /**
@@ -330,17 +369,17 @@ class ToolRegistryTest {
      */
     @Test
     void invoke_withUnconvertibleArgument_throws() {
-        assertThrows(IllegalArgumentException.class, () -> ToolRegistry.of(new OrderTools()).invoke("FIND_ORDER", Map.of("orderId", "yesterday")));
+        assertThrows(IllegalArgumentException.class, () -> ToolRegistry.of(new OrderTools()).invoke("OrderTools#findOrder", Map.of("orderId", "yesterday")));
     }
 
     @Test
     void invoke_withMissingArgument_throws() {
-        assertThrows(IllegalArgumentException.class, () -> ToolRegistry.of(new OrderTools()).invoke("FIND_ORDER", Map.of()));
+        assertThrows(IllegalArgumentException.class, () -> ToolRegistry.of(new OrderTools()).invoke("OrderTools#findOrder", Map.of()));
     }
 
     @Test
     void invoke_withUnknownTool_throws() {
-        assertThrows(IllegalArgumentException.class, () -> ToolRegistry.of(new OrderTools()).invoke("NO_SUCH_TOOL", Map.of()));
+        assertThrows(IllegalArgumentException.class, () -> ToolRegistry.of(new OrderTools()).invoke("OrderTools#noSuchTool", Map.of()));
     }
 
     /**
@@ -348,9 +387,9 @@ class ToolRegistryTest {
      */
     @Test
     void invoke_whenToolThrows_wrapsInToolInvocationException() {
-        var exception = assertThrows(ToolInvocationException.class, () -> ToolRegistry.of(new OrderTools()).invoke("EXPLODE", Map.of()));
+        var exception = assertThrows(ToolInvocationException.class, () -> ToolRegistry.of(new OrderTools()).invoke("OrderTools#explode", Map.of()));
 
-        assertEquals("EXPLODE", exception.getToolName());
+        assertEquals("OrderTools#explode", exception.getToolName());
         assertInstanceOf(IllegalStateException.class, exception.getCause());
     }
 

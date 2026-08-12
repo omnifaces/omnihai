@@ -15,7 +15,9 @@ package org.omnifaces.ai.tool;
 import static java.util.Arrays.stream;
 import static java.util.Comparator.comparing;
 import static java.util.stream.Collectors.groupingBy;
+import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toUnmodifiableList;
+import static java.util.stream.IntStream.range;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationTargetException;
@@ -65,9 +67,9 @@ final class ToolMethod implements Tool {
     /** The object the method is invoked on, or {@code null} while this is unbound metadata. */
     private final Object instance;
 
-    private ToolMethod(Method method) {
+    private ToolMethod(Method method, String name) {
         this.method = method;
-        this.name = toUpperSnakeCase(method.getName());
+        this.name = name;
         this.description = method.getAnnotation(AITool.class).value();
         this.params = stream(method.getParameters()).map(parameter -> toToolParam(method, parameter)).collect(toUnmodifiableList());
         this.instance = null;
@@ -108,8 +110,8 @@ final class ToolMethod implements Tool {
     private static List<ToolMethod> scan(Class<?> type) {
         var toolMethods = stream(type.getMethods()).filter(method -> method.isAnnotationPresent(AITool.class))
             .collect(groupingBy(Method::getName)).values().stream()
-            .flatMap(ToolMethod::withoutBridges)
-            .map(ToolMethod::new).sorted(comparing(ToolMethod::getName)).collect(toUnmodifiableList());
+            .flatMap(sameNamed -> toToolMethods(type, sameNamed))
+            .sorted(comparing(ToolMethod::getName)).collect(toUnmodifiableList());
 
         if (!toolMethods.isEmpty() && !Modifier.isPublic(type.getModifiers())) {
             throw new IllegalArgumentException(
@@ -121,12 +123,27 @@ final class ToolMethod implements Tool {
     }
 
     /**
+     * Returns the tools of the given same-named methods of the given class, named after both, e.g. {@code OrderTools#findOrder}. Overloads would share that one
+     * name, so they are numbered {@code OrderTools#findOrder1}, {@code OrderTools#findOrder2}, and so on, in the order of their parameter types, which keeps a
+     * given overload on the same number from one run to the next however reflection happened to order them.
+     */
+    private static Stream<ToolMethod> toToolMethods(Class<?> type, List<Method> sameNamed) {
+        var methods = withoutBridges(sameNamed).sorted(comparing(ToolMethod::toSignature)).toList();
+        var name = type.getSimpleName() + "#" + sameNamed.get(0).getName();
+        var overloaded = methods.size() > 1;
+        return range(0, methods.size()).mapToObj(index -> new ToolMethod(methods.get(index), overloaded ? name + (index + 1) : name));
+    }
+
+    private static String toSignature(Method method) {
+        return stream(method.getParameterTypes()).map(Class::getName).collect(joining(","));
+    }
+
+    /**
      * Returns the given same-named methods without the synthetic bridges which merely stand in front of one of the others.
      * <p>
      * A bridge generated for a generic or covariant override forwards to a method of its own class, which is the one to keep. A bridge generated to widen the
      * visibility of a method inherited from a non-public class forwards to that superclass method, which reflection does not otherwise offer, so it is the only
-     * handle on that tool and is kept. Genuine overloads are all kept, so that they collide on the one tool name they would share rather than one of them
-     * disappearing.
+     * handle on that tool and is kept. Genuine overloads are all kept, so that each becomes a tool of its own rather than one of them disappearing.
      */
     private static Stream<Method> withoutBridges(List<Method> sameNamed) {
         return sameNamed.stream().filter(method -> !method.isBridge() || isInheritedThroughBridge(method));
@@ -178,20 +195,6 @@ final class ToolMethod implements Tool {
         }
 
         return ToolParam.of(parameter.getType(), name, annotation.value());
-    }
-
-    private static String toUpperSnakeCase(String methodName) {
-        var upperSnakeCase = new StringBuilder();
-
-        for (var character : methodName.toCharArray()) {
-            if (Character.isUpperCase(character) && upperSnakeCase.length() > 0) {
-                upperSnakeCase.append('_');
-            }
-
-            upperSnakeCase.append(Character.toUpperCase(character));
-        }
-
-        return upperSnakeCase.toString();
     }
 
     @Override

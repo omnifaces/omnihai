@@ -21,8 +21,9 @@ import java.lang.annotation.Target;
 /**
  * Marks a method as a tool the AI may choose to call.
  * <p>
- * The tool name is derived from the method name in upper snake case, so {@code findOrder} becomes {@code FIND_ORDER}. The description is what the AI reads when
- * deciding whether the tool applies, so state what it returns and when it is appropriate.
+ * The tool name is derived from the method signature, so {@code findOrder} of {@code OrderTools} becomes {@code OrderTools#findOrder}, and overloads of it
+ * become {@code OrderTools#findOrder1} and {@code OrderTools#findOrder2}. The description is what the AI reads when deciding whether the tool applies, so state
+ * what it returns and when it is appropriate.
  * <p>
  * Usage example:
  *

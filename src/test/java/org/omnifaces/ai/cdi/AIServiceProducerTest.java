@@ -150,14 +150,14 @@ class AIServiceProducerTest {
     void produce_withTools_isDecoratedWithTheirRegistry() {
         var agent = assertInstanceOf(ToolCallingAIService.class, produce("withTools"));
 
-        assertEquals(Set.of("FIND_ORDER", "REFUND"), Set.copyOf(agent.getRegistry().getToolNames()));
+        assertEquals(Set.of("OrderTools#findOrder", "OrderTools#refund"), Set.copyOf(agent.getRegistry().getToolNames()));
     }
 
     @Test
     void produce_withToolGroup_narrowsTheRegistry() {
         var agent = assertInstanceOf(ToolCallingAIService.class, produce("withToolGroup"));
 
-        assertEquals(Set.of("FIND_ORDER"), Set.copyOf(agent.getRegistry().getToolNames()));
+        assertEquals(Set.of("OrderTools#findOrder"), Set.copyOf(agent.getRegistry().getToolNames()));
     }
 
     /**

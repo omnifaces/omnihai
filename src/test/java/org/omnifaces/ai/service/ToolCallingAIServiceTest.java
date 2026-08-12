@@ -123,12 +123,13 @@ class ToolCallingAIServiceTest {
      */
     @Test
     void chat_whenAiCallsTool_feedsTheResultBack() {
-        var agent = withTools(scripted(toolCall("FIND_ORDER", "orderId", "42"), answer("It is shipped.")));
+        var agent = withTools(scripted(toolCall("OrderTools#findOrder", "orderId", "42"), answer("It is shipped.")));
 
         assertEquals("It is shipped.", agent.chat("Where is order 42?"));
         assertEquals(2, requests.size());
         assertTrue(
-            requests.get(1).getMessage().contains("You called FIND_ORDER(orderId=42) and it returned: order 42 is shipped"), requests.get(1).getMessage()
+            requests.get(1).getMessage().contains("You called OrderTools#findOrder(orderId=42) and it returned: order 42 is shipped"),
+            requests.get(1).getMessage()
         );
     }
 
@@ -138,7 +139,7 @@ class ToolCallingAIServiceTest {
      */
     @Test
     void chat_tellsTheAiNotToRepeatACallItAlreadyMade() {
-        var agent = withTools(scripted(toolCall("FIND_ORDER", "orderId", "42"), answer("It is shipped.")));
+        var agent = withTools(scripted(toolCall("OrderTools#findOrder", "orderId", "42"), answer("It is shipped.")));
 
         agent.chat("Where is order 42?");
 
@@ -150,7 +151,7 @@ class ToolCallingAIServiceTest {
      */
     @Test
     void chat_asksForAnAnswerOnTheFinalTurn() {
-        var wrapped = scripted(toolCall("FIND_ORDER", "orderId", "42"), answer("It is shipped."));
+        var wrapped = scripted(toolCall("OrderTools#findOrder", "orderId", "42"), answer("It is shipped."));
         var agent = new ToolCallingAIService(wrapped, ToolRegistry.of(new OrderTools()), 1, null);
 
         agent.chat("Where is order 42?");
@@ -165,7 +166,7 @@ class ToolCallingAIServiceTest {
     void chat_offersNoToolOnTheFinalTurn() {
         var schemas = new ArrayList<JsonObject>();
         var wrapped = mock(AIService.class);
-        var remaining = new ArrayList<>(List.of(toolCall("FIND_ORDER", "orderId", "42"), answer("It is shipped.")));
+        var remaining = new ArrayList<>(List.of(toolCall("OrderTools#findOrder", "orderId", "42"), answer("It is shipped.")));
 
         when(wrapped.chat(any(ChatInput.class), any(ChatOptions.class))).thenAnswer(invocation -> {
             schemas.add(((ChatOptions) invocation.getArgument(1)).getJsonSchema());
@@ -174,7 +175,8 @@ class ToolCallingAIServiceTest {
 
         new ToolCallingAIService(wrapped, ToolRegistry.of(new OrderTools()), 1, null).chat("Where is order 42?");
 
-        assertEquals(List.of("COLLAPSE", "EXPLODE", "FIND_ORDER", "ANSWER"), toolNames(schemas.get(0))); // Sorted by name, then ANSWER.
+        // Sorted by name, then ANSWER.
+        assertEquals(List.of("OrderTools#collapse", "OrderTools#explode", "OrderTools#findOrder", "ANSWER"), toolNames(schemas.get(0)));
         assertEquals(List.of("ANSWER"), toolNames(schemas.get(1)));
     }
 
@@ -190,7 +192,7 @@ class ToolCallingAIServiceTest {
     void chatAsync_offersNoToolOnTheFinalTurn() {
         var schemas = new ArrayList<JsonObject>();
         var wrapped = mock(AIService.class);
-        var remaining = new ArrayList<>(List.of(toolCall("FIND_ORDER", "orderId", "42"), answer("It is shipped.")));
+        var remaining = new ArrayList<>(List.of(toolCall("OrderTools#findOrder", "orderId", "42"), answer("It is shipped.")));
 
         when(wrapped.chatAsync(any(ChatInput.class), any(ChatOptions.class))).thenAnswer(invocation -> {
             schemas.add(((ChatOptions) invocation.getArgument(1)).getJsonSchema());
@@ -199,7 +201,7 @@ class ToolCallingAIServiceTest {
 
         new ToolCallingAIService(wrapped, ToolRegistry.of(new OrderTools()), 1, null).chatAsync("Where is order 42?").join();
 
-        assertEquals(List.of("COLLAPSE", "EXPLODE", "FIND_ORDER", "ANSWER"), toolNames(schemas.get(0)));
+        assertEquals(List.of("OrderTools#collapse", "OrderTools#explode", "OrderTools#findOrder", "ANSWER"), toolNames(schemas.get(0)));
         assertEquals(List.of("ANSWER"), toolNames(schemas.get(1)));
     }
 
@@ -222,22 +224,22 @@ class ToolCallingAIServiceTest {
      */
     @Test
     void chat_whenToolFails_feedsTheFailureBack() {
-        var agent = withTools(scripted(toolCall("EXPLODE"), answer("Could not check.")));
+        var agent = withTools(scripted(toolCall("OrderTools#explode"), answer("Could not check.")));
 
         assertEquals("Could not check.", agent.chat("Explode please"));
         assertTrue(
-            requests.get(1).getMessage().contains("You called EXPLODE() and it did not complete"),
+            requests.get(1).getMessage().contains("You called OrderTools#explode() and it did not complete"),
             requests.get(1).getMessage()
         );
     }
 
     @Test
     void chat_whenArgumentIsUnconvertible_feedsTheFailureBack() {
-        var agent = withTools(scripted(toolCall("FIND_ORDER", "orderId", "yesterday"), answer("Could not check.")));
+        var agent = withTools(scripted(toolCall("OrderTools#findOrder", "orderId", "yesterday"), answer("Could not check.")));
 
         assertEquals("Could not check.", agent.chat("Where is my order?"));
         assertTrue(
-            requests.get(1).getMessage().contains("You called FIND_ORDER(orderId=yesterday) and it was rejected"), requests.get(1).getMessage()
+            requests.get(1).getMessage().contains("You called OrderTools#findOrder(orderId=yesterday) and it was rejected"), requests.get(1).getMessage()
         );
     }
 
@@ -246,7 +248,7 @@ class ToolCallingAIServiceTest {
      */
     @Test
     void chat_whenAiNeverAnswers_throwsAtTheIterationCap() {
-        var wrapped = scripted(toolCall("FIND_ORDER", "orderId", "42"), toolCall("FIND_ORDER", "orderId", "42"));
+        var wrapped = scripted(toolCall("OrderTools#findOrder", "orderId", "42"), toolCall("OrderTools#findOrder", "orderId", "42"));
         var agent = new ToolCallingAIService(wrapped, ToolRegistry.of(new OrderTools()), 1, null);
 
         var exception = assertThrows(AIToolIterationException.class, () -> agent.chat("Where is order 42?"));
@@ -264,7 +266,7 @@ class ToolCallingAIServiceTest {
     @Test
     void chat_withType_runsTheLoopAndAnswersTyped() {
         var wrapped = mock(AIService.class);
-        when(wrapped.chat(any(ChatInput.class), any(ChatOptions.class))).thenReturn(toolCall("FIND_ORDER", "orderId", "42"));
+        when(wrapped.chat(any(ChatInput.class), any(ChatOptions.class))).thenReturn(toolCall("OrderTools#findOrder", "orderId", "42"));
         when(wrapped.chat(any(ChatInput.class), any(ChatOptions.class), eq(Answer.class))).thenAnswer(invocation -> {
             requests.add(invocation.getArgument(0));
             return new Answer("ZZTOP-9");
@@ -273,7 +275,7 @@ class ToolCallingAIServiceTest {
         var answer = new ToolCallingAIService(wrapped, ToolRegistry.of(new OrderTools())).chat("Which carrier shipped order 42?", Answer.class);
 
         assertEquals(new Answer("ZZTOP-9"), answer);
-        assertTrue(requests.get(0).getMessage().contains("You called FIND_ORDER(orderId=42)"), requests.get(0).getMessage());
+        assertTrue(requests.get(0).getMessage().contains("You called OrderTools#findOrder(orderId=42)"), requests.get(0).getMessage());
     }
 
     /**
@@ -282,7 +284,7 @@ class ToolCallingAIServiceTest {
     @Test
     void chatAsync_withType_runsTheLoopAndAnswersTyped() {
         var wrapped = mock(AIService.class);
-        var remaining = new ArrayList<>(List.of(toolCall("FIND_ORDER", "orderId", "42"), answer("done")));
+        var remaining = new ArrayList<>(List.of(toolCall("OrderTools#findOrder", "orderId", "42"), answer("done")));
         when(wrapped.chatAsync(any(ChatInput.class), any(ChatOptions.class))).thenAnswer(invocation -> completedFuture(remaining.remove(0)));
         when(wrapped.chatAsync(any(ChatInput.class), any(ChatOptions.class), eq(Answer.class))).thenAnswer(invocation -> {
             requests.add(invocation.getArgument(0));
@@ -292,7 +294,7 @@ class ToolCallingAIServiceTest {
         var agent = new ToolCallingAIService(wrapped, ToolRegistry.of(new OrderTools()));
 
         assertEquals(new Answer("ZZTOP-9"), agent.chatAsync("Which carrier shipped order 42?", Answer.class).join());
-        assertTrue(requests.get(0).getMessage().contains("You called FIND_ORDER(orderId=42)"), requests.get(0).getMessage());
+        assertTrue(requests.get(0).getMessage().contains("You called OrderTools#findOrder(orderId=42)"), requests.get(0).getMessage());
     }
 
     /**
@@ -301,7 +303,7 @@ class ToolCallingAIServiceTest {
     @Test
     void chat_withType_whenAiNeverAnswers_answersTypedAtTheCap() {
         var wrapped = mock(AIService.class);
-        when(wrapped.chat(any(ChatInput.class), any(ChatOptions.class))).thenReturn(toolCall("FIND_ORDER", "orderId", "42"));
+        when(wrapped.chat(any(ChatInput.class), any(ChatOptions.class))).thenReturn(toolCall("OrderTools#findOrder", "orderId", "42"));
         when(wrapped.chat(any(ChatInput.class), any(ChatOptions.class), eq(Answer.class))).thenReturn(new Answer("ZZTOP-9"));
 
         var agent = new ToolCallingAIService(wrapped, ToolRegistry.of(new OrderTools()), 1, null);
@@ -336,7 +338,7 @@ class ToolCallingAIServiceTest {
     private ChatInput typedTurnOf(ChatOptions options) {
         var typedTurns = new ArrayList<ChatInput>();
         var wrapped = mock(AIService.class);
-        when(wrapped.chat(any(ChatInput.class), any(ChatOptions.class))).thenReturn(toolCall("FIND_ORDER", "orderId", "42"), answer("done"));
+        when(wrapped.chat(any(ChatInput.class), any(ChatOptions.class))).thenReturn(toolCall("OrderTools#findOrder", "orderId", "42"), answer("done"));
         when(wrapped.chat(any(ChatInput.class), any(ChatOptions.class), eq(Answer.class))).thenAnswer(invocation -> {
             typedTurns.add(invocation.getArgument(0));
             return new Answer("ZZTOP-9");
@@ -350,7 +352,7 @@ class ToolCallingAIServiceTest {
     @Test
     void chatAsync_withType_whenAiNeverAnswers_answersTypedAtTheCap() {
         var wrapped = mock(AIService.class);
-        when(wrapped.chatAsync(any(ChatInput.class), any(ChatOptions.class))).thenReturn(completedFuture(toolCall("FIND_ORDER", "orderId", "42")));
+        when(wrapped.chatAsync(any(ChatInput.class), any(ChatOptions.class))).thenReturn(completedFuture(toolCall("OrderTools#findOrder", "orderId", "42")));
         when(wrapped.chatAsync(any(ChatInput.class), any(ChatOptions.class), eq(Answer.class))).thenReturn(completedFuture(new Answer("ZZTOP-9")));
 
         var agent = new ToolCallingAIService(wrapped, ToolRegistry.of(new OrderTools()), 1, null);
@@ -374,13 +376,13 @@ class ToolCallingAIServiceTest {
     @Test
     void chat_notifiesObserverOfEveryToolCall() {
         var invocations = new ArrayList<ToolInvocation>();
-        var wrapped = scripted(toolCall("FIND_ORDER", "orderId", "42"), toolCall("EXPLODE"), answer("Done."));
+        var wrapped = scripted(toolCall("OrderTools#findOrder", "orderId", "42"), toolCall("OrderTools#explode"), answer("Done."));
         var agent = new ToolCallingAIService(wrapped, ToolRegistry.of(new OrderTools()), 5, invocations::add);
 
         agent.chat("Where is order 42?");
 
         assertEquals(2, invocations.size());
-        assertEquals("FIND_ORDER", invocations.get(0).toolName());
+        assertEquals("OrderTools#findOrder", invocations.get(0).toolName());
         assertFalse(invocations.get(0).hasFailed());
         assertEquals("42", invocations.get(0).arguments().get("orderId"));
         assertTrue(invocations.get(1).hasFailed());
@@ -395,12 +397,17 @@ class ToolCallingAIServiceTest {
     @Test
     void chat_withProgrammaticallyDeclaredTool_callsTheLambda() {
         var tools = ToolRegistry.newBuilder()
-            .add("FIND_ORDER", "Looks up a single order by id", (Long orderId) -> "order " + orderId, ToolParam.of(long.class, "orderId", "The order id"))
+            .add(
+                "OrderTools#findOrder", "Looks up a single order by id", (Long orderId) -> "order " + orderId,
+                ToolParam.of(long.class, "orderId", "The order id")
+            )
             .build();
-        var agent = new ToolCallingAIService(scripted(toolCall("FIND_ORDER", "orderId", "42"), answer("Found it.")), tools);
+        var agent = new ToolCallingAIService(scripted(toolCall("OrderTools#findOrder", "orderId", "42"), answer("Found it.")), tools);
 
         assertEquals("Found it.", agent.chat("Where is order 42?"));
-        assertTrue(requests.get(1).getMessage().contains("You called FIND_ORDER(orderId=42) and it returned: order 42"), requests.get(1).getMessage());
+        assertTrue(
+            requests.get(1).getMessage().contains("You called OrderTools#findOrder(orderId=42) and it returned: order 42"), requests.get(1).getMessage()
+        );
     }
 
     /**
@@ -451,10 +458,10 @@ class ToolCallingAIServiceTest {
      */
     @Test
     void chat_whenArgumentsAreOmitted_feedsTheFailureBack() {
-        var agent = withTools(scripted("{\"tool\":\"FIND_ORDER\",\"answer\":\"\"}", answer("Could not check.")));
+        var agent = withTools(scripted("{\"tool\":\"OrderTools#findOrder\",\"answer\":\"\"}", answer("Could not check.")));
 
         assertEquals("Could not check.", agent.chat("Where is my order?"));
-        assertTrue(requests.get(1).getMessage().contains("You called FIND_ORDER() and it was rejected"), requests.get(1).getMessage());
+        assertTrue(requests.get(1).getMessage().contains("You called OrderTools#findOrder() and it was rejected"), requests.get(1).getMessage());
     }
 
     /**
@@ -472,11 +479,12 @@ class ToolCallingAIServiceTest {
         }
     )
     void chat_acceptsEveryUnambiguousArgumentShape(String arguments) {
-        var agent = withTools(scripted("{\"tool\":\"FIND_ORDER\",\"arguments\":" + arguments + ",\"answer\":\"\"}", answer("Found it.")));
+        var agent = withTools(scripted("{\"tool\":\"OrderTools#findOrder\",\"arguments\":" + arguments + ",\"answer\":\"\"}", answer("Found it.")));
 
         assertEquals("Found it.", agent.chat("Where is order 42?"));
         assertTrue(
-            requests.get(1).getMessage().contains("You called FIND_ORDER(orderId=42) and it returned: order 42 is shipped"), requests.get(1).getMessage()
+            requests.get(1).getMessage().contains("You called OrderTools#findOrder(orderId=42) and it returned: order 42 is shipped"),
+            requests.get(1).getMessage()
         );
     }
 
@@ -517,7 +525,7 @@ class ToolCallingAIServiceTest {
      */
     @Test
     void chat_whenToolThrows_doesNotLeakTheExceptionDetailToTheAi() {
-        var agent = withTools(scripted(toolCall("EXPLODE"), answer("Could not check.")));
+        var agent = withTools(scripted(toolCall("OrderTools#explode"), answer("Could not check.")));
 
         agent.chat("Explode please");
 
@@ -531,7 +539,7 @@ class ToolCallingAIServiceTest {
     @Test
     void chat_carriesAttachmentsIntoEveryTurn() {
         var input = ChatInput.newBuilder().message("What does this show?").attach("payload".getBytes()).build();
-        var agent = withTools(scripted(toolCall("FIND_ORDER", "orderId", "42"), answer("Done.")));
+        var agent = withTools(scripted(toolCall("OrderTools#findOrder", "orderId", "42"), answer("Done.")));
 
         agent.chat(input, ChatOptions.DEFAULT);
 
@@ -544,7 +552,7 @@ class ToolCallingAIServiceTest {
      */
     @Test
     void chatAsync_runsTheLoop() {
-        var agent = withTools(scripted(toolCall("FIND_ORDER", "orderId", "42"), answer("It is shipped.")));
+        var agent = withTools(scripted(toolCall("OrderTools#findOrder", "orderId", "42"), answer("It is shipped.")));
 
         assertEquals("It is shipped.", agent.chatAsync("Where is order 42?").join());
         assertEquals(2, requests.size());
@@ -555,7 +563,7 @@ class ToolCallingAIServiceTest {
      */
     @Test
     void chatAsync_whenAiNeverAnswers_throwsAtTheIterationCap() {
-        var wrapped = scripted(toolCall("FIND_ORDER", "orderId", "42"), toolCall("FIND_ORDER", "orderId", "42"));
+        var wrapped = scripted(toolCall("OrderTools#findOrder", "orderId", "42"), toolCall("OrderTools#findOrder", "orderId", "42"));
         var agent = new ToolCallingAIService(wrapped, ToolRegistry.of(new OrderTools()), 1, null);
 
         var exception = assertThrows(CompletionException.class, () -> agent.chatAsync("Where is order 42?").join());
@@ -590,7 +598,7 @@ class ToolCallingAIServiceTest {
         }).build();
 
         assertThrows(StackOverflowError.class, () -> new ToolCallingAIService(scripted(toolCall("BOOM")), lambda).chat("Boom please"));
-        assertThrows(StackOverflowError.class, () -> withTools(scripted(toolCall("COLLAPSE"))).chat("Collapse please"));
+        assertThrows(StackOverflowError.class, () -> withTools(scripted(toolCall("OrderTools#collapse"))).chat("Collapse please"));
     }
 
     /**
@@ -599,7 +607,7 @@ class ToolCallingAIServiceTest {
     @Test
     void chat_withMemory_carriesAttachmentsIntoEveryTurn() {
         var input = ChatInput.newBuilder().message("What does this show?").attach("payload".getBytes()).build();
-        var agent = withTools(scripted(toolCall("FIND_ORDER", "orderId", "42"), answer("Done.")));
+        var agent = withTools(scripted(toolCall("OrderTools#findOrder", "orderId", "42"), answer("Done.")));
 
         agent.chat(input, ChatOptions.newBuilder().withMemory(50).build());
 
@@ -613,7 +621,7 @@ class ToolCallingAIServiceTest {
     @Test
     void chat_withMemory_leavesFilesToTheHistoryWhenTheProviderReplaysThem() {
         var input = ChatInput.newBuilder().message("What does this show?").attach("payload".getBytes()).build();
-        var wrapped = scripted(toolCall("FIND_ORDER", "orderId", "42"), answer("Done."));
+        var wrapped = scripted(toolCall("OrderTools#findOrder", "orderId", "42"), answer("Done."));
         when(wrapped.supportsFileAttachmentsInHistory()).thenReturn(true);
 
         new ToolCallingAIService(wrapped, ToolRegistry.of(new OrderTools())).chat(input, ChatOptions.newBuilder().withMemory(50).build());
@@ -627,11 +635,11 @@ class ToolCallingAIServiceTest {
      */
     @Test
     void chat_carriesThePriorTurnOnlyWithoutMemory() {
-        withTools(scripted(toolCall("FIND_ORDER", "orderId", "42"), answer("Done."))).chat("Where is order 42?", ChatOptions.newBuilder().build());
+        withTools(scripted(toolCall("OrderTools#findOrder", "orderId", "42"), answer("Done."))).chat("Where is order 42?", ChatOptions.newBuilder().build());
         var withoutMemory = requests.get(1).getMessage();
 
         requests.clear();
-        withTools(scripted(toolCall("FIND_ORDER", "orderId", "42"), answer("Done.")))
+        withTools(scripted(toolCall("OrderTools#findOrder", "orderId", "42"), answer("Done.")))
             .chat("Where is order 42?", ChatOptions.newBuilder().withMemory(50).build());
         var withMemory = requests.get(1).getMessage();
 
@@ -669,7 +677,7 @@ class ToolCallingAIServiceTest {
         var wrapped = mock(AIService.class);
         when(wrapped.chat(any(ChatInput.class), any(ChatOptions.class))).thenAnswer(invocation -> {
             requests.add(invocation.getArgument(0));
-            return toolCall("FIND_ORDER", "orderId", "42");
+            return toolCall("OrderTools#findOrder", "orderId", "42");
         });
 
         var agent = new ToolCallingAIService(wrapped, ToolRegistry.of(new OrderTools()), maxToolCalls, invocations::add);
@@ -709,7 +717,7 @@ class ToolCallingAIServiceTest {
         var wrapped = mock(AIService.class);
         when(wrapped.chat(any(ChatInput.class), any(ChatOptions.class))).thenAnswer(invocation -> {
             requests.add(invocation.getArgument(0));
-            return toolCall("FIND_ORDER", "orderId", "42");
+            return toolCall("OrderTools#findOrder", "orderId", "42");
         });
         when(wrapped.chat(any(ChatInput.class), any(ChatOptions.class), eq(Answer.class))).thenAnswer(invocation -> {
             requests.add(invocation.getArgument(0));

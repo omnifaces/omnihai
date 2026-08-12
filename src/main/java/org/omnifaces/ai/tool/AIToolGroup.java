@@ -41,7 +41,7 @@ import java.lang.annotation.Target;
  * </pre>
  * <p>
  * Selecting the group narrows the tools the AI is offered. The narrowing is part of the generated response schema rather than a check applied afterwards, so a
- * service restricted to {@code ReadOnly} cannot name {@code REFUND} at all.
+ * service restricted to {@code ReadOnly} cannot name the {@code refund} tool at all.
  *
  * @author Bauke Scholtz
  * @since 1.6

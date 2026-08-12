@@ -239,6 +239,21 @@
                 </executions>
             </plugin>
 
+            <!-- Compile the test sources with -parameters, so that tool methods can rely on reflective parameter names. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.14.1</version>
+                <executions>
+                    <execution>
+                        <id>default-testCompile</id>
+                        <configuration>
+                            <parameters>true</parameters>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
             <!-- Configure the unit tests (*Test.java). -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

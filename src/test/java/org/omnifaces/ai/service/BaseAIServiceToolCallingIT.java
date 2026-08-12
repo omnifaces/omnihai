@@ -56,35 +56,35 @@ abstract class BaseAIServiceToolCallingIT extends AIServiceIT {
 
         @ReadOnly
         @AITool("Returns the status of a single order, including the carrier which shipped it")
-        public String findOrder(@AIToolParam(value = "The order id", name = "orderId") long orderId) {
+        public String findOrder(@AIToolParam("The order id") long orderId) {
             calls.add("findOrder(" + orderId + ")");
             return orderId == 42 ? "Order 42 was shipped by carrier ZZTOP-9, customer id 7." : "No order found with id " + orderId + ".";
         }
 
         @ReadOnly
         @AITool("Returns the name of a customer by customer id")
-        public String findCustomer(@AIToolParam(value = "The customer id", name = "customerId") long customerId) {
+        public String findCustomer(@AIToolParam("The customer id") long customerId) {
             calls.add("findCustomer(" + customerId + ")");
             return customerId == 7 ? "Customer 7 is named Wubbo Ockels." : "No customer found with id " + customerId + ".";
         }
 
         @ReadOnly
         @AITool("Returns which orders were placed on a given date")
-        public String findOrdersByDate(@AIToolParam(value = "The date in ISO 8601 format, so yyyy-MM-dd", name = "date") LocalDate date) {
-            calls.add("findOrdersByDate(" + date + ")");
-            return date.equals(LocalDate.of(2019, 3, 7)) ? "One order was placed that day: order 42." : "No orders were placed on " + date + ".";
+        public String findOrdersByDate(@AIToolParam(value = "The date in ISO 8601 format, so yyyy-MM-dd", name = "date") LocalDate d) {
+            calls.add("findOrdersByDate(" + d + ")");
+            return d.equals(LocalDate.of(2019, 3, 7)) ? "One order was placed that day: order 42." : "No orders were placed on " + d + ".";
         }
 
         @ReadOnly
         @AITool("Returns the delivery estimate of an order")
-        public String findDeliveryEstimate(@AIToolParam(value = "The order id", name = "orderId") long orderId) {
-            calls.add("findDeliveryEstimate(" + orderId + ")");
+        public String findDeliveryEstimate(@AIToolParam(value = "The order id", name = "orderId") long id) {
+            calls.add("findDeliveryEstimate(" + id + ")");
 
             if (flakyAttempts.incrementAndGet() == 1) {
                 throw new IllegalStateException("The tracking service is momentarily unavailable, retrying is expected to help.");
             }
 
-            return "Order " + orderId + " is estimated to arrive on the 29th of February.";
+            return "Order " + id + " is estimated to arrive on the 29th of February.";
         }
 
         @AITool("Refunds an order and pays the money back to the customer")
@@ -95,7 +95,7 @@ abstract class BaseAIServiceToolCallingIT extends AIServiceIT {
 
     }
 
-    /** What only {@code FIND_ORDER} knows, so a populated instance proves the typed answer was built from the tool result. */
+    /** What only {@code OrderTools#findOrder} knows, so a populated instance proves the typed answer was built from the tool result. */
     public record Delivery(String carrier, long customerId) {
     }
 
@@ -162,7 +162,7 @@ abstract class BaseAIServiceToolCallingIT extends AIServiceIT {
         assertFalse(answer.isBlank(), "a failing tool must not prevent an answer");
 
         var estimates = invocations.stream()
-            .filter(invocation -> "FIND_DELIVERY_ESTIMATE".equals(invocation.toolName()))
+            .filter(invocation -> "OrderTools#findDeliveryEstimate".equals(invocation.toolName()))
             .filter(invocation -> !(invocation.failure() instanceof IllegalArgumentException)) // A rejected argument never reached the tool.
             .toList();
 
@@ -187,7 +187,7 @@ abstract class BaseAIServiceToolCallingIT extends AIServiceIT {
         log(answer);
 
         assertFalse(tools.calls.stream().anyMatch(call -> call.startsWith("refund")), "refund must not have been called, but calls were: " + tools.calls);
-        assertTrue(invocations.stream().noneMatch(invocation -> "REFUND".equals(invocation.toolName())));
+        assertTrue(invocations.stream().noneMatch(invocation -> "OrderTools#refund".equals(invocation.toolName())));
     }
 
     /**
