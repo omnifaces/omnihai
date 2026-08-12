@@ -70,7 +70,7 @@ class AIServiceProducerTest {
     }
 
     /**
-     * {@code maxAttempts} counts the initial attempt plus retries, as on {@link RetryingAIService.Builder#maxAttempts(int)}, so 1 means a single attempt and
+     * {@code maxAttempts} counts the initial attempt plus retries, as on {@link RetryingAIService.Builder_maxAttempts_int}, so 1 means a single attempt and
      * hence no retrying.
      */
     @Test
@@ -150,14 +150,14 @@ class AIServiceProducerTest {
     void produce_withTools_isDecoratedWithTheirRegistry() {
         var agent = assertInstanceOf(ToolCallingAIService.class, produce("withTools"));
 
-        assertEquals(Set.of("OrderTools#findOrder", "OrderTools#refund"), Set.copyOf(agent.getRegistry().getToolNames()));
+        assertEquals(Set.of("OrderTools_findOrder", "OrderTools_refund"), Set.copyOf(agent.getRegistry().getToolNames()));
     }
 
     @Test
     void produce_withToolGroup_narrowsTheRegistry() {
         var agent = assertInstanceOf(ToolCallingAIService.class, produce("withToolGroup"));
 
-        assertEquals(Set.of("OrderTools#findOrder"), Set.copyOf(agent.getRegistry().getToolNames()));
+        assertEquals(Set.of("OrderTools_findOrder"), Set.copyOf(agent.getRegistry().getToolNames()));
     }
 
     /**

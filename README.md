@@ -680,7 +680,7 @@ The tool beans must be normal-scoped, e.g. `@ApplicationScoped` or `@RequestScop
 
 Each turn the AI either names a tool or answers. A named tool is invoked with its arguments converted to the declared parameter types, the return value is fed back, and the next turn begins, until the AI answers or the tool call cap is exhausted. Tools work the same on every provider, as they ride on the same provider-enforced structured outputs as `chat(message, MyRecord.class)` rather than on provider-native function calling.
 
-The tool name is derived from the method signature, so `findOrder` of `OrderTools` becomes `OrderTools#findOrder` and overloads of it become `OrderTools#findOrder1` and `OrderTools#findOrder2`, and the manifest handed to the AI is generated from the descriptions. A tool may return anything; what the AI is handed is its `toString()`, so return something which reads as an answer. A record does nicely, a bare `true` does not. Tools are listed in a stable order, so that the manifest is identical from one call to the next and the provider's prompt cache keeps hitting.
+The tool name is derived from the method signature, so `findOrder` of `OrderTools` becomes `OrderTools_findOrder` and overloads of it carry their parameter types as `OrderTools_findOrder_long` and `OrderTools_findOrder_String`, and the manifest handed to the AI is generated from the descriptions. A tool may return anything; what the AI is handed is its `toString()`, so return something which reads as an answer. A record does nicely, a bare `true` does not. Tools are listed in a stable order, so that the manifest is identical from one call to the next and the provider's prompt cache keeps hitting.
 
 The declaring class must be `public`, and `@AIToolParam` needs an explicit `name` unless you compile with `-parameters`. Both are checked when the tools are registered, not when the AI first calls one. An injected bean is a container proxy whose methods carry no parameter names of their own, so the class behind the proxy is what gets scanned; hand `ToolRegistry.newBuilder().add(group, declaringClass, instance)` the class explicitly if your container's proxies are not recognized.
 
@@ -714,11 +714,11 @@ public @interface ReadOnly {}
 ```
 
 ```java
-AIService tier1      = aiService.withTools(ReadOnly.class, orderTools); // OrderTools#findOrder only
+AIService tier1      = aiService.withTools(ReadOnly.class, orderTools); // OrderTools_findOrder only
 AIService supervisor = aiService.withTools(orderTools, shippingTools);  // everything
 ```
 
-Narrowing applies to the generated response schema rather than to a check afterwards, so `tier1` cannot name `OrderTools#refund` at all: the token is not in the grammar the model decodes against.
+Narrowing applies to the generated response schema rather than to a check afterwards, so `tier1` cannot name `OrderTools_refund` at all: the token is not in the grammar the model decodes against.
 
 ### Bounding and Observing the Loop
 

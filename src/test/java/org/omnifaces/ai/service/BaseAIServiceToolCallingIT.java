@@ -95,7 +95,7 @@ abstract class BaseAIServiceToolCallingIT extends AIServiceIT {
 
     }
 
-    /** What only {@code OrderTools#findOrder} knows, so a populated instance proves the typed answer was built from the tool result. */
+    /** What only {@code OrderTools_findOrder} knows, so a populated instance proves the typed answer was built from the tool result. */
     public record Delivery(String carrier, long customerId) {
     }
 
@@ -162,7 +162,7 @@ abstract class BaseAIServiceToolCallingIT extends AIServiceIT {
         assertFalse(answer.isBlank(), "a failing tool must not prevent an answer");
 
         var estimates = invocations.stream()
-            .filter(invocation -> "OrderTools#findDeliveryEstimate".equals(invocation.toolName()))
+            .filter(invocation -> "OrderTools_findDeliveryEstimate".equals(invocation.toolName()))
             .filter(invocation -> !(invocation.failure() instanceof IllegalArgumentException)) // A rejected argument never reached the tool.
             .toList();
 
@@ -187,7 +187,7 @@ abstract class BaseAIServiceToolCallingIT extends AIServiceIT {
         log(answer);
 
         assertFalse(tools.calls.stream().anyMatch(call -> call.startsWith("refund")), "refund must not have been called, but calls were: " + tools.calls);
-        assertTrue(invocations.stream().noneMatch(invocation -> "OrderTools#refund".equals(invocation.toolName())));
+        assertTrue(invocations.stream().noneMatch(invocation -> "OrderTools_refund".equals(invocation.toolName())));
     }
 
     /**

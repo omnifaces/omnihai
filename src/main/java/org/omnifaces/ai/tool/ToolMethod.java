@@ -17,7 +17,6 @@ import static java.util.Comparator.comparing;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toUnmodifiableList;
-import static java.util.stream.IntStream.range;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationTargetException;
@@ -123,19 +122,23 @@ final class ToolMethod implements Tool {
     }
 
     /**
-     * Returns the tools of the given same-named methods of the given class, named after both, e.g. {@code OrderTools#findOrder}. Overloads would share that one
-     * name, so they are numbered {@code OrderTools#findOrder1}, {@code OrderTools#findOrder2}, and so on, in the order of their parameter types, which keeps a
-     * given overload on the same number from one run to the next however reflection happened to order them.
+     * Returns the tools of the given same-named methods of the given class, named after both, e.g. {@code OrderTools_findOrder}. Overloads would share that one
+     * name, so each carries its parameter types as well, as in {@code OrderTools_findOrder_long}, which keeps a given overload on the name it already had when
+     * another one is added next to it.
      */
     private static Stream<ToolMethod> toToolMethods(Class<?> type, List<Method> sameNamed) {
-        var methods = withoutBridges(sameNamed).sorted(comparing(ToolMethod::toSignature)).toList();
-        var name = type.getSimpleName() + "#" + sameNamed.get(0).getName();
-        var overloaded = methods.size() > 1;
-        return range(0, methods.size()).mapToObj(index -> new ToolMethod(methods.get(index), overloaded ? name + (index + 1) : name));
+        var methods = withoutBridges(sameNamed).toList();
+        return methods.stream().map(method -> new ToolMethod(method, toName(type, method, methods.size() > 1)));
     }
 
-    private static String toSignature(Method method) {
-        return stream(method.getParameterTypes()).map(Class::getName).collect(joining(","));
+    private static String toName(Class<?> type, Method method, boolean overloaded) {
+        var name = type.getSimpleName() + "_" + method.getName();
+        return overloaded ? name + stream(method.getParameterTypes()).map(ToolMethod::toTypeName).collect(joining("_", "_", "")) : name;
+    }
+
+    /** Returns the given parameter type as a name fragment, where an array becomes {@code long[]} to {@code longArray} rather than carrying its brackets. */
+    private static String toTypeName(Class<?> type) {
+        return type.getSimpleName().replace("[]", "Array");
     }
 
     /**
