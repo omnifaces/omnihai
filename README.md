@@ -682,7 +682,7 @@ Each turn the AI either names a tool or answers. A named tool is invoked with it
 
 The tool name is derived from the method name in upper snake case, so `findOrder` becomes `FIND_ORDER`, and the manifest handed to the AI is generated from the descriptions. A tool may return anything; what the AI is handed is its `toString()`, so return something which reads as an answer. A record does nicely, a bare `true` does not. Tools are listed in a stable order, so that the manifest is identical from one call to the next and the provider's prompt cache keeps hitting.
 
-The declaring class must be `public`, and `@AIToolParam` needs an explicit `name` unless you compile with `-parameters`. Both are checked when the tools are registered, not when the AI first calls one. An injected bean is a container proxy whose methods carry no parameter names of their own, so the class behind the proxy is what gets scanned; hand `ToolRegistry.newBuilder().add(group, declaringClass, instance)` the class explicitly if your container's proxies are not recognised.
+The declaring class must be `public`, and `@AIToolParam` needs an explicit `name` unless you compile with `-parameters`. Both are checked when the tools are registered, not when the AI first calls one. An injected bean is a container proxy whose methods carry no parameter names of their own, so the class behind the proxy is what gets scanned; hand `ToolRegistry.newBuilder().add(group, declaringClass, instance)` the class explicitly if your container's proxies are not recognized.
 
 Providers differ in how strictly they enforce the schema, so whatever shape the AI puts its arguments in is accepted as long as it unambiguously carries a name and a value.
 

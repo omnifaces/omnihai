@@ -1857,7 +1857,7 @@ class ChatOptionsTest {
     }
 
     /**
-     * A budget cap bounds the conversation, not the instance, so spending through a derived instance counts towards the original's cap.
+     * A budget cap bounds the conversation, not the instance, so spending through a derived instance counts toward the original's cap.
      */
     @Test
     void withJsonSchema_accumulatesTotalCostOnTheOriginal() {

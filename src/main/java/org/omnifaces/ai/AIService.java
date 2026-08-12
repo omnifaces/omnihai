@@ -692,7 +692,7 @@ public interface AIService extends Serializable {
      * <p>
      * When {@link ChatOptions#useWebSearch() web search} is enabled, streaming is supported but intermediate tool-use activity (e.g., the model fetching search
      * results) produces no tokens in the {@code onToken} callback. The stream will appear paused during that phase and resume once the model begins writing its
-     * response. This behaviour is provider-dependent and may vary across AI implementations.
+     * response. This behavior is provider-dependent and may vary across AI implementations.
      *
      * @param input The user's input containing message and file attachments.
      * @param options Chat options (system prompt, temperature, max tokens, memory, etc.).

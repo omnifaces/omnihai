@@ -152,7 +152,7 @@ abstract class BaseAIServiceToolCallingIT extends AIServiceIT {
 
     /**
      * A tool which throws is reported back rather than aborting the chat, so the AI still answers instead of the call blowing up. Whether it then tries the
-     * tool again is the AI's own judgement and not something the library can guarantee, but a retry which does happen must succeed and be used.
+     * tool again is the AI's own judgment and not something the library can guarantee, but a retry which does happen must succeed and be used.
      */
     @Test
     void recoversFromFailingTool() {
