@@ -188,6 +188,7 @@
                                     <header>LICENSE.txt</header>
                                     <excludes>
                                        <exclude>*.*</exclude> <!-- excludes files in root folder -->
+                                       <exclude>**/*.txt</exclude>
                                        <exclude>src/test/resources/*.*</exclude>
                                     </excludes>
                                 </licenseSet>
@@ -208,7 +209,7 @@
                             <file>${project.basedir}/src/main/eclipse-formatter.xml</file>
                         </eclipse>
                         <importOrder>
-                            <file>${project.basedir}/src/main/eclipse.importorder</file>
+                            <file>${project.basedir}/src/main/eclipse-importorder.txt</file>
                         </importOrder>
                         <removeUnusedImports />
                         <trimTrailingWhitespace />
