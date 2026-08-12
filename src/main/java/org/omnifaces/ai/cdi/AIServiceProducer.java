@@ -86,7 +86,7 @@ class AIServiceProducer {
         if (!isJsonAvailable()) {
             throw new UnsupportedOperationException(
                 "You need a runtime implementation of jakarta.json-api in order for default AI services to work."
-                    + " E.g. org.eclipse.parsson:parsson:1.1.7 or simply a Jakarta EE-compatible runtime such as WildFly"
+                    + " E.g. org.eclipse.parsson:parsson:1.1.9 or simply a Jakarta EE-compatible runtime such as WildFly"
             );
         }
 
@@ -181,7 +181,7 @@ class AIServiceProducer {
             if (!isMicroProfileConfigAvailable()) {
                 throw new UnsupportedOperationException(
                     "You need a runtime implementation of microprofile-config-api in order for MP config resolution in @AI attributes to work."
-                        + " E.g. io.smallrye.config:smallrye-config:3.15.1 or simply a MicroProfile-compatible runtime such as Quarkus"
+                        + " E.g. io.smallrye.config:smallrye-config:3.18.1 or simply a MicroProfile-compatible runtime such as Quarkus"
                 );
             }
 
