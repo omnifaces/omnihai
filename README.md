@@ -648,7 +648,8 @@ public class OrderTools {
 
     @AITool("Lists the orders placed by a customer")
     public String listOrdersByEmail(@AIToolParam(value = "The customer email", name = "email") String email) {
-        return orders.findByEmail(email).stream().map(Order::toSummary).collect(joining("\n"));
+        var summaries = orders.findByEmail(email).stream().map(Order::toSummary).collect(joining("\n"));
+        return summaries.isEmpty() ? "No orders found for that email." : summaries;
     }
 
     @AITool("Issues a refund for an order")
