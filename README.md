@@ -68,7 +68,7 @@ You can technically also use it on plain Java SE, you'll still need the JSON-P d
 | Meta AI | muse-spark-1.1 | [Yes](https://developer.meta.com/ai/products/meta-model-api/) | [List](https://dev.meta.ai/docs/getting-started/overview/) |
 | Azure OpenAI | gpt-5.5 | [Yes](https://portal.azure.com) | [List](https://ai.azure.com/catalog) |
 | OpenRouter | deepseek/deepseek-v4-pro | [Yes](https://openrouter.ai/settings/keys) | [List](https://openrouter.ai/models) |
-| Hugging Face | google/gemma-4-26B-A4B-it | [Yes](https://huggingface.co/settings/tokens) | [List](https://huggingface.co/models) |
+| Hugging Face | google/gemma-4-31B-it | [Yes](https://huggingface.co/settings/tokens) | [List](https://huggingface.co/models) |
 | Ollama | gemma4 | No (localhost) | [List](https://ollama.com/library) |
 | Custom | - | - | - |
 
@@ -837,7 +837,7 @@ What you give up is everything `@AITool` does for you: the manifest is prose whi
 | **Memory/History** | ✅ | ✅ | ✅ |
 | **Token Usage Tracking** | ✅ | ✅ | ✅ |
 | **Web Search** | ✅ (built-in) | ✅ | ✅ |
-| **Agents** | ❌ | ✅ | ✅ |
+| **Agents** | ➖ (single tool loop, no orchestration) | ✅ | ✅ |
 | **Prompt Templates** | ❌ | ✅ | ✅ |
 
 Jakarta Agentic AI is deliberately absent from that table: it standardizes the workflow around an AI call rather than the call itself, so a feature-by-feature comparison would be comparing different layers. See below.
