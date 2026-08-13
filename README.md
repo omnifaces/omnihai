@@ -815,6 +815,44 @@ AIService supervisor = aiService.withTools(orderTools, shippingTools);  // every
 
 Narrowing applies to the generated response schema rather than to a check afterwards, so `tier1` cannot name `OrderTools_refund` at all: the token is not in the grammar the model decodes against.
 
+### Authorizing Tool Calls
+
+Grouping decides which tools exist, not which data they may return. The AI picks the arguments, and it picks them from everything it has read: the question, and every tool result before it. An `orderId` is therefore a value which arrived from outside, exactly like a request parameter, and a lookup by id or by email which does not check who is asking lets any caller read any caller's data. Keep that check in the service the tool delegates to rather than in the tool itself, so that it holds for the backing bean and the REST resource too, and let it return nothing rather than throw, so that the AI reports "no order found" instead of confirming that the order exists:
+
+```java
+@ApplicationScoped
+public class OrderService {
+
+    @Inject
+    private SecurityContext security;
+
+    @Inject
+    private OrderRepository repository;
+
+    public Optional<Order> findById(long orderId) {
+        return repository.findById(orderId).filter(order -> mayRead(order.getCustomer().getEmail()));
+    }
+
+    public List<Order> findByEmail(String email) {
+        return mayRead(email) ? repository.findByEmail(email) : emptyList();
+    }
+
+    @Transactional
+    @RolesAllowed("SUPPORT")
+    public Refund refund(long orderId) {
+        return repository.refund(orderId);
+    }
+
+    private boolean mayRead(String email) {
+        var caller = security.getCallerPrincipal();
+        return security.isCallerInRole("SUPPORT") || (caller != null && caller.getName().equalsIgnoreCase(email));
+    }
+
+}
+```
+
+The security context and the `@RolesAllowed` interceptor are in scope because the synchronous `chat` methods invoke tools on the calling thread, as described under [bounding the loop](#bounding-and-observing-the-loop). Dropping a parameter the caller has no business choosing is stronger still: a `listMyOrders()` deriving the email from the principal leaves nothing in the schema to aim at, and the email-taking variant then belongs in a support-only tool group.
+
 ### Bounding and Observing the Loop
 
 The tool call cap bounds latency and spend, and defaults to five. The turn after the last permitted call is offered no tool at all: the schema for that turn enumerates only the answer, so a model which keeps reaching for tools is denied the tokens to name one rather than merely asked to stop, which is what a weaker model ignores. `AIToolIterationException` is therefore the backstop for a provider which does not enforce the schema, and means the conversation is not converging rather than that a tool failed. On the typed methods the cap forces the typed answer instead of throwing, as the call which produces it carries your own schema and offers no tool to begin with. An observer receives every tool call after it ran, which is the audit point for logging and metrics. It cannot gate a call, as the tool has already executed by then; see [owning the loop](#owning-the-loop) when you need approval before a tool runs:
