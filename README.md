@@ -7,7 +7,7 @@
 
 *One API, any AI*
 
-A unified Java AI utility library for Jakarta EE or MicroProfile applications.
+A unified Java AI utility library, with first-class Jakarta EE and MicroProfile integration.
 
 ## Overview
 
@@ -16,7 +16,9 @@ OmniHai provides a single, consistent API to interact with multiple AI providers
 ## Minimum Requirements
 
 - Java 17
-- Jakarta EE 10 or MicroProfile 7 (JSON-P required, CDI optional, EL optional, MP Config optional)
+- A JSON-P implementation
+
+That is the only hard requirement. CDI, EL and MP Config are optional and only needed for the `@AI` injection features. Jakarta EE 10 and MicroProfile 7 runtimes already provide all four, so nothing needs to be added there.
 
 ## Installation
 
@@ -29,7 +31,9 @@ OmniHai provides a single, consistent API to interact with multiple AI providers
 ```
 That's all for Jakarta EE / MicroProfile runtimes. No additional dependencies needed.
 
-On non-Jakarta EE / non-MicroProfile runtimes such as Tomcat, you'll need to manually add JSON-P and optionally CDI / MP Config dependencies:
+### Servlet containers
+
+On a bare servlet container such as Tomcat, add JSON-P and optionally CDI / MP Config:
 
 ```xml
 <!-- JSON-P implementation (required) -->
@@ -48,13 +52,103 @@ On non-Jakarta EE / non-MicroProfile runtimes such as Tomcat, you'll need to man
 
 <!-- MP Config implementation (optional, for ${config:...} resolution in @AI attributes) -->
 <dependency>
-    <groupId>smallrye.config</groupId>
+    <groupId>io.smallrye.config</groupId>
     <artifactId>smallrye-config</artifactId>
     <version>3.18.1</version>
 </dependency>
 ```
 
-You can technically also use it on plain Java SE, you'll still need the JSON-P dependency as shown above, but you cannot use the CDI annotation so you can skip the CDI/MP dependencies.
+### Plain Java SE
+
+OmniHai runs on plain Java SE too. The programmatic API needs nothing but a JSON-P implementation:
+
+```xml
+<dependency>
+    <groupId>org.eclipse.parsson</groupId>
+    <artifactId>parsson</artifactId>
+    <version>1.1.9</version>
+</dependency>
+```
+
+```java
+AIService service = AIConfig.of(AIProvider.OLLAMA, null).createService();
+String response = service.chat("What is Jakarta EE?");
+```
+
+The `@AI` injection features work on Java SE as well, via Weld SE. See [CDI on plain Java SE](#cdi-on-plain-java-se).
+
+### CDI on plain Java SE
+
+Add Weld SE, the standalone CDI implementation, next to JSON-P:
+
+```xml
+<dependency>
+    <groupId>org.jboss.weld.se</groupId>
+    <artifactId>weld-se-core</artifactId>
+    <version>6.0.4.Final</version>
+</dependency>
+```
+
+Weld only discovers beans in archives which carry a `META-INF/beans.xml`, so add one to your own module:
+
+```xml
+<beans
+    xmlns="https://jakarta.ee/xml/ns/jakartaee"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="https://jakarta.ee/xml/ns/jakartaee https://jakarta.ee/xml/ns/jakartaee/beans_4_1.xsd"
+    version="4.1" bean-discovery-mode="annotated"
+>
+</beans>
+```
+
+Then bootstrap the container and inject as usual:
+
+```java
+@ApplicationScoped
+public class Chatbot {
+
+    @Inject
+    @AI(provider = AIProvider.OLLAMA)
+    private AIService ai;
+
+    public void run() {
+        System.out.println(ai.chat("What is Jakarta EE?"));
+    }
+
+    public static void main(String[] args) {
+        try (var container = SeContainerInitializer.newInstance().initialize()) {
+            container.select(Chatbot.class).get().run();
+        }
+    }
+}
+```
+
+`@AITool` methods on CDI beans are discovered and invoked exactly as in a container.
+
+EL expressions in `@AI` attributes additionally need Weld's EL module and an EL implementation, as `weld-se-core` ships neither:
+
+```xml
+<dependency>
+    <groupId>org.jboss.weld.module</groupId>
+    <artifactId>weld-web</artifactId>
+    <version>6.0.4.Final</version>
+</dependency>
+<dependency>
+    <groupId>org.glassfish.expressly</groupId>
+    <artifactId>expressly</artifactId>
+    <version>6.0.0</version>
+</dependency>
+```
+
+MicroProfile Config expressions additionally need an MP Config implementation and a `META-INF/microprofile-config.properties`:
+
+```xml
+<dependency>
+    <groupId>io.smallrye.config</groupId>
+    <artifactId>smallrye-config</artifactId>
+    <version>3.18.1</version>
+</dependency>
+```
 
 ## Supported Providers
 
@@ -810,7 +904,7 @@ What you give up is everything `@AITool` does for you: the manifest is prose whi
 
 | Aspect | OmniHai | LangChain4J | Spring AI | Jakarta Agentic |
 |--------|--------|-------------|-----------|-----------------|
-| **Target Runtime** | Jakarta EE / MicroProfile | Any Java | Spring | Jakarta EE |
+| **Target Runtime** | Any Java (Jakarta EE / MicroProfile integration built in) | Any Java | Spring | Jakarta EE |
 | **Philosophy** | Minimal, focused utility | Comprehensive toolkit | Spring integration | Standard specification for agent workflows |
 | **Dependencies** | JSON-P only (CDI/EL/MP-config optional) | Multiple modules | Spring framework | `jakarta.ai.agent` API plus an implementation |
 | **Learning Curve** | Low | Medium-High | Medium (if Spring-familiar) | Medium (workflow annotations) |
@@ -929,7 +1023,7 @@ OmniHai fills a different niche. For apps that need:
 - Audio analysis (transcribe) and generation (text-to-speech)
 - Token usage tracking and cost calculation for budget monitoring
 - Minimal dependencies
-- Pure Jakarta EE / MicroProfile
+- Pure Jakarta EE / MicroProfile APIs, no framework
 
 ...without needing RAG pipelines, agent frameworks, or vector stores, OmniHai is arguably the better choice. Less to learn, less to break, fewer dependencies.
 
@@ -943,6 +1037,7 @@ Yes, significantly:
 - Zero external runtime dependencies — uses JDK's native `java.net.http.HttpClient` directly without any SDKs
 - Only one required dependency: Jakarta JSON-P (which Jakarta EE and MicroProfile runtimes already have)
 - Other dependencies are optional: CDI, EL and/or MP Config APIs (which Jakarta EE resp. MicroProfile runtimes already have)
+- On plain Java SE that one dependency is the entire footprint
 
 ### Is it faster?
 
@@ -965,7 +1060,7 @@ The design strongly suggests yes:
 ### When to Choose Each
 
 **Choose OmniHai when:**
-- You need a lean, focused solution for Jakarta EE or MicroProfile
+- You need a lean, focused solution without pulling in a framework
 - Your use case is straightforward chat, translation, summarization, proofreading, or moderation
 - You want minimal dependencies and a small footprint
 - You prefer simplicity over feature completeness
@@ -990,7 +1085,7 @@ The design strongly suggests yes:
 
 As said, OmniHai is "a sharp chef's knife — does a few things very well" rather than being a full framework.
 
-Bottom line: If you need a lightweight utility for AI chat/text operations in Jakarta EE or MicroProfile without framework overhead, OmniHai is dramatically smaller and should be faster with less GC pressure. If you need RAG or agent pipelines, LangChain4J's / Spring AI's larger footprint comes with those capabilities.
+Bottom line: If you need a lightweight utility for AI chat/text operations without framework overhead, OmniHai is dramatically smaller and should be faster with less GC pressure. If you need RAG or agent pipelines, LangChain4J's / Spring AI's larger footprint comes with those capabilities.
 
 ## License
 
