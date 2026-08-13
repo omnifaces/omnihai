@@ -821,7 +821,6 @@ Grouping decides which tools exist, not which data they may return. The AI picks
 
 ```java
 @ApplicationScoped
-@Transactional
 public class OrderService {
 
     @Inject
@@ -830,16 +829,15 @@ public class OrderService {
     @Inject
     private OrderRepository repository;
 
-    @Transactional(NOT_SUPPORTED)
     public Optional<Order> findById(long orderId) {
-        return repository.findById(orderId).filter(order -> mayRead(order.getEmail()));
+        return repository.findById(orderId).filter(order -> mayRead(order.getCustomer().getEmail()));
     }
 
-    @Transactional(NOT_SUPPORTED)
     public List<Order> findByEmail(String email) {
         return mayRead(email) ? repository.findByEmail(email) : emptyList();
     }
 
+    @Transactional
     @RolesAllowed("SUPPORT")
     public Refund refund(long orderId) {
         return repository.refund(orderId);
@@ -847,7 +845,7 @@ public class OrderService {
 
     private boolean mayRead(String email) {
         var caller = security.getCallerPrincipal();
-        return caller != null && (caller.getName().equalsIgnoreCase(email) || security.isCallerInRole("SUPPORT"));
+        return security.isCallerInRole("SUPPORT") || (caller != null && caller.getName().equalsIgnoreCase(email));
     }
 
 }
