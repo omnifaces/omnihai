@@ -18,7 +18,7 @@ OmniHai provides a single, consistent API to interact with multiple AI providers
 - Java 17
 - A JSON-P implementation
 
-That is the only hard requirement. CDI, EL and MP Config are optional and only needed for the `@AI` injection features. Jakarta EE 10 and MicroProfile 7 runtimes already provide all four, so nothing needs to be added there.
+That is the only hard requirement. CDI, EL and MP Config are optional and only needed for the `@AI` injection features. Jakarta EE 11 and MicroProfile 7 runtimes already provide all four, so nothing needs to be added there.
 
 ## Installation
 
