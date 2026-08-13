@@ -838,8 +838,11 @@ public class OrderService {
     }
 
     @Transactional
-    @RolesAllowed("SUPPORT")
     public Refund refund(long orderId) {
+        if (!security.isCallerInRole("SUPPORT")) {
+            throw new SecurityException("Refunding requires the SUPPORT role.");
+        }
+
         return repository.refund(orderId);
     }
 
@@ -851,7 +854,7 @@ public class OrderService {
 }
 ```
 
-The security context and the `@RolesAllowed` interceptor are in scope because the synchronous `chat` methods invoke tools on the calling thread, as described under [bounding the loop](#bounding-and-observing-the-loop). Dropping a parameter the caller has no business choosing is stronger still: a `listMyOrders()` deriving the email from the principal leaves nothing in the schema to aim at, and the email-taking variant then belongs in a support-only tool group.
+The security context is in scope because the synchronous `chat` methods invoke tools on the calling thread, as described under [bounding the loop](#bounding-and-observing-the-loop). The role check is programmatic because `@RolesAllowed` is enforced by the EJB container only; nothing applies it to a CDI bean. Dropping a parameter the caller has no business choosing is stronger still: a `listMyOrders()` deriving the email from the principal leaves nothing in the schema to aim at, and the email-taking variant then belongs in a support-only tool group.
 
 ### Bounding and Observing the Loop
 
