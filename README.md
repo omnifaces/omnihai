@@ -741,13 +741,13 @@ public class OrderTools {
     }
 
     @AITool("Lists the orders placed by a customer")
-    public String listOrdersByEmail(@AIToolParam(value = "The customer email", name = "email") String email) {
-        var summaries = orders.findByEmail(email).stream().map(Order::toSummary).collect(joining("\n"));
+    public String listOrders(@AIToolParam(value = "The customer email", name = "email") String email) {
+        var summaries = orders.listByEmail(email).stream().map(Order::toSummary).collect(joining("\n"));
         return summaries.isEmpty() ? "No orders found for that email." : summaries;
     }
 
     @AITool("Issues a refund for an order")
-    public Refund refund(@AIToolParam(value = "The order id", name = "orderId") long orderId) {
+    public Refund refundOrder(@AIToolParam(value = "The order id", name = "orderId") long orderId) {
         return orders.refund(orderId);
     }
 
@@ -787,8 +787,8 @@ Providers differ in how strictly they enforce the schema, so whatever shape the 
 
 ```java
 ToolRegistry tools = ToolRegistry.newBuilder()
-    .add("FIND_ORDER", "Looks up a single order by id", orders::findById, ToolParam.of(long.class, "orderId", "The order id"))
-    .add("LIST_OPEN_ORDERS", "Lists all open orders", orders::findOpen) // no arguments to describe
+    .add("FIND_ORDER_BY_ID", "Looks up a single order by id", orders::findById, ToolParam.of(long.class, "orderId", "The order id"))
+    .add("LIST_OPEN_ORDERS", "Lists all open orders", orders::listOpen) // no arguments to describe
     .add(shippingTools)                                                 // mixes fine with annotated objects
     .build();
 
@@ -833,7 +833,7 @@ public class OrderService {
         return repository.findById(orderId).filter(order -> mayRead(order.getCustomer().getEmail()));
     }
 
-    public List<Order> findByEmail(String email) {
+    public List<Order> listByEmail(String email) {
         return mayRead(email) ? repository.findByEmail(email) : emptyList();
     }
 
