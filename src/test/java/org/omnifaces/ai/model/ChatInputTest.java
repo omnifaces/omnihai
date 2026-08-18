@@ -18,6 +18,7 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -30,6 +31,7 @@ import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.util.Base64;
 import java.util.List;
+import java.util.Map;
 
 import javax.imageio.ImageIO;
 
@@ -51,6 +53,20 @@ class ChatInputTest {
         @Override
         public String extension() {
             return "png";
+        }
+
+    };
+
+    private static final MimeType TEST_MP4 = new MimeType() {
+
+        @Override
+        public String value() {
+            return "video/mp4";
+        }
+
+        @Override
+        public String extension() {
+            return "mp4";
         }
 
     };
@@ -333,6 +349,47 @@ class ChatInputTest {
             assertEquals(original.getImages().size(), deserialized.getImages().size());
             assertEquals(original.getFiles().size(), deserialized.getFiles().size());
         }
+    }
+
+    // =================================================================================================================
+    // Video options
+    // =================================================================================================================
+
+    @Test
+    void attachment_videoOptions_nullByDefault() {
+        var attachment = new Attachment(new byte[] { 1 }, TEST_MP4, "video.mp4");
+
+        assertNull(attachment.videoOptions());
+    }
+
+    @Test
+    void attachment_withVideoOptions_copiesAttachment() {
+        var attachment = new Attachment(new byte[] { 1 }, TEST_MP4, "video.mp4");
+        var videoOptions = AnalyzeVideoOptions.newBuilder().fps(2).build();
+
+        var copy = attachment.withVideoOptions(videoOptions);
+
+        assertNotSame(attachment, copy);
+        assertNull(attachment.videoOptions());
+        assertEquals(videoOptions, copy.videoOptions());
+        assertEquals(attachment.fileName(), copy.fileName());
+        assertArrayEquals(attachment.content(), copy.content());
+    }
+
+    @Test
+    void attachment_withMetadata_preservesVideoOptions() {
+        var videoOptions = AnalyzeVideoOptions.newBuilder().fps(2).build();
+        var attachment = new Attachment(new byte[] { 1 }, TEST_MP4, "video.mp4").withVideoOptions(videoOptions);
+
+        assertEquals(videoOptions, attachment.withMetadata("purpose", "user_data").videoOptions());
+        assertEquals(videoOptions, attachment.withMetadata(Map.of("purpose", "user_data")).videoOptions());
+    }
+
+    @Test
+    void attachment_withVideoOptions_nonVideo_throwsException() {
+        var attachment = new Attachment(new byte[] { 1 }, TEST_PDF, "dummy.pdf");
+
+        assertThrows(IllegalArgumentException.class, () -> attachment.withVideoOptions(AnalyzeVideoOptions.DEFAULT));
     }
 
     // =================================================================================================================

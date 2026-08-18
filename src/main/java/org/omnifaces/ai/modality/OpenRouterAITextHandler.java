@@ -13,11 +13,13 @@
 package org.omnifaces.ai.modality;
 
 import jakarta.json.Json;
+import jakarta.json.JsonArrayBuilder;
 import jakarta.json.JsonObject;
 import jakarta.json.JsonObjectBuilder;
 
 import org.omnifaces.ai.AIService;
 import org.omnifaces.ai.model.ChatInput;
+import org.omnifaces.ai.model.ChatInput.Attachment;
 import org.omnifaces.ai.model.ChatOptions;
 import org.omnifaces.ai.model.ChatOptions.ReasoningEffort;
 import org.omnifaces.ai.service.AIServiceWrapper;
@@ -53,6 +55,25 @@ public class OpenRouterAITextHandler extends OpenAITextHandler {
         }
         else {
             return super.buildChatPayload(service, input, options, streaming);
+        }
+    }
+
+    /**
+     * OpenRouter accepts a video attachment as a dedicated {@code video_url} content part, rather than as a generic file, and takes it as a data URI.
+     *
+     * @see <a href="https://openrouter.ai/docs/guides/overview/multimodal/videos">Video Inputs API Reference</a>
+     */
+    @Override
+    protected void addInlineFileContent(AIService service, JsonArrayBuilder content, Attachment file, boolean supportsResponsesApi) {
+        if (file.mimeType().isVideo()) {
+            content.add(
+                Json.createObjectBuilder()
+                    .add("type", "video_url")
+                    .add("video_url", Json.createObjectBuilder().add("url", file.toDataUri()))
+            );
+        }
+        else {
+            super.addInlineFileContent(service, content, file, supportsResponsesApi);
         }
     }
 

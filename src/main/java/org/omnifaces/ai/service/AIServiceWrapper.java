@@ -22,6 +22,7 @@ import org.omnifaces.ai.AIModality;
 import org.omnifaces.ai.AIModelVersion;
 import org.omnifaces.ai.AIService;
 import org.omnifaces.ai.exception.AIException;
+import org.omnifaces.ai.model.AnalyzeVideoOptions;
 import org.omnifaces.ai.model.ChatInput;
 import org.omnifaces.ai.model.ChatInput.Attachment;
 import org.omnifaces.ai.model.ChatOptions;
@@ -383,6 +384,46 @@ public abstract class AIServiceWrapper implements AIService {
     @Override
     public CompletableFuture<Void> generateAudioAsync(String text, Path path, GenerateAudioOptions options) throws AIException {
         return getWrapped().generateAudioAsync(text, path, options);
+    }
+
+    @Override
+    public String analyzeVideo(byte[] video, String prompt) throws AIException {
+        return getWrapped().analyzeVideo(video, prompt);
+    }
+
+    @Override
+    public String analyzeVideo(Path video, String prompt) throws AIException {
+        return getWrapped().analyzeVideo(video, prompt);
+    }
+
+    @Override
+    public String analyzeVideo(byte[] video, String prompt, AnalyzeVideoOptions options) throws AIException {
+        return getWrapped().analyzeVideo(video, prompt, options);
+    }
+
+    @Override
+    public String analyzeVideo(Path video, String prompt, AnalyzeVideoOptions options) throws AIException {
+        return getWrapped().analyzeVideo(video, prompt, options);
+    }
+
+    @Override
+    public CompletableFuture<String> analyzeVideoAsync(byte[] video, String prompt) throws AIException {
+        return getWrapped().analyzeVideoAsync(video, prompt);
+    }
+
+    @Override
+    public CompletableFuture<String> analyzeVideoAsync(Path video, String prompt) throws AIException {
+        return getWrapped().analyzeVideoAsync(video, prompt);
+    }
+
+    @Override
+    public CompletableFuture<String> analyzeVideoAsync(byte[] video, String prompt, AnalyzeVideoOptions options) throws AIException {
+        return getWrapped().analyzeVideoAsync(video, prompt, options);
+    }
+
+    @Override
+    public CompletableFuture<String> analyzeVideoAsync(Path video, String prompt, AnalyzeVideoOptions options) throws AIException {
+        return getWrapped().analyzeVideoAsync(video, prompt, options);
     }
 
     @Override

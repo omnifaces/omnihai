@@ -31,6 +31,7 @@ import org.omnifaces.ai.AIImageHandler;
 import org.omnifaces.ai.AIProvider;
 import org.omnifaces.ai.AIService;
 import org.omnifaces.ai.AITextHandler;
+import org.omnifaces.ai.AIVideoHandler;
 import org.omnifaces.ai.model.ChatOptions;
 import org.omnifaces.ai.service.RetryingAIService;
 import org.omnifaces.ai.service.ToolCallingAIService;
@@ -183,6 +184,16 @@ public @interface AI {
      */
     @Nonbinding
     Class<? extends AIAudioHandler> audioHandler() default AIAudioHandler.class;
+
+    /**
+     * Custom {@link AIVideoHandler} implementation class. If not specified, uses the provider's default video handler as per
+     * {@link AIProvider#getDefaultVideoHandler()}.
+     *
+     * @return The custom video handler class, or {@link AIVideoHandler AIVideoHandler.class} if not specified.
+     * @since 1.7
+     */
+    @Nonbinding
+    Class<? extends AIVideoHandler> videoHandler() default AIVideoHandler.class;
 
     /**
      * The maximum number of attempts, counting the initial attempt plus retries. Anything above 1 decorates the produced service with a

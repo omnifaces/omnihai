@@ -26,6 +26,7 @@ import java.util.function.Function;
 import org.omnifaces.ai.AIService;
 import org.omnifaces.ai.exception.AIException;
 import org.omnifaces.ai.exception.AIStreamAbortedException;
+import org.omnifaces.ai.model.AnalyzeVideoOptions;
 import org.omnifaces.ai.model.ChatInput;
 import org.omnifaces.ai.model.ChatInput.Attachment;
 import org.omnifaces.ai.model.ChatOptions;
@@ -523,6 +524,48 @@ public abstract class InterceptingAIServiceWrapper extends AIServiceWrapper {
     @Override
     public CompletableFuture<Void> generateAudioAsync(String text, Path path, GenerateAudioOptions options) throws AIException {
         return interceptAsync(service -> service.generateAudioAsync(text, path, options));
+    }
+
+    // Video Analysis Capabilities ------------------------------------------------------------------------------------
+
+    @Override
+    public String analyzeVideo(byte[] video, String prompt) throws AIException {
+        return intercept(service -> service.analyzeVideo(video, prompt));
+    }
+
+    @Override
+    public String analyzeVideo(Path video, String prompt) throws AIException {
+        return intercept(service -> service.analyzeVideo(video, prompt));
+    }
+
+    @Override
+    public String analyzeVideo(byte[] video, String prompt, AnalyzeVideoOptions options) throws AIException {
+        return intercept(service -> service.analyzeVideo(video, prompt, options));
+    }
+
+    @Override
+    public String analyzeVideo(Path video, String prompt, AnalyzeVideoOptions options) throws AIException {
+        return intercept(service -> service.analyzeVideo(video, prompt, options));
+    }
+
+    @Override
+    public CompletableFuture<String> analyzeVideoAsync(byte[] video, String prompt) throws AIException {
+        return interceptAsync(service -> service.analyzeVideoAsync(video, prompt));
+    }
+
+    @Override
+    public CompletableFuture<String> analyzeVideoAsync(Path video, String prompt) throws AIException {
+        return interceptAsync(service -> service.analyzeVideoAsync(video, prompt));
+    }
+
+    @Override
+    public CompletableFuture<String> analyzeVideoAsync(byte[] video, String prompt, AnalyzeVideoOptions options) throws AIException {
+        return interceptAsync(service -> service.analyzeVideoAsync(video, prompt, options));
+    }
+
+    @Override
+    public CompletableFuture<String> analyzeVideoAsync(Path video, String prompt, AnalyzeVideoOptions options) throws AIException {
+        return interceptAsync(service -> service.analyzeVideoAsync(video, prompt, options));
     }
 
 }

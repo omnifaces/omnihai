@@ -37,6 +37,7 @@ import org.omnifaces.ai.AIProvider;
 import org.omnifaces.ai.AIService;
 import org.omnifaces.ai.AIStrategy;
 import org.omnifaces.ai.AITextHandler;
+import org.omnifaces.ai.AIVideoHandler;
 import org.omnifaces.ai.service.RetryingAIService;
 import org.omnifaces.ai.service.ToolCallingAIService;
 import org.omnifaces.ai.tool.ToolRegistry;
@@ -98,7 +99,9 @@ class AIServiceProducer {
         var textHandler = annotation.textHandler() == AITextHandler.class ? null : annotation.textHandler();
         var imageHandler = annotation.imageHandler() == AIImageHandler.class ? null : annotation.imageHandler();
         var audioHandler = annotation.audioHandler() == AIAudioHandler.class ? null : annotation.audioHandler();
-        var config = new AIConfig(provider, apiKey, model, endpoint, prompt, AIStrategy.of(textHandler, imageHandler, audioHandler), emptyMap());
+        var videoHandler = annotation.videoHandler() == AIVideoHandler.class ? null : annotation.videoHandler();
+        var strategy = AIStrategy.of(textHandler, imageHandler, audioHandler, videoHandler);
+        var config = new AIConfig(provider, apiKey, model, endpoint, prompt, strategy, emptyMap());
         var service = serviceCache.computeIfAbsent(config, AIConfig::createService);
 
         if (annotation.maxAttempts() > 1) {

@@ -28,6 +28,7 @@ import java.util.function.Consumer;
 
 import org.omnifaces.ai.exception.AIException;
 import org.omnifaces.ai.helper.JsonSchemaHelper;
+import org.omnifaces.ai.model.AnalyzeVideoOptions;
 import org.omnifaces.ai.model.ChatInput;
 import org.omnifaces.ai.model.ChatInput.Attachment;
 import org.omnifaces.ai.model.ChatOptions;
@@ -49,6 +50,11 @@ import org.omnifaces.ai.tool.ToolRegistry;
  * analysis, and more.
  * <p>
  * The implementations must be stateless and able to be {@code jakarta.enterprise.context.ApplicationScoped}.
+ * <p>
+ * Every operation documents {@code UnsupportedOperationException}, so that an implementation which does not offer it has one agreed way of saying so and a
+ * caller has one exception to catch across all of them, whichever provider or custom implementation is behind it. An implementation is not obliged to throw it:
+ * an operation which is routed through chat rather than a dedicated endpoint lets the AI provider's own error surface as an {@link AIException} instead. See
+ * {@link #supportsModality(AIModality)} to check up front rather than by catching.
  *
  * @author Bauke Scholtz
  * @since 1.0
@@ -1482,6 +1488,141 @@ public interface AIService extends Serializable {
      */
     CompletableFuture<Void> generateAudioAsync(String text, Path path, GenerateAudioOptions options) throws AIException;
 
+    // Video Analysis Capabilities ------------------------------------------------------------------------------------
+
+    /**
+     * Analyzes a video and generates a description based on the given prompt.
+     * <p>
+     * Useful for summarizing footage, answering questions about what happens in it, or detecting events.
+     *
+     * @implNote The default implementation delegates to {@link #analyzeVideoAsync(byte[], String)}.
+     * @param video The video bytes to analyze.
+     * @param prompt The prompt describing what to focus on (e.g., "summarize this lecture", "when does the goal happen"), or {@code null} for a general
+     * description.
+     * @return Description of the video, never {@code null}.
+     * @throws UnsupportedOperationException if video analysis is not supported by the implementation.
+     * @throws AIException if video analysis fails.
+     * @since 1.7
+     */
+    default String analyzeVideo(byte[] video, String prompt) throws AIException {
+        return joinAsync(analyzeVideoAsync(video, prompt));
+    }
+
+    /**
+     * Analyzes a video and generates a description based on the given prompt.
+     * <p>
+     * Useful for summarizing footage, answering questions about what happens in it, or detecting events.
+     *
+     * @implNote The default implementation delegates to {@link #analyzeVideoAsync(Path, String)}.
+     * @param video The video source to analyze.
+     * @param prompt The prompt describing what to focus on (e.g., "summarize this lecture", "when does the goal happen"), or {@code null} for a general
+     * description.
+     * @return Description of the video, never {@code null}.
+     * @throws UnsupportedOperationException if video analysis is not supported by the implementation.
+     * @throws AIException if video analysis fails.
+     * @since 1.7
+     */
+    default String analyzeVideo(Path video, String prompt) throws AIException {
+        return joinAsync(analyzeVideoAsync(video, prompt));
+    }
+
+    /**
+     * Analyzes a video and generates a description based on the given prompt, sampling frames as specified by the given options.
+     *
+     * @implNote The default implementation delegates to {@link #analyzeVideoAsync(byte[], String, AnalyzeVideoOptions)}.
+     * @param video The video bytes to analyze.
+     * @param prompt The prompt describing what to focus on, or {@code null} for a general description.
+     * @param options The video analysis options.
+     * @return Description of the video, never {@code null}.
+     * @throws NullPointerException if options is null.
+     * @throws UnsupportedOperationException if video analysis is not supported by the implementation.
+     * @throws AIException if video analysis fails.
+     * @since 1.7
+     */
+    default String analyzeVideo(byte[] video, String prompt, AnalyzeVideoOptions options) throws AIException {
+        return joinAsync(analyzeVideoAsync(video, prompt, options));
+    }
+
+    /**
+     * Analyzes a video and generates a description based on the given prompt, sampling frames as specified by the given options.
+     *
+     * @implNote The default implementation delegates to {@link #analyzeVideoAsync(Path, String, AnalyzeVideoOptions)}.
+     * @param video The video source to analyze.
+     * @param prompt The prompt describing what to focus on, or {@code null} for a general description.
+     * @param options The video analysis options.
+     * @return Description of the video, never {@code null}.
+     * @throws NullPointerException if options is null.
+     * @throws UnsupportedOperationException if video analysis is not supported by the implementation.
+     * @throws AIException if video analysis fails.
+     * @since 1.7
+     */
+    default String analyzeVideo(Path video, String prompt, AnalyzeVideoOptions options) throws AIException {
+        return joinAsync(analyzeVideoAsync(video, prompt, options));
+    }
+
+    /**
+     * Asynchronously analyzes a video and generates a description based on the given prompt.
+     *
+     * @implNote The default implementation delegates to {@link #analyzeVideoAsync(byte[], String, AnalyzeVideoOptions)} with
+     * {@link AnalyzeVideoOptions#DEFAULT}.
+     * @param video The video bytes to analyze.
+     * @param prompt The prompt describing what to focus on, or {@code null} for a general description.
+     * @return A CompletableFuture that will contain the description of the video, never {@code null}.
+     * @throws UnsupportedOperationException if video analysis is not supported by the implementation.
+     * @throws AIException if video analysis fails.
+     * @since 1.7
+     */
+    default CompletableFuture<String> analyzeVideoAsync(byte[] video, String prompt) throws AIException {
+        return analyzeVideoAsync(video, prompt, AnalyzeVideoOptions.DEFAULT);
+    }
+
+    /**
+     * Asynchronously analyzes a video and generates a description based on the given prompt.
+     *
+     * @implNote The default implementation delegates to {@link #analyzeVideoAsync(Path, String, AnalyzeVideoOptions)} with {@link AnalyzeVideoOptions#DEFAULT}.
+     * @param video The video source to analyze.
+     * @param prompt The prompt describing what to focus on, or {@code null} for a general description.
+     * @return A CompletableFuture that will contain the description of the video, never {@code null}.
+     * @throws UnsupportedOperationException if video analysis is not supported by the implementation.
+     * @throws AIException if video analysis fails.
+     * @since 1.7
+     */
+    default CompletableFuture<String> analyzeVideoAsync(Path video, String prompt) throws AIException {
+        return analyzeVideoAsync(video, prompt, AnalyzeVideoOptions.DEFAULT);
+    }
+
+    /**
+     * Asynchronously analyzes a video and generates a description based on the given prompt, sampling frames as specified by the given options.
+     * <p>
+     * This is the core method for in-memory video analysis.
+     *
+     * @param video The video bytes to analyze.
+     * @param prompt The prompt describing what to focus on, or {@code null} for a general description.
+     * @param options The video analysis options.
+     * @return A CompletableFuture that will contain the description of the video, never {@code null}.
+     * @throws NullPointerException if options is null.
+     * @throws UnsupportedOperationException if video analysis is not supported by the implementation.
+     * @throws AIException if video analysis fails.
+     * @since 1.7
+     */
+    CompletableFuture<String> analyzeVideoAsync(byte[] video, String prompt, AnalyzeVideoOptions options) throws AIException;
+
+    /**
+     * Asynchronously analyzes a video and generates a description based on the given prompt, sampling frames as specified by the given options.
+     * <p>
+     * This is the core method for streaming video analysis.
+     *
+     * @param video The video source to analyze.
+     * @param prompt The prompt describing what to focus on, or {@code null} for a general description.
+     * @param options The video analysis options.
+     * @return A CompletableFuture that will contain the description of the video, never {@code null}.
+     * @throws NullPointerException if options is null.
+     * @throws UnsupportedOperationException if video analysis is not supported by the implementation.
+     * @throws AIException if video analysis fails.
+     * @since 1.7
+     */
+    CompletableFuture<String> analyzeVideoAsync(Path video, String prompt, AnalyzeVideoOptions options) throws AIException;
+
     // Service Metadata -----------------------------------------------------------------------------------------------
 
     /**
@@ -1682,10 +1823,15 @@ public interface AIService extends Serializable {
     }
 
     /**
-     * Checks whether the given modality is supported by this AI service, which is usually determined by {@link #getModelName()} or {@link #getModelVersion()}.
+     * Checks whether the given modality is supported by this AI service, which is usually determined by {@link #getModelName()} or {@link #getModelVersion()},
+     * and by the modalities which the AI provider publishes per model, if any.
+     * <p>
+     * This is the modality which the service can actually serve, not merely the one which the model offers: a modality which no operation of this service can
+     * perform is reported as unsupported, so that a caller skipping the call or disabling the button is not offered something which would throw.
      * <p>
      * <strong>Important:</strong> This method provides a <em>hint</em> rather than a strict guarantee. Implementations are <em>not required</em> to enforce
-     * this check before performing operations such as {@link #analyzeImage(byte[], String)}, {@link #generateImage(String)}, or other modality-specific calls.
+     * this check before performing operations such as {@link #analyzeImage(byte[], String)}, {@link #analyzeVideo(java.nio.file.Path, String)},
+     * {@link #generateImage(String)}, or other modality-specific calls.
      * <p>
      * The primary purposes of this method are to allow callers to:
      * <ul>

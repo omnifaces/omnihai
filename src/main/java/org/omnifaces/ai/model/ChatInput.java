@@ -137,6 +137,8 @@ public class ChatInput implements Serializable {
         private final String fileName;
         /** Additional provider-specific metadata. */
         private final Map<String, String> metadata;
+        /** The video analysis options. */
+        private final AnalyzeVideoOptions videoOptions;
 
         /**
          * Creates a new attachment with the given content, MIME type, and file name.
@@ -194,6 +196,13 @@ public class ChatInput implements Serializable {
         }
 
         private Attachment(byte[] content, Path source, MimeType mimeType, String fileName, Map<String, String> metadata) {
+            this(content, source, mimeType, fileName, metadata, null);
+        }
+
+        private Attachment(
+            byte[] content, Path source, MimeType mimeType, String fileName, Map<String, String> metadata, AnalyzeVideoOptions videoOptions
+        )
+        {
             this.content = content;
             this.source = source;
             this.mimeType = requireNonNull(mimeType, "mimeType");
@@ -201,6 +210,7 @@ public class ChatInput implements Serializable {
             this.metadata = requireNonNull(metadata, "metadata").entrySet().stream()
                 .filter(e -> !isBlank(e.getKey()) && !isBlank(e.getValue()))
                 .collect(toUnmodifiableMap(e -> e.getKey().strip(), e -> e.getValue().strip()));
+            this.videoOptions = videoOptions;
         }
 
         /**
@@ -276,6 +286,27 @@ public class ChatInput implements Serializable {
         }
 
         /**
+         * Gets the video analysis options.
+         *
+         * @return The video analysis options, or {@code null} if none are set.
+         * @since 1.7
+         * @see #withVideoOptions(AnalyzeVideoOptions)
+         */
+        public AnalyzeVideoOptions videoOptions() {
+            return videoOptions;
+        }
+
+        /**
+         * Gets the content length in bytes, regardless of whether this attachment is backed by {@link #content() byte[]} or a {@link #source() Path}.
+         *
+         * @return The content length in bytes.
+         * @since 1.7
+         */
+        public long size() {
+            return content != null ? content.length : source.toFile().length();
+        }
+
+        /**
          * Converts this attachment to a Base64 encoded string.
          *
          * @return The Base64 encoded content.
@@ -304,7 +335,7 @@ public class ChatInput implements Serializable {
         public Attachment withMetadata(String name, String value) {
             var newMetadata = new HashMap<>(metadata);
             newMetadata.put(requireNonBlank(name, "name").strip(), requireNonBlank(value, "value").strip());
-            return new Attachment(content, source, mimeType, fileName, newMetadata);
+            return new Attachment(content, source, mimeType, fileName, newMetadata, videoOptions);
         }
 
         /**
@@ -317,7 +348,24 @@ public class ChatInput implements Serializable {
         public Attachment withMetadata(Map<String, String> metadata) {
             var newMetadata = new HashMap<>(this.metadata);
             newMetadata.putAll(metadata);
-            return new Attachment(content, source, mimeType, fileName, newMetadata);
+            return new Attachment(content, source, mimeType, fileName, newMetadata, videoOptions);
+        }
+
+        /**
+         * Returns a copy of this attachment with the specified video analysis options, which instruct the AI provider at which rate to sample frames and which
+         * clip of the video to analyze.
+         *
+         * @param videoOptions The video analysis options, or {@code null} to leave them to the AI provider.
+         * @return A new attachment instance with the specified video analysis options.
+         * @throws IllegalArgumentException if this attachment is not a video.
+         * @since 1.7
+         */
+        public Attachment withVideoOptions(AnalyzeVideoOptions videoOptions) {
+            if (!mimeType.isVideo()) {
+                throw new IllegalArgumentException("Video options are only applicable to a video attachment, not to " + mimeType.value());
+            }
+
+            return new Attachment(content, source, mimeType, fileName, metadata, videoOptions);
         }
 
         @Override
@@ -325,11 +373,15 @@ public class ChatInput implements Serializable {
             var stringBuilder = new StringBuilder("Attachment[fileName=").append(fileName)
                 .append(", mimeType=").append(mimeType.value());
 
-            stringBuilder.append(", contentLength=").append(content != null ? content.length : source.toFile().length());
+            stringBuilder.append(", contentLength=").append(size());
             stringBuilder.append(", source=").append(source != null ? source : "byte[]");
 
             if (!metadata.isEmpty()) {
                 stringBuilder.append(", metadata=").append(metadata);
+            }
+
+            if (videoOptions != null && !videoOptions.isDefault()) {
+                stringBuilder.append(", videoOptions=").append(videoOptions);
             }
 
             return stringBuilder.append(']').toString();

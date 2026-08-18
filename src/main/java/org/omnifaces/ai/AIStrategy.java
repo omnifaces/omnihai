@@ -20,24 +20,28 @@ import java.io.Serializable;
  * @param textHandler The text handler, or {@code null} to use the AI provider's default.
  * @param imageHandler The image handler, or {@code null} to use the AI provider's default.
  * @param audioHandler The audio handler, or {@code null} to use the AI provider's default.
+ * @param videoHandler The video handler, or {@code null} to use the AI provider's default.
  * @see AIConfig
  * @see AIService
  * @see AITextHandler
  * @see AIImageHandler
  * @see AIAudioHandler
+ * @see AIVideoHandler
  * @author Bauke Scholtz
  * @since 1.0
  */
 public final record AIStrategy(
-    Class<? extends AITextHandler> textHandler, Class<? extends AIImageHandler> imageHandler, Class<? extends AIAudioHandler> audioHandler
+    Class<? extends AITextHandler> textHandler, Class<? extends AIImageHandler> imageHandler, Class<? extends AIAudioHandler> audioHandler,
+    Class<? extends AIVideoHandler> videoHandler
 ) implements Serializable {
 
     /**
-     * Creates a strategy with the specified text, image, and audio handlers.
+     * Creates a strategy with the specified text, image, audio and video handlers.
      *
      * @param textHandler The text handler, or {@code null} to use the AI provider's default.
      * @param imageHandler The image handler, or {@code null} to use the AI provider's default.
      * @param audioHandler The audio handler, or {@code null} to use the AI provider's default.
+     * @param videoHandler The video handler, or {@code null} to use the AI provider's default.
      */
     public AIStrategy {
         // Canonical constructor.
@@ -50,7 +54,7 @@ public final record AIStrategy(
      * @since 1.1
      */
     public static AIStrategy empty() {
-        return new AIStrategy(null, null, null);
+        return new AIStrategy(null, null, null, null);
     }
 
     /**
@@ -61,7 +65,7 @@ public final record AIStrategy(
      * @since 1.1
      */
     public static AIStrategy of(Class<? extends AITextHandler> textHandler) {
-        return new AIStrategy(textHandler, null, null);
+        return new AIStrategy(textHandler, null, null, null);
     }
 
     /**
@@ -73,7 +77,7 @@ public final record AIStrategy(
      * @since 1.1
      */
     public static AIStrategy of(Class<? extends AITextHandler> textHandler, Class<? extends AIImageHandler> imageHandler) {
-        return new AIStrategy(textHandler, imageHandler, null);
+        return new AIStrategy(textHandler, imageHandler, null, null);
     }
 
     /**
@@ -89,7 +93,25 @@ public final record AIStrategy(
         Class<? extends AITextHandler> textHandler, Class<? extends AIImageHandler> imageHandler, Class<? extends AIAudioHandler> audioHandler
     )
     {
-        return new AIStrategy(textHandler, imageHandler, audioHandler);
+        return new AIStrategy(textHandler, imageHandler, audioHandler, null);
+    }
+
+    /**
+     * Creates a strategy with the specified text, image, audio and video handlers.
+     *
+     * @param textHandler The text handler class, or {@code null} to use the AI provider's default.
+     * @param imageHandler The image handler class, or {@code null} to use the AI provider's default.
+     * @param audioHandler The audio handler class, or {@code null} to use the AI provider's default.
+     * @param videoHandler The video handler class, or {@code null} to use the AI provider's default.
+     * @return A new strategy instance.
+     * @since 1.7
+     */
+    public static AIStrategy of(
+        Class<? extends AITextHandler> textHandler, Class<? extends AIImageHandler> imageHandler, Class<? extends AIAudioHandler> audioHandler,
+        Class<? extends AIVideoHandler> videoHandler
+    )
+    {
+        return new AIStrategy(textHandler, imageHandler, audioHandler, videoHandler);
     }
 
     /**
@@ -99,7 +121,7 @@ public final record AIStrategy(
      * @return A new strategy instance with the updated text handler.
      */
     public AIStrategy withTextHandler(Class<? extends AITextHandler> textHandler) {
-        return new AIStrategy(textHandler, imageHandler, audioHandler);
+        return new AIStrategy(textHandler, imageHandler, audioHandler, videoHandler);
     }
 
     /**
@@ -109,7 +131,7 @@ public final record AIStrategy(
      * @return A new strategy instance with the updated image handler.
      */
     public AIStrategy withImageHandler(Class<? extends AIImageHandler> imageHandler) {
-        return new AIStrategy(textHandler, imageHandler, audioHandler);
+        return new AIStrategy(textHandler, imageHandler, audioHandler, videoHandler);
     }
 
     /**
@@ -119,7 +141,18 @@ public final record AIStrategy(
      * @return A new strategy instance with the updated audio handler.
      */
     public AIStrategy withAudioHandler(Class<? extends AIAudioHandler> audioHandler) {
-        return new AIStrategy(textHandler, imageHandler, audioHandler);
+        return new AIStrategy(textHandler, imageHandler, audioHandler, videoHandler);
+    }
+
+    /**
+     * Returns a copy of this strategy with the specified video handler.
+     *
+     * @param videoHandler The video handler class.
+     * @return A new strategy instance with the updated video handler.
+     * @since 1.7
+     */
+    public AIStrategy withVideoHandler(Class<? extends AIVideoHandler> videoHandler) {
+        return new AIStrategy(textHandler, imageHandler, audioHandler, videoHandler);
     }
 
 }

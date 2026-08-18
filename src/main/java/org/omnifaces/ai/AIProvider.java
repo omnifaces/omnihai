@@ -20,6 +20,7 @@ import org.omnifaces.ai.modality.AzureAITextHandler;
 import org.omnifaces.ai.modality.DefaultAIAudioHandler;
 import org.omnifaces.ai.modality.DefaultAIImageHandler;
 import org.omnifaces.ai.modality.DefaultAITextHandler;
+import org.omnifaces.ai.modality.DefaultAIVideoHandler;
 import org.omnifaces.ai.modality.GoogleAIAudioHandler;
 import org.omnifaces.ai.modality.GoogleAIImageHandler;
 import org.omnifaces.ai.modality.GoogleAITextHandler;
@@ -102,8 +103,7 @@ public enum AIProvider {
      * @see <a href="https://platform.claude.com/docs/en/about-claude/models/overview">Available Anthropic AI Models</a>
      */
     ANTHROPIC(
-        "Anthropic", AnthropicAIService.class, true, "claude-sonnet-5", "https://api.anthropic.com/v1", AnthropicAITextHandler.class,
-        DefaultAIImageHandler.class, DefaultAIAudioHandler.class
+        "Anthropic", AnthropicAIService.class, true, "claude-sonnet-5", "https://api.anthropic.com/v1", AnthropicAITextHandler.class
     ),
 
     /**
@@ -136,8 +136,7 @@ public enum AIProvider {
      * @see <a href="https://docs.x.ai/developers/models">Available xAI Models</a>
      */
     XAI(
-        "xAI", XAIService.class, true, "grok-4.5", "https://api.x.ai/v1", OpenAITextHandler.class, XAIImageHandler.class,
-        DefaultAIAudioHandler.class
+        "xAI", XAIService.class, true, "grok-4.5", "https://api.x.ai/v1", OpenAITextHandler.class, XAIImageHandler.class
     ),
 
     /**
@@ -153,8 +152,7 @@ public enum AIProvider {
      * @see <a href="https://docs.mistral.ai/getting-started/models/">Available Mistral AI Models</a>
      */
     MISTRAL(
-        "Mistral AI", MistralAIService.class, true, "mistral-medium-3-5", "https://api.mistral.ai/v1", MistralAITextHandler.class, OpenAIImageHandler.class,
-        DefaultAIAudioHandler.class
+        "Mistral AI", MistralAIService.class, true, "mistral-medium-3-5", "https://api.mistral.ai/v1", MistralAITextHandler.class, OpenAIImageHandler.class
     ),
 
     /**
@@ -171,7 +169,7 @@ public enum AIProvider {
      */
     META(
         "Meta AI", MetaAIService.class, true, "muse-spark-1.1", "https://api.meta.ai/v1", OpenAITextHandler.class,
-        OpenAIImageHandler.class, DefaultAIAudioHandler.class
+        OpenAIImageHandler.class
     ),
 
     /**
@@ -188,7 +186,7 @@ public enum AIProvider {
      */
     AZURE(
         "Azure OpenAI", AzureAIService.class, true, "gpt-5.5", "https://{org.omnifaces.ai.AZURE_RESOURCE}.openai.azure.com/openai/v1",
-        AzureAITextHandler.class, OpenAIImageHandler.class, DefaultAIAudioHandler.class
+        AzureAITextHandler.class, OpenAIImageHandler.class
     ),
 
     /**
@@ -205,7 +203,7 @@ public enum AIProvider {
      */
     OPENROUTER(
         "OpenRouter", OpenRouterAIService.class, true, "deepseek/deepseek-v4-pro", "https://openrouter.ai/api/v1", OpenRouterAITextHandler.class,
-        OpenAIImageHandler.class, DefaultAIAudioHandler.class
+        OpenAIImageHandler.class
     ),
 
     /**
@@ -222,7 +220,7 @@ public enum AIProvider {
      */
     HUGGINGFACE(
         "Hugging Face", HuggingFaceAIService.class, true, "google/gemma-4-31B-it", "https://router.huggingface.co/v1", OpenAITextHandler.class,
-        OpenAIImageHandler.class, DefaultAIAudioHandler.class
+        OpenAIImageHandler.class
     ),
 
     /**
@@ -255,8 +253,7 @@ public enum AIProvider {
      * @see <a href="https://ollama.com/library">Available Ollama Models</a> (no API Keys required)
      */
     OLLAMA(
-        "Ollama", OllamaAIService.class, false, "gemma4", "http://localhost:11434", OllamaAITextHandler.class, DefaultAIImageHandler.class,
-        DefaultAIAudioHandler.class
+        "Ollama", OllamaAIService.class, false, "gemma4", "http://localhost:11434", OllamaAITextHandler.class
     ),
 
     /**
@@ -284,6 +281,29 @@ public enum AIProvider {
     private final Class<? extends AITextHandler> defaultTextHandler;
     private final Class<? extends AIImageHandler> defaultImageHandler;
     private final Class<? extends AIAudioHandler> defaultAudioHandler;
+    private final Class<? extends AIVideoHandler> defaultVideoHandler;
+
+    AIProvider(
+        String name, Class<? extends AIService> serviceClass, boolean apiKeyRequired, String defaultModel, String defaultEndpoint,
+        Class<? extends AITextHandler> defaultTextHandler
+    )
+    {
+        this(
+            name, serviceClass, apiKeyRequired, defaultModel, defaultEndpoint, defaultTextHandler, DefaultAIImageHandler.class, DefaultAIAudioHandler.class,
+            DefaultAIVideoHandler.class
+        );
+    }
+
+    AIProvider(
+        String name, Class<? extends AIService> serviceClass, boolean apiKeyRequired, String defaultModel, String defaultEndpoint,
+        Class<? extends AITextHandler> defaultTextHandler, Class<? extends AIImageHandler> defaultImageHandler
+    )
+    {
+        this(
+            name, serviceClass, apiKeyRequired, defaultModel, defaultEndpoint, defaultTextHandler, defaultImageHandler, DefaultAIAudioHandler.class,
+            DefaultAIVideoHandler.class
+        );
+    }
 
     AIProvider(
         String name, Class<? extends AIService> serviceClass, boolean apiKeyRequired, String defaultModel, String defaultEndpoint,
@@ -291,6 +311,19 @@ public enum AIProvider {
         Class<? extends AIAudioHandler> defaultAudioHandler
     )
     {
+        this(
+            name, serviceClass, apiKeyRequired, defaultModel, defaultEndpoint, defaultTextHandler, defaultImageHandler, defaultAudioHandler,
+            DefaultAIVideoHandler.class
+        );
+    }
+
+    AIProvider(
+        String name, Class<? extends AIService> serviceClass, boolean apiKeyRequired, String defaultModel, String defaultEndpoint,
+        Class<? extends AITextHandler> defaultTextHandler, Class<? extends AIImageHandler> defaultImageHandler,
+        Class<? extends AIAudioHandler> defaultAudioHandler, Class<? extends AIVideoHandler> defaultVideoHandler
+    )
+    {
+        this.defaultVideoHandler = defaultVideoHandler;
         this.name = name;
         this.serviceClass = serviceClass;
         this.apiKeyRequired = apiKeyRequired;
@@ -388,6 +421,17 @@ public enum AIProvider {
      */
     public Class<? extends AIAudioHandler> getDefaultAudioHandler() {
         return defaultAudioHandler;
+    }
+
+    /**
+     * Returns the AI provider's default AI video handler. Can be overridden via {@link AIConfig#withStrategy(AIStrategy)} or
+     * {@link AIStrategy#withVideoHandler(Class)}.
+     *
+     * @return the AI provider's default AI video handler.
+     * @since 1.7
+     */
+    public Class<? extends AIVideoHandler> getDefaultVideoHandler() {
+        return defaultVideoHandler;
     }
 
 }

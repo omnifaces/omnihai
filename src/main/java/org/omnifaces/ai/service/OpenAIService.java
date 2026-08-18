@@ -92,8 +92,7 @@ public class OpenAIService extends BaseAIService {
             case IMAGE_GENERATION -> currentModelVersion.gte(DALL_E) || fullModelName.contains("image");
             case AUDIO_ANALYSIS -> currentModelVersion.gte(GPT_4) || fullModelName.contains("transcribe");
             case AUDIO_GENERATION -> fullModelName.contains("tts");
-            case VIDEO_ANALYSIS -> currentModelVersion.gte(GPT_5);
-            case VIDEO_GENERATION -> false;
+            case VIDEO_ANALYSIS, VIDEO_GENERATION -> false;
         };
     }
 

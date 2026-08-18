@@ -24,6 +24,7 @@ import static org.omnifaces.ai.AIConfig.PROPERTY_MODEL;
 import static org.omnifaces.ai.helper.JsonHelper.findNonBlankByPath;
 import static org.omnifaces.ai.helper.TextHelper.isBlank;
 import static org.omnifaces.ai.helper.TextHelper.requireNonBlank;
+import static org.omnifaces.ai.mime.MimeType.guessMimeType;
 import static org.omnifaces.ai.model.ChatOptions.DETERMINISTIC;
 import static org.omnifaces.ai.model.ChatOptions.DETERMINISTIC_TEMPERATURE;
 
@@ -58,10 +59,12 @@ import org.omnifaces.ai.AIImageHandler;
 import org.omnifaces.ai.AIProvider;
 import org.omnifaces.ai.AIService;
 import org.omnifaces.ai.AITextHandler;
+import org.omnifaces.ai.AIVideoHandler;
 import org.omnifaces.ai.exception.AIException;
 import org.omnifaces.ai.exception.AIResponseException;
 import org.omnifaces.ai.helper.JsonHelper;
 import org.omnifaces.ai.helper.TextHelper;
+import org.omnifaces.ai.model.AnalyzeVideoOptions;
 import org.omnifaces.ai.model.ChatInput;
 import org.omnifaces.ai.model.ChatInput.Attachment;
 import org.omnifaces.ai.model.ChatInput.Message;
@@ -113,6 +116,9 @@ public abstract class BaseAIService implements AIService {
     /** The AI audio handler for this service. */
     protected final AIAudioHandler audioHandler;
 
+    /** The video handler. */
+    protected final AIVideoHandler videoHandler;
+
     /**
      * Constructs an AI service with the specified configuration.
      *
@@ -139,6 +145,7 @@ public abstract class BaseAIService implements AIService {
         this.textHandler = createHandler(config.strategy().textHandler(), provider.getDefaultTextHandler(), "text");
         this.imageHandler = createHandler(config.strategy().imageHandler(), provider.getDefaultImageHandler(), "image");
         this.audioHandler = createHandler(config.strategy().audioHandler(), provider.getDefaultAudioHandler(), "audio");
+        this.videoHandler = createHandler(config.strategy().videoHandler(), provider.getDefaultVideoHandler(), "video");
     }
 
     private static <T> T createHandler(Class<? extends T> configuredHandler, Class<? extends T> defaultHandler, String handlerName) {
@@ -194,6 +201,8 @@ public abstract class BaseAIService implements AIService {
             recordUserMessage(options, input.getMessage());
         }
 
+        // Building the payload uploads and awaits any file attachment, and therefore blocks. It belongs on the calling thread, which is the only one holding
+        // the caller's transaction, scope and security context; only the provider call is asynchronous.
         var payload = textHandler.buildChatPayload(this, effectiveInput, options, false);
         var future = asyncPostAndParseChatResponse(getChatPath(false), payload, options);
 
@@ -626,6 +635,34 @@ public abstract class BaseAIService implements AIService {
                     throw new CompletionException("Cannot stream response body to path " + path, e);
                 }
             });
+    }
+
+    // Video Analysis Implementation (delegates to chat) --------------------------------------------------------------
+
+    @Override
+    public CompletableFuture<String> analyzeVideoAsync(byte[] video, String prompt, AnalyzeVideoOptions options) throws AIException {
+        requireNonNull(options, "options");
+        var mimeType = guessMimeType(video);
+        return analyzeVideoAsync(new Attachment(video, mimeType, "video." + mimeType.extension()), prompt, options);
+    }
+
+    @Override
+    public CompletableFuture<String> analyzeVideoAsync(Path video, String prompt, AnalyzeVideoOptions options) throws AIException {
+        requireNonNull(options, "options");
+        return analyzeVideoAsync(new Attachment(video), prompt, options);
+    }
+
+    private CompletableFuture<String> analyzeVideoAsync(Attachment video, String prompt, AnalyzeVideoOptions videoOptions) throws AIException {
+        if (!video.mimeType().isVideo()) {
+            throw new IllegalArgumentException("Cannot recognize " + video.mimeType().value() + " as video");
+        }
+
+        var input = ChatInput.newBuilder()
+            .message(isBlank(prompt) ? "Analyze video" : prompt)
+            .attach(video.withVideoOptions(videoOptions))
+            .build();
+        var options = DETERMINISTIC.withSystemPrompt(isBlank(prompt) ? videoHandler.buildAnalyzeVideoPrompt() : null);
+        return asyncPostAndParseChatResponse(getChatPath(false), textHandler.buildChatPayload(this, input, options, false), null);
     }
 
     // HTTP Helper Methods --------------------------------------------------------------------------------------------

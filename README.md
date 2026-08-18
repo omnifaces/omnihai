@@ -566,6 +566,23 @@ byte[] image = service.generateImage("A modern office",
         .build());
 ```
 
+### Video Analysis
+
+```java
+// Analyze video
+String description = service.analyzeVideo(Path.of("match.mp4"), "When does the goal happen?");
+
+// With options (sample 2 frames per second of the second minute only)
+String sampled = service.analyzeVideo(Path.of("match.mp4"), "When does the goal happen?",
+    AnalyzeVideoOptions.newBuilder()
+        .fps(2)
+        .startOffset(Duration.ofMinutes(1))
+        .endOffset(Duration.ofMinutes(2))
+        .build());
+```
+
+Video input is accepted by Gemini and by the video-capable models routed through OpenRouter; check `service.supportsModality(AIModality.VIDEO_ANALYSIS)` before calling. The sampling options are honored by Gemini only, as OpenRouter takes the video as a plain data URI with nowhere to put them.
+
 ### Audio Transcription
 
 ```java
@@ -591,7 +608,7 @@ byte[] audio = gpt.generateAudio("Hello!",
         .build());
 ```
 
-All methods have async variants returning `CompletableFuture` (e.g., `chatAsync`, `summarizeAsync`, `translateAsync`, `proofreadAsync`, `generateImageAsync`, `transcribeAsync`, `generateAudioAsync`, etc.).
+All methods have async variants returning `CompletableFuture` (e.g., `chatAsync`, `summarizeAsync`, `translateAsync`, `proofreadAsync`, `generateImageAsync`, `analyzeVideoAsync`, `transcribeAsync`, `generateAudioAsync`, etc.).
 
 ## Custom Providers
 

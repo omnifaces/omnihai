@@ -12,11 +12,15 @@
  */
 package org.omnifaces.ai.modality;
 
+import static java.lang.String.format;
 import static org.omnifaces.ai.helper.JsonHelper.findByPath;
 import static org.omnifaces.ai.helper.TextHelper.isBlank;
+import static org.omnifaces.ai.model.AnalyzeVideoOptions.DEFAULT_FPS;
 import static org.omnifaces.ai.model.Sse.Event.Type.DATA;
 
+import java.time.Duration;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Consumer;
 
 import jakarta.json.Json;
@@ -27,6 +31,7 @@ import jakarta.json.JsonObjectBuilder;
 import org.omnifaces.ai.AIService;
 import org.omnifaces.ai.exception.AITokenLimitExceededException;
 import org.omnifaces.ai.model.ChatInput;
+import org.omnifaces.ai.model.ChatInput.Attachment;
 import org.omnifaces.ai.model.ChatInput.Message.Role;
 import org.omnifaces.ai.model.ChatOptions;
 import org.omnifaces.ai.model.ChatOptions.ReasoningEffort;
@@ -170,15 +175,15 @@ public class GoogleAITextHandler extends DefaultAITextHandler {
 
             for (var file : input.getFiles()) {
                 var fileId = service.upload(file, options);
+                var part = Json.createObjectBuilder()
+                    .add(
+                        "file_data", Json.createObjectBuilder()
+                            .add("mime_type", file.mimeType().value())
+                            .add("file_uri", fileId)
+                    );
 
-                parts.add(
-                    Json.createObjectBuilder()
-                        .add(
-                            "file_data", Json.createObjectBuilder()
-                                .add("mime_type", file.mimeType().value())
-                                .add("file_uri", fileId)
-                        )
-                );
+                buildVideoMetadata(file).ifPresent(videoMetadata -> part.add("video_metadata", videoMetadata));
+                parts.add(part);
             }
         }
 
@@ -192,6 +197,43 @@ public class GoogleAITextHandler extends DefaultAITextHandler {
                 .add("role", "user")
                 .add("parts", parts)
         );
+    }
+
+    /**
+     * Builds the video metadata of the given video attachment, which instructs at which rate to sample frames and which clip of the video to analyze.
+     *
+     * @param file The file attachment to build the video metadata for.
+     * @return The video metadata, or empty if the attachment carries no video options.
+     * @since 1.7
+     * @see <a href="https://ai.google.dev/gemini-api/docs/video-understanding">API Reference</a>
+     */
+    protected Optional<JsonObjectBuilder> buildVideoMetadata(Attachment file) {
+        var videoOptions = file.videoOptions();
+
+        if (videoOptions == null || videoOptions.isDefault()) {
+            return Optional.empty();
+        }
+
+        var videoMetadata = Json.createObjectBuilder();
+
+        if (videoOptions.getFps() != DEFAULT_FPS) {
+            videoMetadata.add("fps", videoOptions.getFps());
+        }
+
+        if (videoOptions.getStartOffset() != null) {
+            videoMetadata.add("start_offset", toOffset(videoOptions.getStartOffset()));
+        }
+
+        if (videoOptions.getEndOffset() != null) {
+            videoMetadata.add("end_offset", toOffset(videoOptions.getEndOffset()));
+        }
+
+        return Optional.of(videoMetadata);
+    }
+
+    private static String toOffset(Duration offset) {
+        var millis = offset.toMillisPart();
+        return millis == 0 ? (offset.toSeconds() + "s") : format("%d.%03ds", offset.toSeconds(), millis);
     }
 
     /**

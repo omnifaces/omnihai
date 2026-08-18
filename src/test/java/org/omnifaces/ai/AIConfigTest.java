@@ -32,6 +32,7 @@ import java.util.function.Consumer;
 import org.junit.jupiter.api.Test;
 import org.omnifaces.ai.exception.AIException;
 import org.omnifaces.ai.modality.OpenAITextHandler;
+import org.omnifaces.ai.model.AnalyzeVideoOptions;
 import org.omnifaces.ai.model.ChatInput;
 import org.omnifaces.ai.model.ChatInput.Attachment;
 import org.omnifaces.ai.model.ChatOptions;
@@ -775,6 +776,16 @@ class AIConfigTest {
 
         @Override
         public CompletableFuture<Void> generateAudioAsync(String text, Path path, GenerateAudioOptions options) throws AIException {
+            return null;
+        }
+
+        @Override
+        public CompletableFuture<String> analyzeVideoAsync(byte[] video, String prompt, AnalyzeVideoOptions options) throws AIException {
+            return null;
+        }
+
+        @Override
+        public CompletableFuture<String> analyzeVideoAsync(Path video, String prompt, AnalyzeVideoOptions options) throws AIException {
             return null;
         }
 

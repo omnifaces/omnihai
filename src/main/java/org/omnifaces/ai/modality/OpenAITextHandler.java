@@ -217,6 +217,37 @@ public class OpenAITextHandler extends DefaultAITextHandler {
     }
 
     /**
+     * Add the content part of a file attachment which is inlined in the payload rather than uploaded to a files API.
+     *
+     * @param service The visiting AI service.
+     * @param content The content array builder.
+     * @param file The file attachment to inline.
+     * @param supportsResponsesApi Whether the Responses API is used.
+     * @since 1.7
+     */
+    protected void addInlineFileContent(AIService service, JsonArrayBuilder content, Attachment file, boolean supportsResponsesApi) {
+        if (supportsResponsesApi) {
+            content.add(
+                Json.createObjectBuilder()
+                    .add("type", "input_file")
+                    .add("filename", file.fileName())
+                    .add("file_data", file.toDataUri())
+            );
+        }
+        else {
+            content.add(
+                Json.createObjectBuilder()
+                    .add("type", "file")
+                    .add(
+                        "file", Json.createObjectBuilder()
+                            .add("filename", file.fileName())
+                            .add("file_data", file.toDataUri())
+                    )
+            );
+        }
+    }
+
+    /**
      * Add user content (images, audio files, other files, and text message) to the input array for Responses API.
      *
      * @param service The visiting AI service.
@@ -283,24 +314,8 @@ public class OpenAITextHandler extends DefaultAITextHandler {
                     var fileId = service.upload(file.withMetadata(getFileUploadMetadata.apply(file)), options);
                     addUploadedFileContent(service, content, fileId, supportsResponsesApi);
                 }
-                else if (supportsResponsesApi) {
-                    content.add(
-                        Json.createObjectBuilder()
-                            .add("type", "input_file")
-                            .add("filename", file.fileName())
-                            .add("file_data", file.toDataUri())
-                    );
-                }
                 else {
-                    content.add(
-                        Json.createObjectBuilder()
-                            .add("type", "file")
-                            .add(
-                                "file", Json.createObjectBuilder()
-                                    .add("filename", file.fileName())
-                                    .add("file_data", file.toDataUri())
-                            )
-                    );
+                    addInlineFileContent(service, content, file, supportsResponsesApi);
                 }
             }
         }
