@@ -1833,6 +1833,9 @@ public interface AIService extends Serializable {
      * this check before performing operations such as {@link #analyzeImage(byte[], String)}, {@link #analyzeVideo(java.nio.file.Path, String)},
      * {@link #generateImage(String)}, or other modality-specific calls.
      * <p>
+     * An implementation may consult the AI provider to answer this, in which case the call blocks on one HTTP request the first time and is served from memory
+     * afterwards. No operation of this library consults it, so nothing but the asking caller ever waits on it.
+     * <p>
      * The primary purposes of this method are to allow callers to:
      * <ul>
      * <li>skip unnecessary API calls when a modality is known to be unsupported,</li>

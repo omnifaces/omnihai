@@ -12,7 +12,10 @@
  */
 package org.omnifaces.ai.service;
 
+import static org.omnifaces.ai.service.ModelModalitiesRegistry.findModelModalities;
+
 import java.nio.file.Path;
+import java.util.EnumSet;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
@@ -56,6 +59,12 @@ public class HuggingFaceAIService extends OpenAIService {
     private static final long serialVersionUID = 1L;
 
     /**
+     * The modalities which the listing may report but no call can serve: OmniHai has no video generation API at all, and Hugging Face is wired with the
+     * {@link org.omnifaces.ai.modality.DefaultAIAudioHandler}, which does not implement audio generation.
+     */
+    private static final Set<AIModality> UNSERVEABLE_MODALITIES = EnumSet.of(AIModality.AUDIO_GENERATION, AIModality.VIDEO_GENERATION);
+
+    /**
      * Constructs a Hugging Face AI service with the specified configuration.
      *
      * @param config the AI configuration
@@ -65,15 +74,30 @@ public class HuggingFaceAIService extends OpenAIService {
         super(config);
     }
 
+    /**
+     * Hugging Face publishes the input and output modalities of every routed model, so they are looked up rather than guessed from the model name. Matching the
+     * model name against the modality name is the fallback for as long as the listing cannot be obtained, and for a model which is not in it.
+     *
+     * @see <a href="https://huggingface.co/docs/inference-providers/index">Inference Providers API Reference</a>
+     */
     @Override
     public boolean supportsModality(AIModality modality) {
+        if (UNSERVEABLE_MODALITIES.contains(modality)) {
+            return false;
+        }
+
+        return findModelModalities(this).map(modalities -> modalities.contains(modality)).orElseGet(() -> supportsModalityByModelName(modality));
+    }
+
+    private boolean supportsModalityByModelName(AIModality modality) {
         var fullModelName = getModelName().toLowerCase();
 
         return switch (modality) {
             case IMAGE_ANALYSIS -> true;
             case IMAGE_GENERATION -> fullModelName.contains("image");
             case AUDIO_ANALYSIS -> fullModelName.contains("transcribe") || fullModelName.contains("whisper");
-            default -> false;
+            case VIDEO_ANALYSIS -> fullModelName.contains("video");
+            case AUDIO_GENERATION, VIDEO_GENERATION -> false;
         };
     }
 

@@ -12,6 +12,10 @@
  */
 package org.omnifaces.ai.service;
 
+import static org.omnifaces.ai.AIModality.AUDIO_GENERATION;
+import static org.omnifaces.ai.service.ModelModalitiesRegistry.findModelModalities;
+
+import java.util.EnumSet;
 import java.util.Set;
 
 import org.omnifaces.ai.AIConfig;
@@ -51,6 +55,12 @@ public class OpenRouterAIService extends OpenAIService {
     private static final long serialVersionUID = 1L;
 
     /**
+     * The modalities which the listing may report but no call can serve: OmniHai has no video generation API at all, and OpenRouter emits audio as a chat
+     * completion stream which no {@link org.omnifaces.ai.AIAudioHandler} implements.
+     */
+    private static final Set<AIModality> UNSERVEABLE_MODALITIES = EnumSet.of(AIModality.AUDIO_GENERATION, AIModality.VIDEO_GENERATION);
+
+    /**
      * Constructs an OpenRouter AI service with the specified configuration.
      *
      * @param config the AI configuration
@@ -60,15 +70,38 @@ public class OpenRouterAIService extends OpenAIService {
         super(config);
     }
 
+    /**
+     * OpenRouter publishes the input and output modalities of every routed model, so they are looked up rather than guessed from the model name. Matching the
+     * model name against the modality name is the fallback for as long as the listing cannot be obtained, and for a model which is not in it.
+     *
+     * @see <a href="https://openrouter.ai/docs/api-reference/list-available-models">List Models API Reference</a>
+     */
     @Override
     public boolean supportsModality(AIModality modality) {
+        if (UNSERVEABLE_MODALITIES.contains(modality)) {
+            return false;
+        }
+
+        return findModelModalities(this).map(modalities -> modalities.contains(modality)).orElseGet(() -> supportsModalityByModelName(modality));
+    }
+
+    /**
+     * Matches the model name against the modality name, which a model offering that modality as output is generally named after, such as
+     * {@code google/gemini-3-flash-image}. A model offering it as input is named after its family instead, so image analysis is assumed rather than matched, as
+     * nearly every routed model accepts an image, and audio and video analysis are assumed absent rather than guessed.
+     *
+     * @param modality The modality to check.
+     * @return Whether the model name suggests the given modality.
+     */
+    private boolean supportsModalityByModelName(AIModality modality) {
         var fullModelName = getModelName().toLowerCase();
 
         return switch (modality) {
             case IMAGE_ANALYSIS -> true;
             case IMAGE_GENERATION -> fullModelName.contains("image");
             case AUDIO_ANALYSIS -> fullModelName.contains("audio");
-            default -> false;
+            case VIDEO_ANALYSIS -> fullModelName.contains("video");
+            case AUDIO_GENERATION, VIDEO_GENERATION -> false;
         };
     }
 
