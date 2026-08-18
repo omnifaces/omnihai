@@ -13,14 +13,20 @@
 package org.omnifaces.ai.service;
 
 import static java.lang.String.format;
+import static org.omnifaces.ai.helper.JsonHelper.findByPath;
 
 import java.net.URI;
+import java.time.Duration;
+
+import jakarta.json.JsonObject;
 
 import org.omnifaces.ai.AIConfig;
 import org.omnifaces.ai.AIModality;
 import org.omnifaces.ai.AIModelVersion;
 import org.omnifaces.ai.AIProvider;
 import org.omnifaces.ai.AIService;
+import org.omnifaces.ai.exception.AIException;
+import org.omnifaces.ai.model.ChatInput.Attachment;
 
 /**
  * AI service implementation using Google AI API.
@@ -56,6 +62,22 @@ public class GoogleAIService extends BaseAIService {
     private static final AIModelVersion GEMINI_2 = AIModelVersion.of("gemini", 2);
     private static final AIModelVersion GEMINI_2_5 = AIModelVersion.of("gemini", 2, 5);
     private static final AIModelVersion GEMINI_3 = AIModelVersion.of("gemini", 3);
+
+    private static final String FILE_STATE_ACTIVE = "ACTIVE";
+    private static final String FILE_STATE_PROCESSING = "PROCESSING";
+    private static final String FILE_STATE_UNSPECIFIED = "STATE_UNSPECIFIED";
+    private static final String FILE_STATE_FAILED = "FAILED";
+    private static final String FILE_ERROR_MESSAGE_PATH = "error.message";
+    private static final String UPLOADED_FILE_PROPERTY = "file";
+
+    private static final Duration INITIAL_UPLOADED_FILE_POLL_INTERVAL = Duration.ofSeconds(2);
+    private static final Duration MAX_UPLOADED_FILE_POLL_INTERVAL = Duration.ofSeconds(15);
+    private static final double UPLOADED_FILE_POLL_BACKOFF_MULTIPLIER = 1.5;
+
+    private static final long BYTES_PER_MEGABYTE = 1024L * 1024L;
+    private static final Duration UPLOADED_FILE_PROCESSING_TIME_PER_MEGABYTE = Duration.ofSeconds(2);
+    private static final Duration MIN_UPLOADED_FILE_PROCESSING_TIME = Duration.ofMinutes(1);
+    private static final Duration MAX_UPLOADED_FILE_PROCESSING_TIME = Duration.ofMinutes(15);
 
     /**
      * Constructs a Google AI service with the specified configuration.
@@ -121,6 +143,9 @@ public class GoogleAIService extends BaseAIService {
         if (path.equals(getFilesPath())) {
             return super.resolveURI("../upload/v1beta/" + format(getFilesPath() + "?key=%s", apiKey));
         }
+        else if (path.startsWith(getFilesPath() + "/")) {
+            return super.resolveURI(format("%s?key=%s", path, apiKey));
+        }
         else {
             var parts = path.split("\\?", 2);
             var query = parts.length > 1 ? ("&" + parts[1]) : "";
@@ -134,6 +159,103 @@ public class GoogleAIService extends BaseAIService {
     @Override
     protected String getChatPath(boolean streaming) {
         return streaming ? "streamGenerateContent?alt=sse" : "generateContent";
+    }
+
+    /**
+     * Google AI processes an uploaded file asynchronously and rejects a chat request referencing a file which is not yet active. Video takes the longest, as
+     * every sampled frame is extracted up front. This blocks the calling thread until the file is active, at most {@link #maxProcessingTime(Attachment)}. A
+     * file which is already active on the first poll does not block at all.
+     */
+    @Override
+    protected void awaitUploadedFile(Attachment attachment, String fileId, JsonObject responseJson) throws AIException {
+        var index = fileId.lastIndexOf(getFilesPath() + "/");
+
+        if (index < 0) {
+            return;
+        }
+
+        var filePath = fileId.substring(index);
+
+        if (!isStillProcessing(filePath, getUploadedFile(responseJson))) {
+            return; // The upload response already states the file is ready, which spares a poll altogether.
+        }
+
+        var maxProcessingTime = maxProcessingTime(attachment);
+        var startNanos = System.nanoTime();
+        var pollInterval = INITIAL_UPLOADED_FILE_POLL_INTERVAL;
+
+        do {
+            if (System.nanoTime() - startNanos >= maxProcessingTime.toNanos()) {
+                throw new AIException("Uploaded file " + filePath + " is still being processed after " + maxProcessingTime.toSeconds() + " seconds");
+            }
+
+            sleep(pollInterval);
+            pollInterval = nextPollInterval(pollInterval);
+        }
+        while (isStillProcessing(filePath, pollUploadedFile(filePath)));
+    }
+
+    /**
+     * Returns the uploaded file resource which the upload response wraps, or {@code null} when it does not carry one, in which case its state is unknown.
+     *
+     * @param responseJson The upload response JSON.
+     * @return The uploaded file resource, or {@code null} if absent.
+     */
+    private static JsonObject getUploadedFile(JsonObject responseJson) {
+        return responseJson.containsKey(UPLOADED_FILE_PROPERTY) ? responseJson.getJsonObject(UPLOADED_FILE_PROPERTY) : null;
+    }
+
+    /**
+     * Returns how long the given attachment may reasonably take to process, derived from its size and bounded by {@link #MIN_UPLOADED_FILE_PROCESSING_TIME} and
+     * {@link #MAX_UPLOADED_FILE_PROCESSING_TIME}, as processing time grows with the amount of content to extract.
+     *
+     * @param attachment The uploaded file attachment.
+     * @return How long the given attachment may reasonably take to process.
+     */
+    static Duration maxProcessingTime(Attachment attachment) {
+        var derived = UPLOADED_FILE_PROCESSING_TIME_PER_MEGABYTE.multipliedBy(attachment.size() / BYTES_PER_MEGABYTE);
+
+        if (derived.compareTo(MIN_UPLOADED_FILE_PROCESSING_TIME) < 0) {
+            return MIN_UPLOADED_FILE_PROCESSING_TIME;
+        }
+
+        return derived.compareTo(MAX_UPLOADED_FILE_PROCESSING_TIME) > 0 ? MAX_UPLOADED_FILE_PROCESSING_TIME : derived;
+    }
+
+    private JsonObject pollUploadedFile(String filePath) {
+        return HTTP_CLIENT.get(this, filePath).join();
+    }
+
+    private static boolean isStillProcessing(String filePath, JsonObject file) {
+        if (file == null) {
+            return true; // State unknown, so it must be polled.
+        }
+
+        var state = file.getString("state", FILE_STATE_ACTIVE);
+
+        if (FILE_STATE_FAILED.equals(state)) {
+            throw new AIException("Uploaded file " + filePath + " failed to process: " + findByPath(file, FILE_ERROR_MESSAGE_PATH).orElse(state));
+        }
+        else if (!FILE_STATE_ACTIVE.equals(state) && !FILE_STATE_PROCESSING.equals(state) && !FILE_STATE_UNSPECIFIED.equals(state)) {
+            throw new AIException("Uploaded file " + filePath + " ended up in state " + state);
+        }
+
+        return !FILE_STATE_ACTIVE.equals(state);
+    }
+
+    private static Duration nextPollInterval(Duration pollInterval) {
+        var next = Duration.ofMillis((long) (pollInterval.toMillis() * UPLOADED_FILE_POLL_BACKOFF_MULTIPLIER));
+        return next.compareTo(MAX_UPLOADED_FILE_POLL_INTERVAL) > 0 ? MAX_UPLOADED_FILE_POLL_INTERVAL : next;
+    }
+
+    private static void sleep(Duration duration) {
+        try {
+            Thread.sleep(duration.toMillis());
+        }
+        catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new AIException("Interrupted while awaiting the uploaded file", e);
+        }
     }
 
     @Override

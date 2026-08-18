@@ -315,7 +315,9 @@ public abstract class BaseAIService implements AIService {
     @Override
     public String upload(Attachment attachment, ChatOptions options) throws AIException {
         try {
-            var fileId = asyncUploadAndParseFileIdResponse(getFilesPath(), attachment).join();
+            var responseJson = asyncUploadAndParseFileResponse(getFilesPath(), attachment).join();
+            var fileId = textHandler.parseFileResponse(responseJson);
+            awaitUploadedFile(attachment, fileId, responseJson);
 
             if (getUploadedFileJsonStructure() != null && staleUploadedFilesCleanupRunning.compareAndSet(false, true)) {
                 ExecutorServiceHelper.runAsync(() -> {
@@ -337,6 +339,21 @@ public abstract class BaseAIService implements AIService {
         catch (CompletionException e) {
             throw AIException.asyncRequestFailed(e);
         }
+    }
+
+    /**
+     * Awaits until the file uploaded by {@link #upload(Attachment, ChatOptions)} is ready to be referenced in a chat request. Providers which process an
+     * uploaded file asynchronously, such as when extracting frames from a video, reject a chat request referencing a file which is still being processed.
+     *
+     * @implNote The default implementation does nothing, as most providers accept the file ID right away.
+     * @param attachment The uploaded file attachment, whose {@link Attachment#size() size} indicates how long processing may reasonably take.
+     * @param fileId The file ID as returned by the upload request.
+     * @param responseJson The upload response JSON, which may already state whether the file is ready.
+     * @throws AIException if the file cannot be processed by the AI provider.
+     * @since 1.7
+     */
+    protected void awaitUploadedFile(Attachment attachment, String fileId, JsonObject responseJson) throws AIException {
+        // NOOP.
     }
 
     /**
@@ -714,16 +731,16 @@ public abstract class BaseAIService implements AIService {
     }
 
     /**
-     * Upload file attachment to API at given path along with request headers obtained from {@link #getRequestHeaders()}, and parse file ID from the response
-     * with help of {@link AITextHandler#parseFileResponse(JsonObject)}.
+     * Upload file attachment to API at given path along with request headers obtained from {@link #getRequestHeaders()}. The caller parses the file ID from the
+     * returned response with help of {@link AITextHandler#parseFileResponse(JsonObject)}.
      *
      * @param path API path, relative to {@link #endpoint}.
      * @param attachment The file attachment to upload.
-     * @return A CompletableFuture containing the file ID from the upload response.
+     * @return A CompletableFuture containing the upload response JSON.
      * @throws AIException if anything fails during the process.
      */
-    protected CompletableFuture<String> asyncUploadAndParseFileIdResponse(String path, Attachment attachment) throws AIException {
-        return HTTP_CLIENT.upload(this, path, attachment).thenApply(textHandler::parseFileResponse);
+    protected CompletableFuture<JsonObject> asyncUploadAndParseFileResponse(String path, Attachment attachment) throws AIException {
+        return HTTP_CLIENT.upload(this, path, attachment);
     }
 
     /**
