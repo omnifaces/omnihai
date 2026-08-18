@@ -38,7 +38,14 @@ final class ImageMimeTypeDetector {
         ICO("image/x-icon", 0, new byte[] { 0x00, 0x00, 0x01, 0x00 }, 0, null),
         SVG("image/svg+xml", 0, new byte[] { '<', 's', 'v', 'g' }, 0, null), // Also handled as special case.
         HEIC("image/heic", 4, FTYP_MAGIC, 8, new byte[] { 'h', 'e', 'i', 'c' }),
+        HEIX("image/heic", 4, FTYP_MAGIC, 8, new byte[] { 'h', 'e', 'i', 'x' }),
+        HEVC("image/heic", 4, FTYP_MAGIC, 8, new byte[] { 'h', 'e', 'v', 'c' }),
+        HEVX("image/heic", 4, FTYP_MAGIC, 8, new byte[] { 'h', 'e', 'v', 'x' }),
         MIF1("image/heif", 4, FTYP_MAGIC, 8, new byte[] { 'm', 'i', 'f', '1' }),
+        MSF1("image/heif", 4, FTYP_MAGIC, 8, new byte[] { 'm', 's', 'f', '1' }),
+        AVIF("image/avif", 4, FTYP_MAGIC, 8, new byte[] { 'a', 'v', 'i', 'f' }),
+        AVIS("image/avif", 4, FTYP_MAGIC, 8, new byte[] { 'a', 'v', 'i', 's' }),
+        JXL_BOXED("image/jxl", 4, FTYP_MAGIC, 8, new byte[] { 'j', 'x', 'l', ' ' }),
         JXL("image/jxl", 0, new byte[] { (byte) 0xFF, 0x0A }, 0, null),
         JXL_CODESTREAM("image/jxl", 0, new byte[] { 'J', 'X', 'L', ' ' }, 0, null),
         TIFF_LE("image/tiff", 0, new byte[] { 'I', 'I', '*', 0 }, 0, null),
@@ -96,8 +103,6 @@ final class ImageMimeTypeDetector {
 
     /**
      * Guesses the mime type of an image based on its magic bytes.
-     * <p>
-     * Recognized types: JPEG, PNG, GIF, BMP, WEBP, ICO, SVG, HEIC, MIF1, JXL, TIFF.
      *
      * @param content The content bytes to check.
      * @return An {@link Optional} containing the mime type if recognized as an image, or empty if not.

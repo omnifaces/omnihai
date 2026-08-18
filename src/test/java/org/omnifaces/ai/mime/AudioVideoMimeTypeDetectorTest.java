@@ -225,6 +225,38 @@ class AudioVideoMimeTypeDetectorTest {
     }
 
     @Test
+    void guessAudioVideoMimeType_mp4_fragmentedAndStreamingBrands() {
+        for (var brand : new String[] { "iso4", "iso5", "iso6", "iso8", "dash", "mp4v", "mmp4", "msnv", "3gp5", "3gp6", "M4V " }) {
+            var result = AudioVideoMimeTypeDetector.guessAudioVideoMimeType(newFtypContent(brand));
+            assertTrue(result.isPresent(), brand + " must be recognized");
+            assertEquals("mp4", result.get().extension(), brand + " must be recognized as mp4");
+        }
+    }
+
+    @Test
+    void guessAudioVideoMimeType_audioOnlyBrand_shouldNotBeVideo() {
+        var result = AudioVideoMimeTypeDetector.guessAudioVideoMimeType(newFtypContent("M4A "));
+        assertTrue(result.isPresent());
+        assertEquals("m4a", result.get().extension());
+    }
+
+    @Test
+    void guessAudioVideoMimeType_futureNumberedBrands() {
+        for (var brand : new String[] { "iso9", "3gp7", "mp4x" }) {
+            var result = AudioVideoMimeTypeDetector.guessAudioVideoMimeType(newFtypContent(brand));
+            assertTrue(result.isPresent(), brand + " must be recognized");
+            assertEquals("mp4", result.get().extension(), brand + " must be recognized as mp4");
+        }
+    }
+
+    @Test
+    void guessAudioVideoMimeType_imageBrand_shouldReturnEmpty() {
+        for (var brand : new String[] { "heic", "avif", "mif1", "jxl " }) {
+            assertFalse(AudioVideoMimeTypeDetector.guessAudioVideoMimeType(newFtypContent(brand)).isPresent(), brand + " may not be recognized as video");
+        }
+    }
+
+    @Test
     void guessAudioVideoMimeType_mp4_unknownBrand_shouldReturnEmpty() {
         var content = new byte[] { 0x00, 0x00, 0x00, 0x00, 'f', 't', 'y', 'p', 'X', 'X', 'X', 'X' };
         var result = AudioVideoMimeTypeDetector.guessAudioVideoMimeType(content);
@@ -305,6 +337,16 @@ class AudioVideoMimeTypeDetectorTest {
     void startsWith_offsetTooLarge_shouldReturnFalse() {
         var content = new byte[] { 'A', 'B', 'C', 'D' };
         assertFalse(AudioVideoMimeTypeDetector.startsWith(content, 10, new byte[] { 'A' }));
+    }
+
+    private static byte[] newFtypContent(String brand) {
+        var content = new byte[] { 0x00, 0x00, 0x00, 0x00, 'f', 't', 'y', 'p', 0x00, 0x00, 0x00, 0x00 };
+
+        for (var i = 0; i < 4; i++) {
+            content[8 + i] = (byte) brand.charAt(i);
+        }
+
+        return content;
     }
 
 }

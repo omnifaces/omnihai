@@ -185,10 +185,37 @@ class ImageMimeTypeDetectorTest {
     }
 
     @Test
+    void guessImageMimeType_isoBaseMediaBrands() {
+        for (var brand : new String[] { "heic", "heix", "hevc", "hevx", "mif1", "msf1", "avif", "avis", "jxl " }) {
+            var result = ImageMimeTypeDetector.guessImageMimeType(newFtypContent(brand));
+            assertTrue(result.isPresent(), brand + " must be recognized");
+            assertTrue(result.get().value().startsWith("image/"), brand + " must be recognized as image");
+        }
+    }
+
+    @Test
+    void guessImageMimeType_avif() {
+        var result = ImageMimeTypeDetector.guessImageMimeType(newFtypContent("avif"));
+        assertTrue(result.isPresent());
+        assertEquals("image/avif", result.get().value());
+        assertEquals("avif", result.get().extension());
+    }
+
+    @Test
     void guessImageMimeType_ftypWithoutHeic_shouldReturnEmpty() {
         var content = new byte[] { 0, 0, 0, 0, 'f', 't', 'y', 'p', 'X', 'X', 'X', 'X', 0, 0, 0, 0 };
         var result = ImageMimeTypeDetector.guessImageMimeType(content);
         assertFalse(result.isPresent());
+    }
+
+    private static byte[] newFtypContent(String brand) {
+        var content = new byte[] { 0, 0, 0, 0, 'f', 't', 'y', 'p', 0, 0, 0, 0, 0, 0, 0, 0 };
+
+        for (var i = 0; i < 4; i++) {
+            content[8 + i] = (byte) brand.charAt(i);
+        }
+
+        return content;
     }
 
 }

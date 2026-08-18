@@ -16,6 +16,7 @@ import static java.nio.charset.StandardCharsets.US_ASCII;
 
 import java.util.Arrays;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * Provides audio and video MIME type detection based on magic bytes.
@@ -31,6 +32,17 @@ final class AudioVideoMimeTypeDetector {
     static final byte[] RIFF_MAGIC = { 'R', 'I', 'F', 'F' };
     /** The FTYP magic (to be shared with {@link ImageMimeTypeDetector}). */
     static final byte[] FTYP_MAGIC = { 'f', 't', 'y', 'p' };
+
+    /**
+     * The ISO base media file format brand families which denote video, each covering its numbered members such as {@code isom}, {@code iso5} and {@code mp42}.
+     */
+    private static final Set<String> MP4_BRAND_PREFIXES = Set.of("iso", "mp4", "3gp");
+
+    /**
+     * The remaining ISO base media file format brands which denote video. Audio-only brands such as {@code M4A } and image brands such as {@code heic} share
+     * the same FTYP magic and must therefore stay out of both this set and {@link #MP4_BRAND_PREFIXES}.
+     */
+    private static final Set<String> MP4_BRANDS = Set.of("avc1", "dash", "f4v ", "kddi", "mmp4", "msnv", "M4V ");
 
     private enum AudioVideoMimeType implements MimeType {
 
@@ -95,8 +107,6 @@ final class AudioVideoMimeTypeDetector {
 
     /**
      * Guesses the MIME type of audio/video content based on its magic bytes.
-     * <p>
-     * Recognized types: AAC, MP3, FLAC, OGG, MKV, WEBM, AIFF, AVI, WAV, MP4, MOV, M4A.
      *
      * @param content The content bytes to check.
      * @return An {@link Optional} containing the MIME type if recognized as audio/video, or empty if not.
@@ -128,10 +138,7 @@ final class AudioVideoMimeTypeDetector {
                 if (type == AudioVideoMimeType.MP4 && content.length >= 12) {
                     var brand = new String(content, 8, 4, US_ASCII);
 
-                    return switch (brand) {
-                        case "isom", "iso2", "mp41", "mp42", "avc1", "3gp4", "f4v ", "kddi" -> Optional.of(AudioVideoMimeType.MP4);
-                        default -> Optional.empty();
-                    };
+                    return isVideoBrand(brand) ? Optional.of(AudioVideoMimeType.MP4) : Optional.empty();
                 }
 
                 return Optional.of(type);
@@ -139,6 +146,10 @@ final class AudioVideoMimeTypeDetector {
         }
 
         return Optional.empty();
+    }
+
+    private static boolean isVideoBrand(String brand) {
+        return MP4_BRANDS.contains(brand) || MP4_BRAND_PREFIXES.stream().anyMatch(brand::startsWith);
     }
 
     /**
