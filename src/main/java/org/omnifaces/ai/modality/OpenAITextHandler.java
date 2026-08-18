@@ -391,7 +391,7 @@ public class OpenAITextHandler extends DefaultAITextHandler {
             addReasoningEffort(service, payload, effectiveReasoningEffort, supportsResponsesApi);
         }
 
-        if (effectiveReasoningEffort == ReasoningEffort.NONE) {
+        if (effectiveReasoningEffort == ReasoningEffort.NONE || effectiveReasoningEffort == ReasoningEffort.AUTO) {
             payload.add("temperature", options.getTemperature());
         }
 

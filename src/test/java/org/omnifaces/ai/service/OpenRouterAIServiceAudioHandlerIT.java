@@ -32,7 +32,7 @@ class OpenRouterAIServiceAudioHandlerIT extends BaseAIServiceAudioHandlerIT {
 
     @Override
     protected String getModel() {
-        return "openai/gpt-audio-mini";
+        return "google/gemini-3.5-flash-lite";
     }
 
 }

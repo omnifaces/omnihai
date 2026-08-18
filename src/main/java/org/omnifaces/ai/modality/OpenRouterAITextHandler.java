@@ -78,20 +78,16 @@ public class OpenRouterAITextHandler extends OpenAITextHandler {
     }
 
     /**
-     * OpenRouter accepts {@code "none"} as a valid effort value regardless of the routed model, and transparently translates the effort string to whatever
-     * shape the underlying model needs (percentages of {@code max_tokens} for budget-based providers like Anthropic / Gemini / Qwen). So we do not need the
-     * GPT-5-specific {@code AUTO}/{@code NONE} to {@code MEDIUM} fold that the OpenAI base applies.
+     * OpenRouter transparently translates the effort string to whatever shape the underlying model needs (percentages of {@code max_tokens} for budget-based
+     * providers like Anthropic / Gemini / Qwen), so we do not need the GPT-5-specific {@code AUTO}/{@code NONE} to {@code MEDIUM} fold that the OpenAI base
+     * applies. {@link ReasoningEffort#AUTO} is passed on as such, which leaves the {@code reasoning} object off the payload entirely: a routed model may
+     * mandate reasoning and reject an explicit {@code "none"}, and only the caller asking for {@link ReasoningEffort#NONE} may put it in that position.
      *
      * @see <a href="https://openrouter.ai/docs/guides/best-practices/reasoning-tokens">Reasoning Tokens API Reference</a>
      */
     @Override
     protected ReasoningEffort getEffectiveReasoningEffort(AIService service, ChatOptions options) {
-        if (!service.supportsReasoningEffort()) {
-            return ReasoningEffort.NONE;
-        }
-
-        var effort = options.getReasoningEffort();
-        return effort == ReasoningEffort.AUTO ? ReasoningEffort.NONE : effort;
+        return service.supportsReasoningEffort() ? options.getReasoningEffort() : ReasoningEffort.NONE;
     }
 
     /**
