@@ -425,12 +425,32 @@ public abstract class InterceptingAIServiceWrapper extends AIServiceWrapper {
     }
 
     @Override
+    public String analyzeImage(Path image, String prompt) throws AIException {
+        return intercept(service -> service.analyzeImage(image, prompt));
+    }
+
+    @Override
+    public CompletableFuture<String> analyzeImageAsync(Path image, String prompt) throws AIException {
+        return interceptAsync(service -> service.analyzeImageAsync(image, prompt));
+    }
+
+    @Override
     public String generateAltText(byte[] image) throws AIException {
         return intercept(service -> service.generateAltText(image));
     }
 
     @Override
     public CompletableFuture<String> generateAltTextAsync(byte[] image) throws AIException {
+        return interceptAsync(service -> service.generateAltTextAsync(image));
+    }
+
+    @Override
+    public String generateAltText(Path image) throws AIException {
+        return intercept(service -> service.generateAltText(image));
+    }
+
+    @Override
+    public CompletableFuture<String> generateAltTextAsync(Path image) throws AIException {
         return interceptAsync(service -> service.generateAltTextAsync(image));
     }
 

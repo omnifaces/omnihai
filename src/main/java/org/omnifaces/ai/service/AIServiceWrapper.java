@@ -297,12 +297,32 @@ public abstract class AIServiceWrapper implements AIService {
     }
 
     @Override
+    public String analyzeImage(Path image, String prompt) throws AIException {
+        return getWrapped().analyzeImage(image, prompt);
+    }
+
+    @Override
+    public CompletableFuture<String> analyzeImageAsync(Path image, String prompt) throws AIException {
+        return getWrapped().analyzeImageAsync(image, prompt);
+    }
+
+    @Override
     public String generateAltText(byte[] image) throws AIException {
         return getWrapped().generateAltText(image);
     }
 
     @Override
     public CompletableFuture<String> generateAltTextAsync(byte[] image) throws AIException {
+        return getWrapped().generateAltTextAsync(image);
+    }
+
+    @Override
+    public String generateAltText(Path image) throws AIException {
+        return getWrapped().generateAltText(image);
+    }
+
+    @Override
+    public CompletableFuture<String> generateAltTextAsync(Path image) throws AIException {
         return getWrapped().generateAltTextAsync(image);
     }
 

@@ -315,7 +315,7 @@ public abstract class BaseAIService implements AIService {
     @Override
     public String upload(Attachment attachment, ChatOptions options) throws AIException {
         try {
-            var responseJson = asyncUploadAndParseFileResponse(getFilesPath(), attachment).join();
+            var responseJson = asyncUpload(getFilesPath(), attachment).join();
             var fileId = textHandler.parseFileResponse(responseJson);
             awaitUploadedFile(attachment, fileId, responseJson);
 
@@ -339,6 +339,23 @@ public abstract class BaseAIService implements AIService {
         catch (CompletionException e) {
             throw AIException.asyncRequestFailed(e);
         }
+    }
+
+    /**
+     * Upload file attachment to API at given path along with request headers obtained from {@link #getRequestHeaders()}. The caller parses the file ID from the
+     * returned response with help of {@link AITextHandler#parseFileResponse(JsonObject)}, and reads from it whatever else it needs, such as the state which
+     * {@link #awaitUploadedFile(Attachment, String, JsonObject)} acts on.
+     * <p>
+     * This is package private on purpose: it is the seam which {@link #upload(Attachment, ChatOptions)} is built on rather than an extension point, and
+     * {@link #asyncUploadAndParseFileIdResponse(String, Attachment)} is the one to call for just the file ID.
+     *
+     * @param path API path, relative to {@link #endpoint}.
+     * @param attachment The file attachment to upload.
+     * @return A CompletableFuture containing the upload response JSON.
+     * @throws AIException if anything fails during the process.
+     */
+    CompletableFuture<JsonObject> asyncUpload(String path, Attachment attachment) throws AIException {
+        return HTTP_CLIENT.upload(this, path, attachment);
     }
 
     /**
@@ -568,13 +585,28 @@ public abstract class BaseAIService implements AIService {
 
     @Override
     public CompletableFuture<String> analyzeImageAsync(byte[] image, String prompt) throws AIException {
-        var input = ChatInput.newBuilder().message(isBlank(prompt) ? "Analyze image" : prompt).attach(image).build();
+        return analyzeImageAsync(input -> input.attach(image), prompt);
+    }
+
+    @Override
+    public CompletableFuture<String> analyzeImageAsync(Path image, String prompt) throws AIException {
+        return analyzeImageAsync(input -> input.attach(image), prompt);
+    }
+
+    private CompletableFuture<String> analyzeImageAsync(Consumer<ChatInput.Builder> inputBuilder, String prompt) throws AIException {
+        var input = ChatInput.newBuilder().message(isBlank(prompt) ? "Analyze image" : prompt);
+        inputBuilder.accept(input);
         var options = DETERMINISTIC.withSystemPrompt(isBlank(prompt) ? imageHandler.buildAnalyzeImagePrompt() : null);
-        return asyncPostAndParseChatResponse(getChatPath(false), textHandler.buildChatPayload(this, input, options, false), null);
+        return asyncPostAndParseChatResponse(getChatPath(false), textHandler.buildChatPayload(this, input.build(), options, false), null);
     }
 
     @Override
     public CompletableFuture<String> generateAltTextAsync(byte[] image) throws AIException {
+        return analyzeImageAsync(image, imageHandler.buildGenerateAltTextPrompt());
+    }
+
+    @Override
+    public CompletableFuture<String> generateAltTextAsync(Path image) throws AIException {
         return analyzeImageAsync(image, imageHandler.buildGenerateAltTextPrompt());
     }
 
@@ -731,16 +763,18 @@ public abstract class BaseAIService implements AIService {
     }
 
     /**
-     * Upload file attachment to API at given path along with request headers obtained from {@link #getRequestHeaders()}. The caller parses the file ID from the
-     * returned response with help of {@link AITextHandler#parseFileResponse(JsonObject)}.
+     * Upload file attachment to API at given path along with request headers obtained from {@link #getRequestHeaders()}, and parse file ID from the response
+     * with help of {@link AITextHandler#parseFileResponse(JsonObject)}.
      *
      * @param path API path, relative to {@link #endpoint}.
      * @param attachment The file attachment to upload.
-     * @return A CompletableFuture containing the upload response JSON.
+     * @return A CompletableFuture containing the file ID from the upload response.
      * @throws AIException if anything fails during the process.
+     * @implNote {@link #upload(Attachment, ChatOptions)} obtains the whole response instead, as {@link #awaitUploadedFile(Attachment, String, JsonObject)}
+     * needs the state which it states, so overriding this one does not intercept an upload; override {@link #asyncUpload(String, Attachment)} for that.
      */
-    protected CompletableFuture<JsonObject> asyncUploadAndParseFileResponse(String path, Attachment attachment) throws AIException {
-        return HTTP_CLIENT.upload(this, path, attachment);
+    protected CompletableFuture<String> asyncUploadAndParseFileIdResponse(String path, Attachment attachment) throws AIException {
+        return asyncUpload(path, attachment).thenApply(textHandler::parseFileResponse);
     }
 
     /**

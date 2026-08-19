@@ -33,8 +33,16 @@ abstract class BaseAIServiceImageHandlerIT extends AIServiceIT {
     private static final Set<String> UNACCEPTABLE_DESCRIPTIONS = Set.of("six");
 
     @Test
-    void analyzeImage() {
-        var response = service.analyzeImage(readAllBytes("/omnifaces.png"), "What shape is this?");
+    void analyzeImageFromBytes() {
+        assertShape(service.analyzeImage(readAllBytes("/omnifaces.png"), "What shape is this?"));
+    }
+
+    @Test
+    void analyzeImageFromPath() {
+        assertShape(service.analyzeImage(getPath("/omnifaces.png"), "What shape is this?"));
+    }
+
+    private void assertShape(String response) {
         log(response);
         assertAll(
             () -> assertTrue(
@@ -47,8 +55,16 @@ abstract class BaseAIServiceImageHandlerIT extends AIServiceIT {
     }
 
     @Test
-    void generateAltText() {
-        var response = service.generateAltText(readAllBytes("/omnifaces.png"));
+    void generateAltTextFromBytes() {
+        assertAltText(service.generateAltText(readAllBytes("/omnifaces.png")));
+    }
+
+    @Test
+    void generateAltTextFromPath() {
+        assertAltText(service.generateAltText(getPath("/omnifaces.png")));
+    }
+
+    private void assertAltText(String response) {
         log(response);
         var sentences = response.split("\\.");
         assertAll(

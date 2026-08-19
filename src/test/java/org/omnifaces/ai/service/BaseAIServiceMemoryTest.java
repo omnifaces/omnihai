@@ -212,7 +212,7 @@ class BaseAIServiceMemoryTest {
         }
 
         @Override
-        protected CompletableFuture<JsonObject> asyncUploadAndParseFileResponse(String path, Attachment attachment) {
+        CompletableFuture<JsonObject> asyncUpload(String path, Attachment attachment) {
             return CompletableFuture.completedFuture(Json.createObjectBuilder().add("id", "file-123").build());
         }
 

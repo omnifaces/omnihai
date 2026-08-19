@@ -1220,6 +1220,39 @@ public interface AIService extends Serializable {
     CompletableFuture<String> analyzeImageAsync(byte[] image, String prompt) throws AIException;
 
     /**
+     * Analyzes an image and generates a description based on the given prompt.
+     * <p>
+     * Useful for generating alt text for accessibility, extracting information from images, or describing visual content.
+     *
+     * @implNote The default implementation delegates to {@link #analyzeImageAsync(Path, String)}.
+     * @param image The image source to analyze.
+     * @param prompt The prompt describing what to focus on (e.g., "describe the product", "what's the main subject"), or {@code null} for a general
+     * description.
+     * @return Description of the image, never {@code null}.
+     * @throws UnsupportedOperationException if image analysis is not supported by the implementation.
+     * @throws AIException if image analysis fails.
+     * @since 1.7
+     */
+    default String analyzeImage(Path image, String prompt) throws AIException {
+        return joinAsync(analyzeImageAsync(image, prompt));
+    }
+
+    /**
+     * Asynchronously analyzes an image and generates a description based on the given prompt.
+     * <p>
+     * This is the core method for image analysis from a source path. The image is read to be sanitized for AI compatibility, as an image attachment always is.
+     *
+     * @param image The image source to analyze.
+     * @param prompt The prompt describing what to focus on (e.g., "describe the product", "what's the main subject"), or {@code null} for a general
+     * description.
+     * @return A CompletableFuture that will contain the description of the image, never {@code null}.
+     * @throws UnsupportedOperationException if image analysis is not supported by the implementation.
+     * @throws AIException if image analysis fails.
+     * @since 1.7
+     */
+    CompletableFuture<String> analyzeImageAsync(Path image, String prompt) throws AIException;
+
+    /**
      * Generates alt text for an image suitable for accessibility purposes.
      *
      * @implNote The default implementation delegates to {@link #generateAltTextAsync(byte[])}.
@@ -1243,6 +1276,33 @@ public interface AIService extends Serializable {
      * @throws AIException if image analysis fails.
      */
     CompletableFuture<String> generateAltTextAsync(byte[] image) throws AIException;
+
+    /**
+     * Generates alt text for an image suitable for accessibility purposes.
+     *
+     * @implNote The default implementation delegates to {@link #generateAltTextAsync(Path)}.
+     * @param image The image source to analyze.
+     * @return Alt text description, never {@code null}.
+     * @throws UnsupportedOperationException if image analysis is not supported by the implementation.
+     * @throws AIException if image analysis fails.
+     * @since 1.7
+     */
+    default String generateAltText(Path image) throws AIException {
+        return joinAsync(generateAltTextAsync(image));
+    }
+
+    /**
+     * Asynchronously generates alt text for an image suitable for accessibility purposes.
+     * <p>
+     * This is the core method for image alt text generation from a source path.
+     *
+     * @param image The image source to analyze.
+     * @return A CompletableFuture that will contain the alt text description, never {@code null}.
+     * @throws UnsupportedOperationException if image analysis is not supported by the implementation.
+     * @throws AIException if image analysis fails.
+     * @since 1.7
+     */
+    CompletableFuture<String> generateAltTextAsync(Path image) throws AIException;
 
     // Image Generation Capabilities ----------------------------------------------------------------------------------
 

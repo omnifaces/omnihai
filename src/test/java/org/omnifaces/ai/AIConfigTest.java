@@ -745,7 +745,17 @@ class AIConfigTest {
         }
 
         @Override
+        public CompletableFuture<String> analyzeImageAsync(Path image, String prompt) throws AIException {
+            return null;
+        }
+
+        @Override
         public CompletableFuture<String> generateAltTextAsync(byte[] image) throws AIException {
+            return null;
+        }
+
+        @Override
+        public CompletableFuture<String> generateAltTextAsync(Path image) throws AIException {
             return null;
         }
 

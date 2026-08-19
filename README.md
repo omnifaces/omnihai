@@ -549,6 +549,9 @@ ModerationResult result = service.moderateContent(content,
 byte[] imageBytes = Files.readAllBytes(imagePath);
 String description = service.analyzeImage(imageBytes, "Describe the product");
 
+// Or straight from a source path
+String described = service.analyzeImage(Path.of("product.png"), "Describe the product");
+
 // Generate alt text
 String altText = service.generateAltText(imageBytes);
 ```
