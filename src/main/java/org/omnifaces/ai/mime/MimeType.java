@@ -136,13 +136,44 @@ public interface MimeType {
      * Fallback implementation of {@link MimeType} for values that do not match a known built-in type.
      * <p>
      * The {@link #extension()} is derived from the subtype portion of the MIME string (after the slash), stripping any parameters after a semicolon.
+     *
+     * @param value The MIME type string, must not be {@code null} or blank.
+     * @param extension The file extension without a leading dot (e.g., "pdf"), must not be {@code null} or blank.
+     * @since 1.4
+     * @see MimeType#of(String)
      */
     final record UnknownMimeType(String value, String extension) implements MimeType, Serializable {
 
+        /**
+         * Validates the record components.
+         *
+         * @param value The MIME type string, must not be {@code null} or blank.
+         * @param extension The file extension without a leading dot (e.g., "pdf"), must not be {@code null} or blank.
+         * @throws IllegalArgumentException if the value or the extension is {@code null} or blank.
+         * @since 1.7
+         */
+        public UnknownMimeType {
+            value = requireNonBlank(value, "value");
+            extension = requireNonBlank(extension, "extension");
+        }
+
+        /**
+         * Creates an unknown MIME type whose extension is derived from the subtype portion of the given value.
+         *
+         * @param value The MIME type string, must not be {@code null} or blank.
+         * @throws IllegalArgumentException if the value is {@code null} or blank, or states no subtype to derive an extension from.
+         * @since 1.4
+         */
         UnknownMimeType(String value) {
             this(value, deriveExtension(value));
         }
 
+        /**
+         * Derives the file extension from the subtype portion of the given MIME type string, being whatever follows the slash, up to any parameter.
+         *
+         * @param value The MIME type string.
+         * @return The derived file extension.
+         */
         private static String deriveExtension(String value) {
             var subtype = value.contains("/") ? value.substring(value.indexOf('/') + 1) : value;
             return subtype.contains(";") ? subtype.substring(0, subtype.indexOf(';')).strip() : subtype;
