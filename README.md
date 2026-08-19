@@ -542,6 +542,31 @@ ModerationResult result = service.moderateContent(content,
         .build());
 ```
 
+### Modality Support
+
+Not every model does every modality, so `supportsModality` gives a hint about the configured one, to skip a call which would fail, to disable a button, or to pick another provider:
+
+```java
+if (service.supportsModality(AIModality.VIDEO_ANALYSIS)) {
+    return service.analyzeVideo(video, "Summarize this");
+}
+```
+
+Most providers derive the answer from the model name and version. OpenRouter and Hugging Face instead publish the input and output modalities per routed model, which OmniHai looks up rather than guesses: of the OpenRouter models accepting video, not one carries "video" in its name. That listing is fetched at most once a day per endpoint and shared by every service instance on it, so the first call blocks on one HTTP request and the rest are answered from memory; when it cannot be obtained, matching the model name is the fallback.
+
+It answers about the service rather than about the model alone: a modality which no operation of the service can perform is reported as unsupported, whatever the provider publishes about the model.
+
+It remains a hint, not a guarantee, and can be wrong in both directions: a published listing goes stale, a name-matched guess is a guess, and a provider may still refuse a call it advertises, for this key, this region or this moment. The only guarantee is to make the call and handle its failure — `UnsupportedOperationException` when the implementation itself does not serve the modality, and an `AIException` when the AI provider rejects it:
+
+```java
+try {
+    return service.analyzeVideo(video, "Summarize this");
+}
+catch (UnsupportedOperationException | AIException e) {
+    return fallbackService.analyzeVideo(video, "Summarize this");
+}
+```
+
 ### Image Analysis
 
 ```java
@@ -584,7 +609,7 @@ String sampled = service.analyzeVideo(Path.of("match.mp4"), "When does the goal 
         .build());
 ```
 
-Video input is accepted by Gemini and by the video-capable models routed through OpenRouter; check `service.supportsModality(AIModality.VIDEO_ANALYSIS)` before calling. The sampling options are honored by Gemini only, as OpenRouter takes the video as a plain data URI with nowhere to put them.
+Video input is accepted by Gemini and by the video-capable models routed through OpenRouter, which [modality support](#modality-support) tells apart. The sampling options are honored by Gemini only, as OpenRouter takes the video as a plain data URI with nowhere to put them.
 
 ### Audio Transcription
 
