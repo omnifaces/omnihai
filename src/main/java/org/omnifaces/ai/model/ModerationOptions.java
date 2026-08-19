@@ -18,6 +18,7 @@ import static java.util.stream.Collectors.toCollection;
 import java.io.Serializable;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -178,7 +179,18 @@ public class ModerationOptions implements Serializable {
          * @return This builder instance for chaining.
          */
         public Builder categories(Category... categories) {
-            this.categories = new TreeSet<>(Arrays.stream(categories).map(Category::getName).toList());
+            return categories(Arrays.asList(categories));
+        }
+
+        /**
+         * Sets the categories to check. Defaults to {@link Category#OPENAI_SUPPORTED_CATEGORY_NAMES}.
+         *
+         * @param categories Categories to check.
+         * @return This builder instance for chaining.
+         * @since 1.7
+         */
+        public Builder categories(List<Category> categories) {
+            this.categories = new TreeSet<>(requireNonNull(categories, "categories").stream().map(Category::getName).toList());
             return this;
         }
 
@@ -191,7 +203,20 @@ public class ModerationOptions implements Serializable {
          * @throws IllegalArgumentException if a category contains illegal characters.
          */
         public Builder addCategories(String... categories) {
-            for (var category : categories) {
+            return addCategories(Arrays.asList(categories));
+        }
+
+        /**
+         * Adds custom categories to check.
+         *
+         * @param categories Custom categories to check, each category may only contain alphabetic characters or hyphens.
+         * @return This builder instance for chaining.
+         * @throws NullPointerException when the categories or a category therein is null.
+         * @throws IllegalArgumentException if a category contains illegal characters.
+         * @since 1.7
+         */
+        public Builder addCategories(List<String> categories) {
+            for (var category : requireNonNull(categories, "categories")) {
                 requireNonNull(category, "category");
 
                 if (!category.matches("[a-zA-Z-]+")) {

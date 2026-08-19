@@ -23,6 +23,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
+import java.util.List;
 import java.util.Set;
 
 import org.junit.jupiter.api.Test;
@@ -303,6 +304,33 @@ class ModerationOptionsTest {
         assertEquals("hate", categories[0]);
         assertEquals("sexual", categories[1]);
         assertEquals("violence", categories[2]);
+    }
+
+    // =================================================================================================================
+    // List overloads
+    // =================================================================================================================
+
+    @Test
+    void categories_listAndVarargs_areEquivalent() {
+        var fromList = ModerationOptions.newBuilder().categories(List.of(Category.HATE, Category.VIOLENCE)).build();
+        var fromVarargs = ModerationOptions.newBuilder().categories(Category.HATE, Category.VIOLENCE).build();
+
+        assertEquals(fromVarargs.getCategories(), fromList.getCategories());
+    }
+
+    @Test
+    void addCategories_listAndVarargs_areEquivalent() {
+        var fromList = ModerationOptions.newBuilder().categories().addCategories(List.of("spoilers", "off-topic")).build();
+        var fromVarargs = ModerationOptions.newBuilder().categories().addCategories("spoilers", "off-topic").build();
+
+        assertEquals(fromVarargs.getCategories(), fromList.getCategories());
+    }
+
+    @Test
+    void addCategories_listWithIllegalCharacters_throwsException() {
+        var builder = ModerationOptions.newBuilder();
+
+        assertThrows(IllegalArgumentException.class, () -> builder.addCategories(List.of("not valid")));
     }
 
 }
