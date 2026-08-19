@@ -12,6 +12,9 @@
  */
 package org.omnifaces.ai.modality;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import jakarta.json.Json;
 import jakarta.json.JsonArrayBuilder;
 import jakarta.json.JsonObject;
@@ -75,6 +78,17 @@ public class OpenRouterAITextHandler extends OpenAITextHandler {
         else {
             super.addInlineFileContent(service, content, file, supportsResponsesApi);
         }
+    }
+
+    /**
+     * A routed reasoning model may answer with a {@code null} content and the answer itself in {@code reasoning}, which the provider serving it did not
+     * separate. That is the last path to try, so that it is only fallen back to when there is no content at all.
+     */
+    @Override
+    public List<String> getChatResponseContentPaths() {
+        var paths = new ArrayList<>(super.getChatResponseContentPaths());
+        paths.add("choices[0].message.reasoning");
+        return List.copyOf(paths);
     }
 
     /**
