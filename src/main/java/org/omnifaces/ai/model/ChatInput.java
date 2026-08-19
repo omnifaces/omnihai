@@ -96,20 +96,34 @@ public class ChatInput implements Serializable {
      *
      * @param id The provider-assigned file ID.
      * @param mimeType The MIME type of the uploaded file.
+     * @param videoOptions The video analysis options the file was uploaded with, or {@code null} if there were none.
      * @since 1.1
      * @see ChatInput#getHistory()
      */
-    public final record UploadedFile(String id, MimeType mimeType) implements Serializable {
+    public final record UploadedFile(String id, MimeType mimeType, AnalyzeVideoOptions videoOptions) implements Serializable {
 
         /**
          * Validates the record components.
          *
          * @param id The provider-assigned file ID, may not be blank.
          * @param mimeType The MIME type of the uploaded file, may not be null.
+         * @param videoOptions The video analysis options the file was uploaded with, may be null.
+         * @since 1.7
          */
         public UploadedFile {
             id = requireNonBlank(id, "id");
             mimeType = requireNonNull(mimeType, "mimeType");
+        }
+
+        /**
+         * Creates an uploaded file which carries no video analysis options, as anything but a video does.
+         *
+         * @param id The provider-assigned file ID, may not be blank.
+         * @param mimeType The MIME type of the uploaded file, may not be null.
+         * @since 1.1
+         */
+        public UploadedFile(String id, MimeType mimeType) {
+            this(id, mimeType, null);
         }
 
     }

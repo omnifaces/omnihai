@@ -26,6 +26,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.util.Currency;
 import java.util.List;
 
@@ -335,9 +336,9 @@ class ChatOptionsTest {
     @Test
     void builder_history_restoresUploadedFiles() {
         var saved = List.of(
-            new Message(Role.USER, "Analyze this", List.of(new UploadedFile("file-1", TEST_PDF))),
+            new Message(Role.USER, "Analyze this", List.of(new UploadedFile("file-1", TEST_PDF, null))),
             new Message(Role.ASSISTANT, "It contains data", emptyList()),
-            new Message(Role.USER, "And this", List.of(new UploadedFile("file-2", TEST_PNG), new UploadedFile("file-3", TEST_PDF))),
+            new Message(Role.USER, "And this", List.of(new UploadedFile("file-2", TEST_PNG, null), new UploadedFile("file-3", TEST_PDF, null))),
             new Message(Role.ASSISTANT, "Got it", emptyList())
         );
 
@@ -357,9 +358,9 @@ class ChatOptionsTest {
     @Test
     void builder_history_slidingWindowCleansUpUploadedFiles() {
         var saved = List.of(
-            new Message(Role.USER, "msg1", List.of(new UploadedFile("file-1", TEST_PDF))),
+            new Message(Role.USER, "msg1", List.of(new UploadedFile("file-1", TEST_PDF, null))),
             new Message(Role.ASSISTANT, "reply1", emptyList()),
-            new Message(Role.USER, "msg2", List.of(new UploadedFile("file-2", TEST_PNG))),
+            new Message(Role.USER, "msg2", List.of(new UploadedFile("file-2", TEST_PNG, null))),
             new Message(Role.ASSISTANT, "reply2", emptyList())
         );
 
@@ -556,6 +557,8 @@ class ChatOptionsTest {
     // UploadedFile record tests
     // =================================================================================================================
 
+    private static final MimeType TEST_MP4 = MimeType.of("video/mp4");
+
     private static final MimeType TEST_PDF = new MimeType() {
 
         @Override
@@ -586,7 +589,7 @@ class ChatOptionsTest {
 
     @Test
     void uploadedFile_validConstruction() {
-        var uploadedFile = new UploadedFile("file-123", TEST_PDF);
+        var uploadedFile = new UploadedFile("file-123", TEST_PDF, null);
 
         assertEquals("file-123", uploadedFile.id());
         assertEquals(TEST_PDF, uploadedFile.mimeType());
@@ -594,18 +597,18 @@ class ChatOptionsTest {
 
     @Test
     void uploadedFile_nullId_throwsException() {
-        assertThrows(IllegalArgumentException.class, () -> new UploadedFile(null, TEST_PDF));
+        assertThrows(IllegalArgumentException.class, () -> new UploadedFile(null, TEST_PDF, null));
     }
 
     @Test
     void uploadedFile_blankId_throwsException() {
-        assertThrows(IllegalArgumentException.class, () -> new UploadedFile("", TEST_PDF));
-        assertThrows(IllegalArgumentException.class, () -> new UploadedFile("   ", TEST_PDF));
+        assertThrows(IllegalArgumentException.class, () -> new UploadedFile("", TEST_PDF, null));
+        assertThrows(IllegalArgumentException.class, () -> new UploadedFile("   ", TEST_PDF, null));
     }
 
     @Test
     void uploadedFile_nullMimeType_throwsException() {
-        assertThrows(NullPointerException.class, () -> new UploadedFile("file-123", null));
+        assertThrows(NullPointerException.class, () -> new UploadedFile("file-123", null, null));
     }
 
     @Test
@@ -644,7 +647,7 @@ class ChatOptionsTest {
         var options = ChatOptions.newBuilder().withMemory().build();
 
         options.recordMessage(Role.USER, "Analyze this file");
-        options.recordUploadedFile("file-123", TEST_PDF);
+        options.recordUploadedFile(new UploadedFile("file-123", TEST_PDF));
 
         var history = options.getHistory();
         assertEquals(1, history.size());
@@ -659,13 +662,50 @@ class ChatOptionsTest {
         var options = ChatOptions.newBuilder().withMemory().build();
 
         options.recordMessage(Role.USER, "Analyze these files");
-        options.recordUploadedFile("file-1", TEST_PDF);
-        options.recordUploadedFile("file-2", TEST_PNG);
+        options.recordUploadedFile(new UploadedFile("file-1", TEST_PDF));
+        options.recordUploadedFile(new UploadedFile("file-2", TEST_PNG));
 
         var uploadedFiles = options.getHistory().get(0).uploadedFiles();
         assertEquals(2, uploadedFiles.size());
         assertEquals("file-1", uploadedFiles.get(0).id());
         assertEquals("file-2", uploadedFiles.get(1).id());
+    }
+
+    @Test
+    @SuppressWarnings("removal")
+    void recordUploadedFile_fileIdAndMimeType_recordsAFileWithoutOptions() {
+        var options = ChatOptions.newBuilder().withMemory().build();
+        options.recordMessage(Role.USER, "Describe it");
+        options.recordUploadedFile("file-1", TEST_PDF);
+
+        var uploadedFile = options.getHistory().get(0).uploadedFiles().get(0);
+        assertEquals("file-1", uploadedFile.id());
+        assertEquals(TEST_PDF, uploadedFile.mimeType());
+        assertNull(uploadedFile.videoOptions());
+    }
+
+    @Test
+    void recordUploadedFile_keepsTheVideoOptionsForReplay() {
+        var options = ChatOptions.newBuilder().withMemory().build();
+        var videoOptions = AnalyzeVideoOptions.newBuilder().fps(2).startOffset(Duration.ofSeconds(30)).build();
+        options.recordMessage(Role.USER, "Describe it");
+        options.recordUploadedFile(new UploadedFile("file-1", TEST_MP4, videoOptions));
+
+        assertEquals(videoOptions, options.getHistory().get(0).uploadedFiles().get(0).videoOptions());
+    }
+
+    @Test
+    void toJson_roundTripsTheVideoOptionsOfAnUploadedFile() {
+        var options = ChatOptions.newBuilder().withMemory().build();
+        var videoOptions = AnalyzeVideoOptions.newBuilder().fps(0.5).startOffset(Duration.ofSeconds(30)).endOffset(Duration.ofSeconds(90)).build();
+        options.recordMessage(Role.USER, "Describe it");
+        options.recordUploadedFile(new UploadedFile("file-1", TEST_MP4, videoOptions));
+
+        var restored = ChatOptions.fromJson(options.toJson()).getHistory().get(0).uploadedFiles().get(0).videoOptions();
+
+        assertEquals(videoOptions.getFps(), restored.getFps());
+        assertEquals(videoOptions.getStartOffset(), restored.getStartOffset());
+        assertEquals(videoOptions.getEndOffset(), restored.getEndOffset());
     }
 
     @Test
@@ -675,7 +715,7 @@ class ChatOptionsTest {
         options.recordMessage(Role.USER, "First message");
         options.recordMessage(Role.ASSISTANT, "Reply");
         options.recordMessage(Role.USER, "Second message");
-        options.recordUploadedFile("file-123", TEST_PDF);
+        options.recordUploadedFile(new UploadedFile("file-123", TEST_PDF));
 
         var history = options.getHistory();
         assertTrue(history.get(0).uploadedFiles().isEmpty());
@@ -686,14 +726,14 @@ class ChatOptionsTest {
     void recordUploadedFile_noUserMessage_throwsException() {
         var options = ChatOptions.newBuilder().withMemory().build();
 
-        assertThrows(IllegalStateException.class, () -> options.recordUploadedFile("file-123", TEST_PDF));
+        assertThrows(IllegalStateException.class, () -> options.recordUploadedFile(new UploadedFile("file-123", TEST_PDF)));
     }
 
     @Test
     void recordUploadedFile_nonMemory_throwsException() {
         var options = ChatOptions.newBuilder().build();
 
-        assertThrows(IllegalStateException.class, () -> options.recordUploadedFile("file-123", TEST_PDF));
+        assertThrows(IllegalStateException.class, () -> options.recordUploadedFile(new UploadedFile("file-123", TEST_PDF)));
     }
 
     @Test
@@ -703,7 +743,7 @@ class ChatOptionsTest {
         options.recordMessage(Role.USER, "yes");
         options.recordMessage(Role.ASSISTANT, "Got it");
         options.recordMessage(Role.USER, "yes");
-        options.recordUploadedFile("file-1", TEST_PDF);
+        options.recordUploadedFile(new UploadedFile("file-1", TEST_PDF));
 
         var history = options.getHistory();
         assertTrue(history.get(0).uploadedFiles().isEmpty());
@@ -1105,10 +1145,10 @@ class ChatOptionsTest {
         var options = ChatOptions.newBuilder().withMemory(4).build();
 
         options.recordMessage(Role.USER, "msg1");
-        options.recordUploadedFile("file-1", TEST_PDF);
+        options.recordUploadedFile(new UploadedFile("file-1", TEST_PDF));
         options.recordMessage(Role.ASSISTANT, "reply1");
         options.recordMessage(Role.USER, "msg2");
-        options.recordUploadedFile("file-2", TEST_PNG);
+        options.recordUploadedFile(new UploadedFile("file-2", TEST_PNG));
         options.recordMessage(Role.ASSISTANT, "reply2");
 
         // History is now full (4 messages). Verify files are accessible.
@@ -1223,8 +1263,8 @@ class ChatOptionsTest {
     void jsonRoundTrip_uploadedFiles() {
         var original = ChatOptions.newBuilder().withMemory().build();
         original.recordMessage(Role.USER, "Analyze these");
-        original.recordUploadedFile("file-1", TEST_PDF);
-        original.recordUploadedFile("file-2", TEST_PNG);
+        original.recordUploadedFile(new UploadedFile("file-1", TEST_PDF));
+        original.recordUploadedFile(new UploadedFile("file-2", TEST_PNG));
         original.recordMessage(Role.ASSISTANT, "Done");
 
         var restored = ChatOptions.fromJson(original.toJson());
@@ -1241,7 +1281,7 @@ class ChatOptionsTest {
     void jsonRoundTrip_uploadedFiles_rehydratesKnownMimeTypeAsEnum() {
         var original = ChatOptions.newBuilder().withMemory().build();
         original.recordMessage(Role.USER, "x");
-        original.recordUploadedFile("f", TEST_PDF);
+        original.recordUploadedFile(new UploadedFile("f", TEST_PDF));
 
         var restored = ChatOptions.fromJson(original.toJson());
         var mimeType = restored.getHistory().get(0).uploadedFiles().get(0).mimeType();

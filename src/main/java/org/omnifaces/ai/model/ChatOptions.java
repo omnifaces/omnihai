@@ -23,10 +23,12 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Currency;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.stream.Stream;
 
 import jakarta.json.Json;
@@ -229,6 +231,64 @@ public class ChatOptions implements Serializable {
             totalCost = BigDecimal.ZERO;
         }
 
+    }
+
+    /**
+     * Returns the video analysis options of the given uploaded file as JSON, or empty when there are none to state, so that a file uploaded with a sampling
+     * rate or a clip is replayed with them after a round trip.
+     *
+     * @param videoOptions The video analysis options, which may be {@code null}.
+     * @return The video analysis options as JSON, or empty.
+     */
+    private static Optional<JsonObjectBuilder> toJson(AnalyzeVideoOptions videoOptions) {
+        if (videoOptions == null || videoOptions.isDefault()) {
+            return Optional.empty();
+        }
+
+        var builder = Json.createObjectBuilder();
+
+        if (videoOptions.getFps() != AnalyzeVideoOptions.DEFAULT_FPS) {
+            builder.add("fps", videoOptions.getFps());
+        }
+
+        if (videoOptions.getStartOffset() != null) {
+            builder.add("startOffset", videoOptions.getStartOffset().toMillis());
+        }
+
+        if (videoOptions.getEndOffset() != null) {
+            builder.add("endOffset", videoOptions.getEndOffset().toMillis());
+        }
+
+        return Optional.of(builder);
+    }
+
+    /**
+     * Returns the video analysis options which the given uploaded file JSON states, or {@code null} when it states none.
+     *
+     * @param uploadedFileJson The uploaded file JSON.
+     * @return The video analysis options, or {@code null}.
+     */
+    private static AnalyzeVideoOptions toVideoOptions(JsonObject uploadedFileJson) {
+        if (!uploadedFileJson.containsKey("videoOptions")) {
+            return null;
+        }
+
+        var json = uploadedFileJson.getJsonObject("videoOptions");
+        var builder = AnalyzeVideoOptions.newBuilder();
+
+        if (json.containsKey("fps")) {
+            builder.fps(json.getJsonNumber("fps").doubleValue());
+        }
+
+        if (json.containsKey("startOffset")) {
+            builder.startOffset(Duration.ofMillis(json.getJsonNumber("startOffset").longValue()));
+        }
+
+        if (json.containsKey("endOffset")) {
+            builder.endOffset(Duration.ofMillis(json.getJsonNumber("endOffset").longValue()));
+        }
+
+        return builder.build();
     }
 
     /**
@@ -826,8 +886,26 @@ public class ChatOptions implements Serializable {
      * @throws IllegalStateException if this instance is not {@link #hasMemory() memory-enabled}, or if there is no preceding user message.
      * @since 1.1
      * @see #getHistory()
+     * @deprecated Since 1.7. Use {@link #recordUploadedFile(UploadedFile)} instead, which takes everything the uploaded file states, such as the video analysis
+     * options it was uploaded with.
      */
+    @Deprecated(since = "1.7", forRemoval = true)
     public void recordUploadedFile(String fileId, MimeType mimeType) {
+        recordUploadedFile(new UploadedFile(fileId, mimeType));
+    }
+
+    /**
+     * Records an uploaded file reference against the most recent user message in the conversation history.
+     * <p>
+     * This is called by text handlers during {@code buildChatPayload} after uploading a file, so the file ID can be replayed in subsequent turns. The file
+     * reference is automatically discarded when its associated message is evicted from the sliding window.
+     *
+     * @param uploadedFile The uploaded file to record, which states everything the next turn needs to reference it exactly as this one did.
+     * @throws IllegalStateException if this instance is not {@link #hasMemory() memory-enabled}, or if there is no preceding user message.
+     * @since 1.7
+     * @see #getHistory()
+     */
+    public void recordUploadedFile(UploadedFile uploadedFile) {
         if (!hasMemory()) {
             throw new IllegalStateException(
                 "Cannot record uploaded file on non-memory ChatOptions; use withMemory() method to create a memory-enabled instance"
@@ -839,7 +917,7 @@ public class ChatOptions implements Serializable {
 
             if (message.role() == Role.USER) {
                 var uploadedFiles = new ArrayList<>(message.uploadedFiles());
-                uploadedFiles.add(new UploadedFile(fileId, mimeType));
+                uploadedFiles.add(uploadedFile);
                 history.set(i, new Message(message.role(), message.content(), uploadedFiles));
                 return;
             }
@@ -941,11 +1019,12 @@ public class ChatOptions implements Serializable {
                     var filesBuilder = Json.createArrayBuilder();
 
                     for (var uploadedFile : message.uploadedFiles()) {
-                        filesBuilder.add(
-                            Json.createObjectBuilder()
-                                .add("id", uploadedFile.id())
-                                .add("mimeType", uploadedFile.mimeType().value())
-                        );
+                        var fileBuilder = Json.createObjectBuilder()
+                            .add("id", uploadedFile.id())
+                            .add("mimeType", uploadedFile.mimeType().value());
+
+                        toJson(uploadedFile.videoOptions()).ifPresent(videoOptions -> fileBuilder.add("videoOptions", videoOptions));
+                        filesBuilder.add(fileBuilder);
                     }
 
                     messageBuilder.add("uploadedFiles", filesBuilder);
@@ -1047,7 +1126,7 @@ public class ChatOptions implements Serializable {
                     if (message.containsKey("uploadedFiles")) {
                         for (var fileValue : message.getJsonArray("uploadedFiles")) {
                             var file = fileValue.asJsonObject();
-                            files.add(new UploadedFile(file.getString("id"), MimeType.of(file.getString("mimeType"))));
+                            files.add(new UploadedFile(file.getString("id"), MimeType.of(file.getString("mimeType")), toVideoOptions(file)));
                         }
                     }
 

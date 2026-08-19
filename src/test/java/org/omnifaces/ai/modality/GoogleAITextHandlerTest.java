@@ -61,6 +61,20 @@ class GoogleAITextHandlerTest {
     }
 
     @Test
+    void buildVideoMetadata_fromReplayedUploadedFile_isRendered() {
+        var videoOptions = AnalyzeVideoOptions.newBuilder().fps(2).build();
+
+        var videoMetadata = handler.buildVideoMetadata(videoOptions).orElseThrow().build();
+
+        assertEquals(2.0, videoMetadata.getJsonNumber("fps").doubleValue(), "a file replayed from history keeps its sampling rate");
+    }
+
+    @Test
+    void buildVideoMetadata_fromReplayedUploadedFileWithoutOptions_isAbsent() {
+        assertTrue(handler.buildVideoMetadata((AnalyzeVideoOptions) null).isEmpty());
+    }
+
+    @Test
     void buildVideoMetadata_rendersSubSecondOffsetAsFraction() {
         var video = newVideo().withVideoOptions(AnalyzeVideoOptions.newBuilder().startOffset(ofMillis(1500)).build());
 

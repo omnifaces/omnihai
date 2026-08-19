@@ -69,6 +69,7 @@ import org.omnifaces.ai.model.ChatInput;
 import org.omnifaces.ai.model.ChatInput.Attachment;
 import org.omnifaces.ai.model.ChatInput.Message;
 import org.omnifaces.ai.model.ChatInput.Message.Role;
+import org.omnifaces.ai.model.ChatInput.UploadedFile;
 import org.omnifaces.ai.model.ChatOptions;
 import org.omnifaces.ai.model.ChatUsage;
 import org.omnifaces.ai.model.GenerateAudioOptions;
@@ -331,7 +332,7 @@ public abstract class BaseAIService implements AIService {
             }
 
             if (options.hasMemory()) {
-                options.recordUploadedFile(fileId, attachment.mimeType());
+                options.recordUploadedFile(new UploadedFile(fileId, attachment.mimeType(), attachment.videoOptions()));
             }
 
             return fileId;

@@ -30,6 +30,7 @@ import jakarta.json.JsonObjectBuilder;
 
 import org.omnifaces.ai.AIService;
 import org.omnifaces.ai.exception.AITokenLimitExceededException;
+import org.omnifaces.ai.model.AnalyzeVideoOptions;
 import org.omnifaces.ai.model.ChatInput;
 import org.omnifaces.ai.model.ChatInput.Attachment;
 import org.omnifaces.ai.model.ChatInput.Message.Role;
@@ -124,14 +125,15 @@ public class GoogleAITextHandler extends DefaultAITextHandler {
             var parts = Json.createArrayBuilder();
 
             for (var uploadedFile : historyMessage.uploadedFiles()) {
-                parts.add(
-                    Json.createObjectBuilder()
-                        .add(
-                            "file_data", Json.createObjectBuilder()
-                                .add("mime_type", uploadedFile.mimeType().value())
-                                .add("file_uri", uploadedFile.id())
-                        )
-                );
+                var part = Json.createObjectBuilder()
+                    .add(
+                        "file_data", Json.createObjectBuilder()
+                            .add("mime_type", uploadedFile.mimeType().value())
+                            .add("file_uri", uploadedFile.id())
+                    );
+
+                buildVideoMetadata(uploadedFile.videoOptions()).ifPresent(videoMetadata -> part.add("video_metadata", videoMetadata));
+                parts.add(part);
             }
 
             parts.add(
@@ -208,8 +210,17 @@ public class GoogleAITextHandler extends DefaultAITextHandler {
      * @see <a href="https://ai.google.dev/gemini-api/docs/video-understanding">API Reference</a>
      */
     protected Optional<JsonObjectBuilder> buildVideoMetadata(Attachment file) {
-        var videoOptions = file.videoOptions();
+        return buildVideoMetadata(file.videoOptions());
+    }
 
+    /**
+     * Builds the video metadata of the given video analysis options, which instructs at which rate to sample frames and which clip of the video to analyze.
+     *
+     * @param videoOptions The video analysis options, which may be {@code null}.
+     * @return The video metadata, or empty if there are no options to state.
+     * @since 1.7
+     */
+    protected Optional<JsonObjectBuilder> buildVideoMetadata(AnalyzeVideoOptions videoOptions) {
         if (videoOptions == null || videoOptions.isDefault()) {
             return Optional.empty();
         }
