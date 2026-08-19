@@ -29,6 +29,7 @@ import org.omnifaces.ai.modality.OllamaAITextHandler;
 import org.omnifaces.ai.modality.OpenAIAudioHandler;
 import org.omnifaces.ai.modality.OpenAIImageHandler;
 import org.omnifaces.ai.modality.OpenAITextHandler;
+import org.omnifaces.ai.modality.OpenRouterAIAudioHandler;
 import org.omnifaces.ai.modality.OpenRouterAITextHandler;
 import org.omnifaces.ai.modality.XAIImageHandler;
 import org.omnifaces.ai.service.AnthropicAIService;
@@ -197,13 +198,13 @@ public enum AIProvider {
      * @see OpenRouterAIService
      * @see OpenRouterAITextHandler
      * @see OpenAIImageHandler
-     * @see DefaultAIAudioHandler
+     * @see OpenRouterAIAudioHandler
      * @see <a href="https://openrouter.ai/settings/keys/">Manage OpenRouter API Keys</a>
      * @see <a href="https://openrouter.ai/models">Available OpenRouter Models</a>
      */
     OPENROUTER(
         "OpenRouter", OpenRouterAIService.class, true, "deepseek/deepseek-v4-pro", "https://openrouter.ai/api/v1", OpenRouterAITextHandler.class,
-        OpenAIImageHandler.class
+        OpenAIImageHandler.class, OpenRouterAIAudioHandler.class
     ),
 
     /**
