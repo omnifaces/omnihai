@@ -18,14 +18,15 @@
  * <ul>
  * <li>{@link org.omnifaces.ai.AIProvider} - enumeration of supported AI providers (OpenAI, Anthropic, Google, etc.)</li>
  * <li>{@link org.omnifaces.ai.AIConfig} - configuration interface for API keys, endpoints, and models</li>
- * <li>{@link org.omnifaces.ai.AIStrategy} - holder for custom text and image handler configuration</li>
+ * <li>{@link org.omnifaces.ai.AIStrategy} - holder for custom text, image, audio and video handler configuration</li>
  * <li>{@link org.omnifaces.ai.AIService} - unified interface for AI operations (chat, web search, summarization, translation, proofreading, moderation, image
- * analysis/generation)</li>
+ * analysis/generation, audio transcription/generation, video analysis)</li>
  * <li>{@link org.omnifaces.ai.AIModality} - capabilities supported by AI providers (text input/output, image input/output, etc.)</li>
  * <li>{@link org.omnifaces.ai.AIModelVersion} - AI model version information extracted from model names in config</li>
  * <li>{@link org.omnifaces.ai.AITextHandler} - customization point for text-based request/response handling</li>
  * <li>{@link org.omnifaces.ai.AIImageHandler} - customization point for image-based request/response handling</li>
  * <li>{@link org.omnifaces.ai.AIAudioHandler} - customization point for audio-based request/response handling</li>
+ * <li>{@link org.omnifaces.ai.AIVideoHandler} - customization point for video-based request/response handling</li>
  * </ul>
  * <p>
  * This package also contains {@link org.omnifaces.ai.OmniHai} for access to application properties (name, version, user agent).

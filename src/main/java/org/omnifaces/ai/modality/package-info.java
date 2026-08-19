@@ -12,14 +12,14 @@
  */
 
 /**
- * Provider-specific handlers for text, image, and audio modalities.
+ * Provider-specific handlers for text, image, audio and video modalities.
  * <p>
  * AI providers differ in their JSON payload formats and response structures. This package contains {@link org.omnifaces.ai.AITextHandler},
- * {@link org.omnifaces.ai.AIImageHandler}, and {@link org.omnifaces.ai.AIAudioHandler} implementations that adapt the generic API to provider-specific
- * requirements:
+ * {@link org.omnifaces.ai.AIImageHandler}, {@link org.omnifaces.ai.AIAudioHandler} and {@link org.omnifaces.ai.AIVideoHandler} implementations that adapt the
+ * generic API to provider-specific requirements:
  * <ul>
  * <li>{@link org.omnifaces.ai.modality.DefaultAITextHandler} / {@link org.omnifaces.ai.modality.DefaultAIImageHandler} /
- * {@link org.omnifaces.ai.modality.DefaultAIAudioHandler} - sensible defaults for most LLMs</li>
+ * {@link org.omnifaces.ai.modality.DefaultAIAudioHandler} / {@link org.omnifaces.ai.modality.DefaultAIVideoHandler} - sensible defaults for most LLMs</li>
  * <li>{@link org.omnifaces.ai.modality.OpenAITextHandler} / {@link org.omnifaces.ai.modality.OpenAIImageHandler} /
  * {@link org.omnifaces.ai.modality.OpenAIAudioHandler} - OpenAI-specific handling</li>
  * <li>{@link org.omnifaces.ai.modality.AnthropicAITextHandler} - Anthropic-specific handling</li>
@@ -28,14 +28,16 @@
  * <li>{@link org.omnifaces.ai.modality.XAIImageHandler} - xAI-specific handling</li>
  * <li>{@link org.omnifaces.ai.modality.MistralAITextHandler} - Mistral-specific handling</li>
  * <li>{@link org.omnifaces.ai.modality.AzureAITextHandler} - Azure AI-specific handling</li>
- * <li>{@link org.omnifaces.ai.modality.OpenRouterAITextHandler} - OpenRouter-specific handling</li>
+ * <li>{@link org.omnifaces.ai.modality.OpenRouterAITextHandler} / {@link org.omnifaces.ai.modality.OpenRouterAIAudioHandler} - OpenRouter-specific
+ * handling</li>
  * <li>{@link org.omnifaces.ai.modality.OllamaAITextHandler} - Ollama-specific handling</li>
  * </ul>
- * Custom handlers can be specified via {@link org.omnifaces.ai.cdi.AI#textHandler()}, {@link org.omnifaces.ai.cdi.AI#imageHandler()}, and
- * {@link org.omnifaces.ai.cdi.AI#audioHandler()} to customize request payloads or response parsing.
+ * Custom handlers can be specified via {@link org.omnifaces.ai.cdi.AI#textHandler()}, {@link org.omnifaces.ai.cdi.AI#imageHandler()},
+ * {@link org.omnifaces.ai.cdi.AI#audioHandler()} and {@link org.omnifaces.ai.cdi.AI#videoHandler()} to customize request payloads or response parsing.
  *
  * @see org.omnifaces.ai.AITextHandler
  * @see org.omnifaces.ai.AIImageHandler
  * @see org.omnifaces.ai.AIAudioHandler
+ * @see org.omnifaces.ai.AIVideoHandler
  */
 package org.omnifaces.ai.modality;
