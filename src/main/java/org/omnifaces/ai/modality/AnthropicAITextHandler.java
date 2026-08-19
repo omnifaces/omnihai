@@ -17,7 +17,7 @@ import static java.util.stream.Collectors.joining;
 import static org.omnifaces.ai.helper.JsonHelper.addStrictAdditionalProperties;
 import static org.omnifaces.ai.helper.JsonHelper.checkErrors;
 import static org.omnifaces.ai.helper.JsonHelper.findAllByPath;
-import static org.omnifaces.ai.helper.JsonHelper.findByPath;
+import static org.omnifaces.ai.helper.JsonHelper.findFirstByPath;
 import static org.omnifaces.ai.helper.TextHelper.isBlank;
 import static org.omnifaces.ai.modality.OpenAITextHandler.buildUserLocation;
 import static org.omnifaces.ai.model.Sse.Event.Type.DATA;
@@ -430,7 +430,7 @@ public class AnthropicAITextHandler extends DefaultAITextHandler {
                         options.recordUsage(parseChatUsage(json.getJsonObject("message")));
                     }
                     else if ("message_delta".equals(type)) {
-                        findByPath(json, getChatUsageOutputTokensPaths().get(0)).ifPresent(outputTokens -> {
+                        findFirstByPath(json, getChatUsageOutputTokensPaths().get(0)).ifPresent(outputTokens -> {
                             var prior = options.getLastUsage();
                             options.recordUsage(
                                 new ChatUsage(

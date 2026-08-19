@@ -13,7 +13,7 @@
 package org.omnifaces.ai.service;
 
 import static java.lang.String.format;
-import static org.omnifaces.ai.helper.JsonHelper.findByPath;
+import static org.omnifaces.ai.helper.JsonHelper.findFirstByPath;
 
 import java.net.URI;
 import java.time.Duration;
@@ -234,7 +234,7 @@ public class GoogleAIService extends BaseAIService {
         var state = file.getString("state", FILE_STATE_ACTIVE);
 
         if (FILE_STATE_FAILED.equals(state)) {
-            throw new AIException("Uploaded file " + filePath + " failed to process: " + findByPath(file, FILE_ERROR_MESSAGE_PATH).orElse(state));
+            throw new AIException("Uploaded file " + filePath + " failed to process: " + findFirstByPath(file, FILE_ERROR_MESSAGE_PATH).orElse(state));
         }
         else if (!FILE_STATE_ACTIVE.equals(state) && !FILE_STATE_PROCESSING.equals(state) && !FILE_STATE_UNSPECIFIED.equals(state)) {
             throw new AIException("Uploaded file " + filePath + " ended up in state " + state);

@@ -184,8 +184,25 @@ public final class JsonHelper {
      * @param root JSON root value (usually a {@link JsonObject})
      * @param path dot-separated path, may contain {@code [index]} or {@code [*]} segments
      * @return an {@link Optional} containing the string value, or empty if not found
+     * @deprecated Since 1.7. Use {@link #findFirstByPath(JsonObject, String)} instead, which names which of the matches it returns.
      */
+    @Deprecated(since = "1.7", forRemoval = true)
     public static Optional<String> findByPath(JsonObject root, String path) {
+        return findFirstByPath(root, path);
+    }
+
+    /**
+     * Finds the string value from a JSON object found at the given dot-separated path.
+     * <p>
+     * Supports array indexing with bracket notation, e.g. {@code "choices[0].message.content"}. Also supports wildcard array indexes, e.g.
+     * {@code "output[*].content[*].text"}.
+     *
+     * @param root JSON root value (usually a {@link JsonObject})
+     * @param path dot-separated path, may contain {@code [index]} or {@code [*]} segments
+     * @return an {@link Optional} containing the string value, or empty if not found
+     * @since 1.7
+     */
+    public static Optional<String> findFirstByPath(JsonObject root, String path) {
         return findAllByPath(root, path).stream().findFirst();
     }
 
@@ -199,9 +216,26 @@ public final class JsonHelper {
      * @param path dot-separated path, may contain {@code [index]} or {@code [*]} segments
      * @return an {@link Optional} containing the non-blank string value, or empty if not found
      * @since 1.1
+     * @deprecated Since 1.7. Use {@link #findFirstNonBlankByPath(JsonObject, String)} instead, which names which of the matches it returns.
      */
+    @Deprecated(since = "1.7", forRemoval = true)
     public static Optional<String> findNonBlankByPath(JsonObject root, String path) {
-        return findByPath(root, path).map(TextHelper::stripToNull).filter(Objects::nonNull);
+        return findFirstNonBlankByPath(root, path);
+    }
+
+    /**
+     * Finds the non-blank string value from a JSON object found at the given dot-separated path.
+     * <p>
+     * Supports array indexing with bracket notation, e.g. {@code "choices[0].message.content"}. Also supports wildcard array indexes, e.g.
+     * {@code "output[*].content[*].text"}.
+     *
+     * @param root JSON root value (usually a {@link JsonObject})
+     * @param path dot-separated path, may contain {@code [index]} or {@code [*]} segments
+     * @return an {@link Optional} containing the non-blank string value, or empty if not found
+     * @since 1.7
+     */
+    public static Optional<String> findFirstNonBlankByPath(JsonObject root, String path) {
+        return findFirstByPath(root, path).map(TextHelper::stripToNull).filter(Objects::nonNull);
     }
 
     /**
@@ -212,10 +246,43 @@ public final class JsonHelper {
      * @param root JSON root object to search.
      * @param paths list of dot-separated paths to try, in order of preference.
      * @return an {@link Optional} containing the first non-blank value found, or empty if no path matches.
-     * @see #findByPath(JsonObject, String)
+     * @see #findFirstByPath(JsonObject, String)
      */
     public static Optional<String> findFirstNonBlankByPaths(JsonObject root, List<String> paths) {
-        return paths.stream().map(path -> findNonBlankByPath(root, path)).flatMap(Optional::stream).findFirst();
+        return paths.stream().map(path -> findFirstNonBlankByPath(root, path)).flatMap(Optional::stream).findFirst();
+    }
+
+    /**
+     * Finds the last non-blank string value from a JSON object at the given dot-separated path, which is the one to have where a wildcard path matches a
+     * sequence whose last entry is the relevant one, such as the message items of an agentic turn.
+     * <p>
+     * Supports array indexing with bracket notation, e.g. {@code "choices[0].message.content"}. Also supports wildcard array indexes, e.g.
+     * {@code "output[*].content[*].text"}.
+     *
+     * @param root JSON root value (usually a {@link JsonObject})
+     * @param path dot-separated path, may contain {@code [index]} or {@code [*]} segments
+     * @return an {@link Optional} containing the last non-blank string value, or empty if not found
+     * @since 1.7
+     * @see #findFirstNonBlankByPath(JsonObject, String)
+     */
+    public static Optional<String> findLastNonBlankByPath(JsonObject root, String path) {
+        return findAllByPath(root, path).stream().map(TextHelper::stripToNull).filter(Objects::nonNull).reduce((first, last) -> last);
+    }
+
+    /**
+     * Finds the last non-blank string value from a JSON object at the first of the given paths which matches at all.
+     * <p>
+     * The paths are tried in order of preference exactly as {@link #findFirstNonBlankByPaths(JsonObject, List)} does; it is within the matching path that the
+     * last value is taken rather than the first, which is the one to have where a wildcard path matches a sequence whose last entry is the relevant one.
+     *
+     * @param root JSON root object to search.
+     * @param paths list of dot-separated paths to try, in order of preference.
+     * @return an {@link Optional} containing the last non-blank value at the first matching path, or empty if no path matches.
+     * @since 1.7
+     * @see #findLastNonBlankByPath(JsonObject, String)
+     */
+    public static Optional<String> findLastNonBlankByPaths(JsonObject root, List<String> paths) {
+        return paths.stream().map(path -> findLastNonBlankByPath(root, path)).flatMap(Optional::stream).findFirst();
     }
 
     /**
@@ -287,7 +354,7 @@ public final class JsonHelper {
      * @since 1.3
      */
     public static void checkErrors(Path jsonFile, List<String> errorMessagePaths) throws AIResponseException {
-        errorMessagePaths.stream().map(path -> findByPath(jsonFile, path).map(TextHelper::stripToNull).orElse(null)).filter(Objects::nonNull).findFirst()
+        errorMessagePaths.stream().map(path -> findFirstByPath(jsonFile, path).map(TextHelper::stripToNull).orElse(null)).filter(Objects::nonNull).findFirst()
             .ifPresent(errorMessage -> {
                 throw new AIResponseException(errorMessage, jsonFile);
             });
@@ -304,9 +371,27 @@ public final class JsonHelper {
      * @return an {@link Optional} containing the string value, or empty if not found
      * @throws AIResponseException If the file cannot be read or parsed.
      * @since 1.3
+     * @deprecated Since 1.7. Use {@link #findFirstByPath(Path, String)} instead, which names which of the matches it returns.
      */
+    @Deprecated(since = "1.7", forRemoval = true)
     public static Optional<String> findByPath(Path jsonFile, String path) {
-        return ofNullable(findByPath(jsonFile, path, parser -> {
+        return findFirstByPath(jsonFile, path);
+    }
+
+    /**
+     * Finds the string value from a JSON file at the given dot-separated path within the file at {@code source}, without loading the whole file into memory.
+     * <p>
+     * Supports array indexing with bracket notation, e.g. {@code "choices[0].message.content"}. Also supports wildcard array indexes, e.g.
+     * {@code "output[*].content[*].text"}.
+     *
+     * @param jsonFile The JSON file to read from, must not be {@code null}.
+     * @param path dot-separated path, may contain {@code [index]} or {@code [*]} segments
+     * @return an {@link Optional} containing the string value, or empty if not found
+     * @throws AIResponseException If the file cannot be read or parsed.
+     * @since 1.3
+     */
+    public static Optional<String> findFirstByPath(Path jsonFile, String path) {
+        return ofNullable(findFirstByPath(jsonFile, path, parser -> {
             parser.next();
             return parser.getString();
         }));
@@ -327,7 +412,7 @@ public final class JsonHelper {
      * @since 1.3
      */
     public static InputStream streamByPath(Path jsonFile, String path) {
-        return findByPath(jsonFile, path, parser -> {
+        return findFirstByPath(jsonFile, path, parser -> {
             long startOffset = parser.getLocation().getStreamOffset(); // after key
             var event = parser.next();
             long endOffset = parser.getLocation().getStreamOffset(); // after value
@@ -401,11 +486,11 @@ public final class JsonHelper {
         }
     }
 
-    private static <R> R findByPath(Path jsonFile, String path, Function<JsonParser, R> processor) {
+    private static <R> R findFirstByPath(Path jsonFile, String path, Function<JsonParser, R> processor) {
         try (var inputStream = new FileInputStream(jsonFile.toFile())) {
             try (var jsonStream = Json.createParser(inputStream)) {
                 var segments = stream(path.split("[\\.\\[\\]]")).filter(not(String::isBlank)).collect(toCollection(LinkedList::new));
-                return findByPath(jsonStream, segments, processor);
+                return findFirstByPath(jsonStream, segments, processor);
             }
         }
         catch (AIResponseException e) {
@@ -416,7 +501,7 @@ public final class JsonHelper {
         }
     }
 
-    private static <R> R findByPath(JsonParser parser, Queue<String> segments, Function<JsonParser, R> processor) {
+    private static <R> R findFirstByPath(JsonParser parser, Queue<String> segments, Function<JsonParser, R> processor) {
         if (segments.isEmpty()) {
             return null;
         }
@@ -438,7 +523,7 @@ public final class JsonHelper {
                             throw new IllegalArgumentException("Path must point to a value, not to an object or array.");
                         }
 
-                        var result = findByPath(parser, isWildcard ? new LinkedList<>(segments) : segments, processor);
+                        var result = findFirstByPath(parser, isWildcard ? new LinkedList<>(segments) : segments, processor);
 
                         if (result != null || !isWildcard) {
                             return result;
@@ -460,7 +545,7 @@ public final class JsonHelper {
                     return processor.apply(parser);
                 }
 
-                return findByPath(parser, segments, processor);
+                return findFirstByPath(parser, segments, processor);
             }
             else if (event == END_OBJECT) {
                 return null;

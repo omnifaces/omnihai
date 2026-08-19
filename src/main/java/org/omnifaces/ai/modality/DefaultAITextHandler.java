@@ -16,6 +16,7 @@ import static java.util.Collections.emptyList;
 import static java.util.logging.Level.WARNING;
 import static org.omnifaces.ai.helper.JsonHelper.checkErrors;
 import static org.omnifaces.ai.helper.JsonHelper.findFirstNonBlankByPaths;
+import static org.omnifaces.ai.helper.JsonHelper.findLastNonBlankByPaths;
 import static org.omnifaces.ai.helper.JsonHelper.parseJson;
 
 import java.util.List;
@@ -185,7 +186,7 @@ public class DefaultAITextHandler implements AITextHandler {
             throw new IllegalStateException("getChatResponseContentPaths() may not return an empty list");
         }
 
-        return findFirstNonBlankByPaths(responseJson, messageContentPaths)
+        return findLastNonBlankByPaths(responseJson, messageContentPaths)
             .orElseThrow(() -> new AIResponseException("No message content found at paths " + messageContentPaths, responseJson));
     }
 
@@ -250,7 +251,8 @@ public class DefaultAITextHandler implements AITextHandler {
 
     /**
      * Returns all possible paths to the message content in the JSON response parsed by {@link #parseChatResponse(JsonObject)}. May not be empty. The first path
-     * that matches a value in the JSON response will be used; remaining paths are ignored.
+     * that matches a value in the JSON response will be used; remaining paths are ignored. Where a path matches more than one value, the last one is the
+     * message content: a turn which called a server side tool answers in message items which the ones announcing the call precede.
      *
      * @implNote The default implementation throws UnsupportedOperationException.
      * @return all possible paths to the message content in the JSON response.

@@ -13,7 +13,7 @@
 package org.omnifaces.ai.modality;
 
 import static java.lang.String.format;
-import static org.omnifaces.ai.helper.JsonHelper.findByPath;
+import static org.omnifaces.ai.helper.JsonHelper.findFirstByPath;
 import static org.omnifaces.ai.helper.TextHelper.isBlank;
 import static org.omnifaces.ai.model.AnalyzeVideoOptions.DEFAULT_FPS;
 import static org.omnifaces.ai.model.Sse.Event.Type.DATA;
@@ -354,12 +354,12 @@ public class GoogleAITextHandler extends DefaultAITextHandler {
     public boolean processChatStreamEvent(AIService service, ChatOptions options, Event event, Consumer<String> onToken) {
         if (event.type() == DATA) {
             return tryParseEventDataJson(event.value(), json -> {
-                findByPath(json, "candidates[0].content.parts[0].text").ifPresent(onToken);
+                findFirstByPath(json, "candidates[0].content.parts[0].text").ifPresent(onToken);
 
                 if (!options.isDefault() && json.containsKey("usageMetadata")) {
                     options.recordUsage(parseChatUsage(json));
                 }
-                var finishReason = findByPath(json, "candidates[0].finishReason");
+                var finishReason = findFirstByPath(json, "candidates[0].finishReason");
 
                 if (finishReason.filter("STOP"::equals).isPresent()) {
                     return false;

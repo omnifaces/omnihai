@@ -13,7 +13,7 @@
 package org.omnifaces.ai.modality;
 
 import static org.omnifaces.ai.helper.JsonHelper.addStrictAdditionalProperties;
-import static org.omnifaces.ai.helper.JsonHelper.findByPath;
+import static org.omnifaces.ai.helper.JsonHelper.findFirstByPath;
 import static org.omnifaces.ai.helper.TextHelper.isBlank;
 import static org.omnifaces.ai.model.Sse.Event.Type.DATA;
 import static org.omnifaces.ai.model.Sse.Event.Type.EVENT;
@@ -583,8 +583,8 @@ public class OpenAITextHandler extends DefaultAITextHandler {
             else if (event.value().contains("chat.completion.chunk")) { // Cheap pre-filter before expensive parse.
                 return tryParseEventDataJson(event.value(), json -> {
                     if ("chat.completion.chunk".equals(json.getString("object", null))) {
-                        findByPath(json, "choices[0].delta.content").ifPresent(onToken);
-                        findByPath(json, "choices[0].finish_reason").filter("length"::equals).ifPresent(__ -> {
+                        findFirstByPath(json, "choices[0].delta.content").ifPresent(onToken);
+                        findFirstByPath(json, "choices[0].finish_reason").filter("length"::equals).ifPresent(__ -> {
                             throw new AITokenLimitExceededException();
                         });
 

@@ -21,7 +21,7 @@ import static java.util.logging.Level.WARNING;
 import static org.omnifaces.ai.AIConfig.PROPERTY_API_KEY;
 import static org.omnifaces.ai.AIConfig.PROPERTY_ENDPOINT;
 import static org.omnifaces.ai.AIConfig.PROPERTY_MODEL;
-import static org.omnifaces.ai.helper.JsonHelper.findNonBlankByPath;
+import static org.omnifaces.ai.helper.JsonHelper.findFirstNonBlankByPath;
 import static org.omnifaces.ai.helper.TextHelper.isBlank;
 import static org.omnifaces.ai.helper.TextHelper.requireNonBlank;
 import static org.omnifaces.ai.mime.MimeType.guessMimeType;
@@ -440,15 +440,15 @@ public abstract class BaseAIService implements AIService {
     }
 
     private static boolean isEligibleForCleanup(JsonObject file, UploadedFileJsonStructure jsonStructure) {
-        return findNonBlankByPath(file, jsonStructure.fileNameProperty)
+        return findFirstNonBlankByPath(file, jsonStructure.fileNameProperty)
             .filter(name -> name.startsWith(HTTP_CLIENT.uploadedFileNamePrefix))
             .isPresent();
     }
 
     private void deleteFileQuietly(JsonObject file, UploadedFileJsonStructure jsonStructure, Instant cutoff) {
         try {
-            var id = findNonBlankByPath(file, jsonStructure.fileIdProperty);
-            var createdAt = findNonBlankByPath(file, jsonStructure.createdAtProperty);
+            var id = findFirstNonBlankByPath(file, jsonStructure.fileIdProperty);
+            var createdAt = findFirstNonBlankByPath(file, jsonStructure.createdAtProperty);
 
             if (id.isPresent() && createdAt.isPresent()) {
                 var timestamp = tryParseFileCreatedAtTimestamp(createdAt.get());
