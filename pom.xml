@@ -189,7 +189,7 @@
                                     <excludes>
                                        <exclude>*.*</exclude> <!-- excludes files in root folder -->
                                        <exclude>**/*.txt</exclude>
-                                       <exclude>src/test/resources/*.*</exclude>
+                                       <exclude>src/test/resources/**</exclude>
                                     </excludes>
                                 </licenseSet>
                             </licenseSets>
