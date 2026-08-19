@@ -596,7 +596,7 @@ String transcription = service.transcribe(Path.of("audio.mp3"));
 // Generate audio
 byte[] audio = service.generateAudio("Hello, welcome to OmniHai!");
 
-// Save directly to file (default format depends on AI provider)
+// Save directly to file (the file name is yours to pick; the format depends on the AI provider)
 gpt.generateAudio("Hello, welcome to OmniHai!", Path.of("greeting.mp3"));
 
 // With options (allowable options depend on AI provider)
@@ -607,6 +607,8 @@ byte[] audio = gpt.generateAudio("Hello!",
         .outputFormat("wav")
         .build());
 ```
+
+OpenAI honors the output format and defaults to MP3. Gemini and OpenRouter emit bare PCM which OmniHai prepends a WAV header to, so they answer WAV whichever format was asked for, and a file named `.mp3` would hold a WAV. Use `MimeType.guessMimeType(audio)` to learn what actually came back, as the audio generation IT does.
 
 All methods have async variants returning `CompletableFuture` (e.g., `chatAsync`, `summarizeAsync`, `translateAsync`, `proofreadAsync`, `generateImageAsync`, `analyzeVideoAsync`, `transcribeAsync`, `generateAudioAsync`, etc.).
 
