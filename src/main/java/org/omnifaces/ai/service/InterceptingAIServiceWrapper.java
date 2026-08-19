@@ -31,6 +31,7 @@ import org.omnifaces.ai.model.ChatInput;
 import org.omnifaces.ai.model.ChatInput.Attachment;
 import org.omnifaces.ai.model.ChatOptions;
 import org.omnifaces.ai.model.ChatOptions.Location;
+import org.omnifaces.ai.model.ClassificationResult;
 import org.omnifaces.ai.model.GenerateAudioOptions;
 import org.omnifaces.ai.model.GenerateImageOptions;
 import org.omnifaces.ai.model.ModerationOptions;
@@ -368,6 +369,26 @@ public abstract class InterceptingAIServiceWrapper extends AIServiceWrapper {
     @Override
     public CompletableFuture<ModerationResult> moderateContentAsync(String content, ModerationOptions options) throws AIException {
         return interceptAsync(service -> service.moderateContentAsync(content, options));
+    }
+
+    @Override
+    public ClassificationResult classify(String text, List<String> labels) throws AIException {
+        return intercept(service -> service.classify(text, labels));
+    }
+
+    @Override
+    public ClassificationResult classify(String text, String... labels) throws AIException {
+        return intercept(service -> service.classify(text, labels));
+    }
+
+    @Override
+    public CompletableFuture<ClassificationResult> classifyAsync(String text, List<String> labels) throws AIException {
+        return interceptAsync(service -> service.classifyAsync(text, labels));
+    }
+
+    @Override
+    public CompletableFuture<ClassificationResult> classifyAsync(String text, String... labels) throws AIException {
+        return interceptAsync(service -> service.classifyAsync(text, labels));
     }
 
     // Web Search Capabilities ----------------------------------------------------------------------------------------

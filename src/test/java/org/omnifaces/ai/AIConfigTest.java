@@ -36,6 +36,7 @@ import org.omnifaces.ai.model.AnalyzeVideoOptions;
 import org.omnifaces.ai.model.ChatInput;
 import org.omnifaces.ai.model.ChatInput.Attachment;
 import org.omnifaces.ai.model.ChatOptions;
+import org.omnifaces.ai.model.ClassificationResult;
 import org.omnifaces.ai.model.GenerateAudioOptions;
 import org.omnifaces.ai.model.GenerateImageOptions;
 import org.omnifaces.ai.model.ModerationOptions;
@@ -736,6 +737,11 @@ class AIConfigTest {
 
         @Override
         public CompletableFuture<ModerationResult> moderateContentAsync(String content, ModerationOptions options) throws AIException {
+            return null;
+        }
+
+        @Override
+        public CompletableFuture<ClassificationResult> classifyAsync(String text, List<String> labels) throws AIException {
             return null;
         }
 

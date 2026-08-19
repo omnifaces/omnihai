@@ -13,6 +13,7 @@
 package org.omnifaces.ai;
 
 import java.io.Serializable;
+import java.util.List;
 import java.util.function.Consumer;
 
 import jakarta.json.JsonObject;
@@ -36,6 +37,7 @@ import org.omnifaces.ai.model.Sse.Event;
  * <li>language detection</li>
  * <li>translation</li>
  * <li>proofreading</li>
+ * <li>classification</li>
  * <li>content moderation</li>
  * </ul>
  * <p>
@@ -149,6 +151,25 @@ public interface AITextHandler extends Serializable {
     String buildProofreadPrompt();
 
     /**
+     * Builds the system prompt for {@link AIService#classify(String, List)} and {@link AIService#classifyAsync(String, List)}.
+     *
+     * @implNote The default implementation throws UnsupportedOperationException.
+     * @param labels The labels to pick from, in the order they are offered to the AI.
+     * @return The system prompt.
+     * @since 1.7
+     */
+    String buildClassifyPrompt(List<String> labels);
+
+    /**
+     * Builds the system prompt for {@link AIService#moderateContent(String, ModerationOptions)} and
+     * {@link AIService#moderateContentAsync(String, ModerationOptions)}.
+     *
+     * @param options Moderation options containing categories and threshold.
+     * @return The system prompt.
+     */
+    String buildModerationPrompt(ModerationOptions options);
+
+    /**
      * Parses message content from the API response JSON returned by chat operation.
      *
      * @param responseJson The API response JSON.
@@ -180,14 +201,5 @@ public interface AITextHandler extends Serializable {
     default String parseFileResponse(JsonObject responseJson) throws AIResponseException {
         throw new UnsupportedOperationException("Please implement parseFileResponse(JsonObject responseJson) for this AI provider");
     }
-
-    /**
-     * Builds the system prompt for {@link AIService#moderateContent(String, ModerationOptions)} and
-     * {@link AIService#moderateContentAsync(String, ModerationOptions)}.
-     *
-     * @param options Moderation options containing categories and threshold.
-     * @return The system prompt.
-     */
-    String buildModerationPrompt(ModerationOptions options);
 
 }

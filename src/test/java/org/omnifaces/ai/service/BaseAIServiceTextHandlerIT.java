@@ -372,6 +372,28 @@ abstract class BaseAIServiceTextHandlerIT extends AIServiceIT {
     }
 
     @Test
+    void classify() {
+        var response = service.classify("My package never arrived and the tracking has not moved in a week.", List.of("billing", "shipping", "technical"));
+        log(response.toString());
+        assertAll(
+            () -> assertEquals("shipping", response.label(), "response must be classified as shipping"),
+            () -> assertTrue(response.confidence() > 0.5, "confidence " + response.confidence() + " must be above half")
+        );
+    }
+
+    @Test
+    void classifyWithVarargs() {
+        var response = service.classify("Buy cheap watches now!!!", "spam", "ham");
+        log(response.toString());
+        assertEquals("spam", response.label(), "response must be classified as spam");
+    }
+
+    @Test
+    void classifyWithTooFewLabels() {
+        assertThrows(IllegalArgumentException.class, () -> service.classify("Anything", List.of("only-one")));
+    }
+
+    @Test
     void moderateContentFlagged() {
         var response = service.moderateContent("I will hunt you down and make you pay for what you did.");
         log(response.toString());

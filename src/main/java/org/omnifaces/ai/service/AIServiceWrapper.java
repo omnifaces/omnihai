@@ -27,6 +27,7 @@ import org.omnifaces.ai.model.ChatInput;
 import org.omnifaces.ai.model.ChatInput.Attachment;
 import org.omnifaces.ai.model.ChatOptions;
 import org.omnifaces.ai.model.ChatOptions.Location;
+import org.omnifaces.ai.model.ClassificationResult;
 import org.omnifaces.ai.model.GenerateAudioOptions;
 import org.omnifaces.ai.model.GenerateImageOptions;
 import org.omnifaces.ai.model.ModerationOptions;
@@ -244,6 +245,26 @@ public abstract class AIServiceWrapper implements AIService {
     @Override
     public CompletableFuture<ModerationResult> moderateContentAsync(String content, ModerationOptions options) throws AIException {
         return getWrapped().moderateContentAsync(content, options);
+    }
+
+    @Override
+    public ClassificationResult classify(String text, List<String> labels) throws AIException {
+        return getWrapped().classify(text, labels);
+    }
+
+    @Override
+    public ClassificationResult classify(String text, String... labels) throws AIException {
+        return getWrapped().classify(text, labels);
+    }
+
+    @Override
+    public CompletableFuture<ClassificationResult> classifyAsync(String text, List<String> labels) throws AIException {
+        return getWrapped().classifyAsync(text, labels);
+    }
+
+    @Override
+    public CompletableFuture<ClassificationResult> classifyAsync(String text, String... labels) throws AIException {
+        return getWrapped().classifyAsync(text, labels);
     }
 
     @Override

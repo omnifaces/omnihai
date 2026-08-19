@@ -33,6 +33,7 @@ import org.omnifaces.ai.model.ChatInput;
 import org.omnifaces.ai.model.ChatInput.Attachment;
 import org.omnifaces.ai.model.ChatOptions;
 import org.omnifaces.ai.model.ChatOptions.Location;
+import org.omnifaces.ai.model.ClassificationResult;
 import org.omnifaces.ai.model.GenerateAudioOptions;
 import org.omnifaces.ai.model.GenerateImageOptions;
 import org.omnifaces.ai.model.ModerationOptions;
@@ -876,6 +877,74 @@ public interface AIService extends Serializable {
      * @throws AIException if proofreading fails.
      */
     CompletableFuture<String> proofreadAsync(String text) throws AIException;
+
+    // Text Classification Capabilities -------------------------------------------------------------------------------
+
+    /**
+     * Classifies the given text as exactly one of the given labels.
+     * <p>
+     * Useful for routing a support ticket, tagging a comment, or any other task of picking one label out of a known set.
+     *
+     * @implNote The default implementation delegates to {@link #classifyAsync(String, List)}.
+     * @param text The text to classify.
+     * @param labels The labels to pick from, at least two, whose order is preserved as it reaches the AI.
+     * @return The label which the AI picked and how sure it is of it, never {@code null}.
+     * @throws IllegalArgumentException if text is blank, or if fewer than two distinct non-blank labels are given.
+     * @throws UnsupportedOperationException if structured output is not supported by the implementation.
+     * @throws AIException if classification fails.
+     * @since 1.7
+     */
+    default ClassificationResult classify(String text, List<String> labels) throws AIException {
+        return joinAsync(classifyAsync(text, labels));
+    }
+
+    /**
+     * Classifies the given text as exactly one of the given labels.
+     *
+     * @implNote The default implementation delegates to {@link #classify(String, List)}.
+     * @param text The text to classify.
+     * @param labels The labels to pick from, at least two, whose order is preserved as it reaches the AI.
+     * @return The label which the AI picked and how sure it is of it, never {@code null}.
+     * @throws IllegalArgumentException if text is blank, or if fewer than two distinct non-blank labels are given.
+     * @throws UnsupportedOperationException if structured output is not supported by the implementation.
+     * @throws AIException if classification fails.
+     * @since 1.7
+     */
+    default ClassificationResult classify(String text, String... labels) throws AIException {
+        return classify(text, List.of(labels));
+    }
+
+    /**
+     * Asynchronously classifies the given text as exactly one of the given labels.
+     * <p>
+     * This is the core method for classification. The labels are offered to the AI as the only values it may answer with, and it answers with one of them
+     * whichever fits best, so a text belonging to none of them still yields a label, and the confidence is what tells that apart.
+     *
+     * @param text The text to classify.
+     * @param labels The labels to pick from, at least two, whose order is preserved as it reaches the AI.
+     * @return A CompletableFuture that will contain the label which the AI picked and how sure it is of it, never {@code null}.
+     * @throws IllegalArgumentException if text is blank, or if fewer than two distinct non-blank labels are given.
+     * @throws UnsupportedOperationException if structured output is not supported by the implementation.
+     * @throws AIException if classification fails.
+     * @since 1.7
+     */
+    CompletableFuture<ClassificationResult> classifyAsync(String text, List<String> labels) throws AIException;
+
+    /**
+     * Asynchronously classifies the given text as exactly one of the given labels.
+     *
+     * @implNote The default implementation delegates to {@link #classifyAsync(String, List)}.
+     * @param text The text to classify.
+     * @param labels The labels to pick from, at least two, whose order is preserved as it reaches the AI.
+     * @return A CompletableFuture that will contain the label which the AI picked and how sure it is of it, never {@code null}.
+     * @throws IllegalArgumentException if text is blank, or if fewer than two distinct non-blank labels are given.
+     * @throws UnsupportedOperationException if structured output is not supported by the implementation.
+     * @throws AIException if classification fails.
+     * @since 1.7
+     */
+    default CompletableFuture<ClassificationResult> classifyAsync(String text, String... labels) throws AIException {
+        return classifyAsync(text, List.of(labels));
+    }
 
     // Text Moderation Capabilities -----------------------------------------------------------------------------------
 

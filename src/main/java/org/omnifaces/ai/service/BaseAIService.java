@@ -22,6 +22,7 @@ import static org.omnifaces.ai.AIConfig.PROPERTY_API_KEY;
 import static org.omnifaces.ai.AIConfig.PROPERTY_ENDPOINT;
 import static org.omnifaces.ai.AIConfig.PROPERTY_MODEL;
 import static org.omnifaces.ai.helper.JsonHelper.findFirstNonBlankByPath;
+import static org.omnifaces.ai.helper.JsonSchemaHelper.fromJson;
 import static org.omnifaces.ai.helper.TextHelper.isBlank;
 import static org.omnifaces.ai.helper.TextHelper.requireNonBlank;
 import static org.omnifaces.ai.mime.MimeType.guessMimeType;
@@ -72,6 +73,7 @@ import org.omnifaces.ai.model.ChatInput.Message.Role;
 import org.omnifaces.ai.model.ChatInput.UploadedFile;
 import org.omnifaces.ai.model.ChatOptions;
 import org.omnifaces.ai.model.ChatUsage;
+import org.omnifaces.ai.model.ClassificationResult;
 import org.omnifaces.ai.model.GenerateAudioOptions;
 import org.omnifaces.ai.model.GenerateImageOptions;
 import org.omnifaces.ai.model.ModerationOptions;
@@ -502,6 +504,54 @@ public abstract class BaseAIService implements AIService {
     @Override
     public CompletableFuture<String> proofreadAsync(String text) throws AIException {
         return chatAsync(requireNonBlank(text, "text"), DETERMINISTIC.withSystemPrompt(textHandler.buildProofreadPrompt()));
+    }
+
+    // Text Classification Implementation (delegates to chat) ---------------------------------------------------------
+
+    @Override
+    public CompletableFuture<ClassificationResult> classifyAsync(String text, List<String> labels) throws AIException {
+        var distinctLabels = distinctLabels(labels);
+        var options = DETERMINISTIC.withSystemPrompt(textHandler.buildClassifyPrompt(distinctLabels)).withJsonSchema(buildClassifyJsonSchema(distinctLabels));
+        return chatAsync(requireNonBlank(text, "text"), options).thenApply(json -> fromJson(json, ClassificationResult.class));
+    }
+
+    /**
+     * Returns the given labels without duplicates and in the order they were given, as that order reaches the AI and a repeated label only takes up room.
+     *
+     * @param labels The labels to pick from.
+     * @return The distinct labels.
+     * @throws IllegalArgumentException if fewer than two distinct non-blank labels remain.
+     */
+    private static List<String> distinctLabels(List<String> labels) {
+        var distinctLabels = requireNonNull(labels, "labels").stream().filter(not(TextHelper::isBlank)).map(String::strip).distinct().toList();
+
+        if (distinctLabels.size() < 2) {
+            throw new IllegalArgumentException("There must be at least two distinct non-blank labels to pick from, but got " + labels);
+        }
+
+        return distinctLabels;
+    }
+
+    /**
+     * Builds the JSON schema which offers the AI no other answer than one of the given labels, along with how sure it is of it. It sticks to the subset which
+     * every AI provider accepts: a numeric range is stated in the prompt instead, and the strictness which some of them want is added by their own handler.
+     *
+     * @param labels The labels to pick from.
+     * @return The JSON schema.
+     */
+    private static JsonObject buildClassifyJsonSchema(List<String> labels) {
+        var labelValues = Json.createArrayBuilder();
+        labels.forEach(labelValues::add);
+
+        return Json.createObjectBuilder()
+            .add("type", "object")
+            .add(
+                "properties", Json.createObjectBuilder()
+                    .add("label", Json.createObjectBuilder().add("type", "string").add("enum", labelValues))
+                    .add("confidence", Json.createObjectBuilder().add("type", "number"))
+            )
+            .add("required", Json.createArrayBuilder().add("label").add("confidence"))
+            .build();
     }
 
     // Text Moderation Implementation (delegates to chat) -------------------------------------------------------------
