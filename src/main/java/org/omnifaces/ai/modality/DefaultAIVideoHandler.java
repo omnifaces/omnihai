@@ -27,6 +27,13 @@ public class DefaultAIVideoHandler implements AIVideoHandler {
 
     private static final long serialVersionUID = 1L;
 
+    /**
+     * Constructs a new instance of this AI handler.
+     */
+    public DefaultAIVideoHandler() {
+        //
+    }
+
     @Override
     public String buildAnalyzeVideoPrompt() {
         return """

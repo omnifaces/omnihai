@@ -31,6 +31,13 @@ public class XAIImageHandler extends OpenAIImageHandler {
     private static final long serialVersionUID = 1L;
 
     /**
+     * Constructs a new instance of this AI handler.
+     */
+    public XAIImageHandler() {
+        //
+    }
+
+    /**
      * @see <a href="https://docs.x.ai/developers/rest-api-reference/inference/chat#image-generations">API Reference</a>
      */
     @Override

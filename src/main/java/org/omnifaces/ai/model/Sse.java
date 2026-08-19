@@ -21,6 +21,10 @@ import java.io.Serializable;
  */
 public final class Sse {
 
+    private Sse() {
+        // Hide constructor.
+    }
+
     /**
      * Represents a single SSE field (id, event, or data).
      *

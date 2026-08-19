@@ -26,6 +26,13 @@ public class AzureAITextHandler extends OpenAITextHandler {
     private static final long serialVersionUID = 1L;
 
     /**
+     * Constructs a new instance of this AI handler.
+     */
+    public AzureAITextHandler() {
+        //
+    }
+
+    /**
      * @see <a href="https://learn.microsoft.com/en-us/azure/foundry/openai/how-to/web-search">Web search tool</a>
      */
     @Override

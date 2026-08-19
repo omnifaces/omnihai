@@ -54,6 +54,13 @@ public class AnthropicAITextHandler extends DefaultAITextHandler {
 
     private static final long serialVersionUID = 1L;
 
+    /**
+     * Constructs a new instance of this AI handler.
+     */
+    public AnthropicAITextHandler() {
+        //
+    }
+
     private static final AIModelVersion CLAUDE_3 = AIModelVersion.of("claude", 3);
     private static final AIModelVersion CLAUDE_4_6 = AIModelVersion.of("claude", 4, 6);
 

@@ -40,6 +40,13 @@ public class OpenRouterAITextHandler extends OpenAITextHandler {
     private static final long serialVersionUID = 1L;
 
     /**
+     * Constructs a new instance of this AI handler.
+     */
+    public OpenRouterAITextHandler() {
+        //
+    }
+
+    /**
      * @see <a href="https://openrouter.ai/docs/guides/features/plugins/web-search">Web Search API Reference</a>
      */
     @Override

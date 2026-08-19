@@ -36,6 +36,13 @@ public class MistralAITextHandler extends OpenAITextHandler {
 
     private static final long serialVersionUID = 1L;
 
+    /**
+     * Constructs a new instance of this AI handler.
+     */
+    public MistralAITextHandler() {
+        //
+    }
+
     @Override
     protected Map<String, String> getFileUploadMetadata(AIService service, Attachment file) {
         var metadata = new HashMap<>(super.getFileUploadMetadata(service, file));

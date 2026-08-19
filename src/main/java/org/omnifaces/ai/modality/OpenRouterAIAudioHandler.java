@@ -63,6 +63,13 @@ public class OpenRouterAIAudioHandler extends DefaultAIAudioHandler {
 
     private static final long serialVersionUID = 1L;
 
+    /**
+     * Constructs a new instance of this AI handler.
+     */
+    public OpenRouterAIAudioHandler() {
+        //
+    }
+
     private static final String DEFAULT_VOICE = "alloy";
     private static final String STREAMING_AUDIO_FORMAT = "pcm16";
     private static final String EVENT_DATA_FIELD = "data:";

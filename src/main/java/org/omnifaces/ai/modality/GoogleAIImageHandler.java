@@ -33,6 +33,13 @@ public class GoogleAIImageHandler extends DefaultAIImageHandler {
     private static final long serialVersionUID = 1L;
 
     /**
+     * Constructs a new instance of this AI handler.
+     */
+    public GoogleAIImageHandler() {
+        //
+    }
+
+    /**
      * @see <a href="https://ai.google.dev/gemini-api/docs/image-generation">API Reference</a>
      */
     @Override

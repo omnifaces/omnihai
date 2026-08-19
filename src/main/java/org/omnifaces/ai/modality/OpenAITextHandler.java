@@ -53,6 +53,13 @@ public class OpenAITextHandler extends DefaultAITextHandler {
 
     private static final long serialVersionUID = 1L;
 
+    /**
+     * Constructs a new instance of this AI handler.
+     */
+    public OpenAITextHandler() {
+        //
+    }
+
     private static final AIModelVersion GPT_5 = AIModelVersion.of("gpt", 5);
     private static final AIModelVersion GPT_5_1 = AIModelVersion.of("gpt", 5, 1);
 

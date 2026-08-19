@@ -59,6 +59,13 @@ public class DefaultAITextHandler implements AITextHandler {
 
     private static final long serialVersionUID = 1L;
 
+    /**
+     * Constructs a new instance of this AI handler.
+     */
+    public DefaultAITextHandler() {
+        //
+    }
+
     /** Logger for current package. */
     protected static final Logger logger = Logger.getLogger(DefaultAITextHandler.class.getPackageName());
 

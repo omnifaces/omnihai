@@ -32,6 +32,13 @@ public class DefaultAIAudioHandler implements AIAudioHandler {
 
     private static final long serialVersionUID = 1L;
 
+    /**
+     * Constructs a new instance of this AI handler.
+     */
+    public DefaultAIAudioHandler() {
+        //
+    }
+
     /** Logger for current package. */
     protected static final Logger logger = Logger.getLogger(DefaultAIAudioHandler.class.getPackageName());
 

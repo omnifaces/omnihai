@@ -33,6 +33,13 @@ public class OpenAIImageHandler extends DefaultAIImageHandler {
     private static final long serialVersionUID = 1L;
 
     /**
+     * Constructs a new instance of this AI handler.
+     */
+    public OpenAIImageHandler() {
+        //
+    }
+
+    /**
      * @see <a href="https://developers.openai.com/api/reference/resources/images/methods/generate">API Reference</a>
      */
     @Override

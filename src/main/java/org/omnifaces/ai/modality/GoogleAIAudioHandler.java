@@ -55,6 +55,13 @@ public class GoogleAIAudioHandler extends DefaultAIAudioHandler {
 
     private static final long serialVersionUID = 1L;
 
+    /**
+     * Constructs a new instance of this AI handler.
+     */
+    public GoogleAIAudioHandler() {
+        //
+    }
+
     private static final String DEFAULT_VOICE = "Kore";
 
     /**

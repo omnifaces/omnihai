@@ -52,6 +52,13 @@ public class GoogleAITextHandler extends DefaultAITextHandler {
     private static final long serialVersionUID = 1L;
 
     /**
+     * Constructs a new instance of this AI handler.
+     */
+    public GoogleAITextHandler() {
+        //
+    }
+
+    /**
      * @see <a href="https://ai.google.dev/gemini-api/docs/text-generation">API Reference</a>
      */
     @Override

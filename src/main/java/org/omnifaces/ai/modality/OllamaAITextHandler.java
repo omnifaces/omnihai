@@ -39,6 +39,13 @@ public class OllamaAITextHandler extends DefaultAITextHandler {
     private static final long serialVersionUID = 1L;
 
     /**
+     * Constructs a new instance of this AI handler.
+     */
+    public OllamaAITextHandler() {
+        //
+    }
+
+    /**
      * @see <a href="https://ollama.readthedocs.io/en/api/#generate-a-chat-completion">API Reference</a>
      */
     @Override
