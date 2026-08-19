@@ -13,6 +13,7 @@
 package org.omnifaces.ai.service;
 
 import static java.util.Collections.emptyMap;
+import static java.util.Comparator.comparingDouble;
 import static java.util.Objects.requireNonNull;
 import static java.util.Optional.ofNullable;
 import static java.util.concurrent.CompletableFuture.completedFuture;
@@ -40,6 +41,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -552,6 +554,69 @@ public abstract class BaseAIService implements AIService {
             )
             .add("required", Json.createArrayBuilder().add("label").add("confidence"))
             .build();
+    }
+
+    @Override
+    public CompletableFuture<List<ClassificationResult>> classifyAllAsync(String text, List<String> labels) throws AIException {
+        var distinctLabels = distinctLabels(labels);
+        var options = DETERMINISTIC.withSystemPrompt(textHandler.buildClassifyAllPrompt(distinctLabels))
+            .withJsonSchema(buildClassifyAllJsonSchema(distinctLabels));
+        return chatAsync(requireNonBlank(text, "text"), options).thenApply(JsonHelper::parseJson)
+            .thenApply(response -> parseClassificationResults(response, distinctLabels));
+    }
+
+    /**
+     * Builds the JSON schema which asks the AI to score every one of the given labels. It sticks to the subset which every AI provider accepts: a numeric range
+     * is stated in the prompt instead, and the strictness which some of them want is added by their own handler.
+     *
+     * @param labels The labels to score.
+     * @return The JSON schema.
+     */
+    private static JsonObject buildClassifyAllJsonSchema(List<String> labels) {
+        var labelValues = Json.createArrayBuilder();
+        labels.forEach(labelValues::add);
+
+        var resultSchema = Json.createObjectBuilder()
+            .add("type", "object")
+            .add(
+                "properties", Json.createObjectBuilder()
+                    .add("label", Json.createObjectBuilder().add("type", "string").add("enum", labelValues))
+                    .add("confidence", Json.createObjectBuilder().add("type", "number"))
+            )
+            .add("required", Json.createArrayBuilder().add("label").add("confidence"));
+
+        return Json.createObjectBuilder()
+            .add("type", "object")
+            .add("properties", Json.createObjectBuilder().add("results", Json.createObjectBuilder().add("type", "array").add("items", resultSchema)))
+            .add("required", Json.createArrayBuilder().add("results"))
+            .build();
+    }
+
+    /**
+     * Returns one result for each of the given labels, the best fitting one first. A label which the AI left out scores 0.0 and a label which it invented is
+     * left out, so that the caller gets back exactly the labels it offered whatever the AI made of them.
+     *
+     * @param responseJson The API response JSON.
+     * @param labels The labels which were offered to the AI.
+     * @return One result per label, the best fitting one first.
+     */
+    static List<ClassificationResult> parseClassificationResults(JsonObject responseJson, List<String> labels) {
+        var confidences = new HashMap<String, Double>();
+
+        if (responseJson.containsKey("results")) {
+            for (var result : responseJson.getJsonArray("results").getValuesAs(JsonObject.class)) {
+                var label = result.getString("label", null);
+
+                if (labels.contains(label)) {
+                    confidences.putIfAbsent(label, result.getJsonNumber("confidence").doubleValue());
+                }
+            }
+        }
+
+        return labels.stream()
+            .map(label -> new ClassificationResult(label, confidences.getOrDefault(label, 0.0)))
+            .sorted(comparingDouble(ClassificationResult::confidence).reversed())
+            .toList();
     }
 
     // Text Moderation Implementation (delegates to chat) -------------------------------------------------------------

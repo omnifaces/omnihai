@@ -525,6 +525,29 @@ String translated = service.translate(text, "en", "fr");
 String corrected = service.proofread(text);
 ```
 
+### Classification
+
+```java
+// Pick exactly one label
+ClassificationResult result = service.classify(ticket, "billing", "shipping", "technical");
+route(result.label()); // Never anything else than one of the offered labels.
+
+// Fall back to a human when the AI is unsure
+if (result.confidence() < 0.7) {
+    queueForReview(ticket);
+}
+
+// Score every label on its own merit, best fitting one first
+List<ClassificationResult> results = service.classifyAll(ticket, "billing", "shipping", "technical");
+
+// Tag with all labels which apply, which may be several or none
+List<String> tags = results.stream().filter(r -> r.confidence() > 0.5).map(ClassificationResult::label).toList();
+```
+
+Use `classify(…)` to route a text to one destination and `classifyAll(…)` to tag it, rank the labels, or find out that none of them fits.
+In `classify(…)` the labels are the only values the AI may answer with, so it always picks one even when the fit is poor, and the confidence is what tells that apart.
+In `classifyAll(…)` each label is scored independently, so the scores are not divided among them.
+
 ### Content Moderation
 
 ```java
@@ -1014,6 +1037,7 @@ What you give up is everything `@AITool` does for you: the manifest is prose whi
 | **Audio Transcription** | ✅ (native + fallback) | ✅ | ✅ |
 | **Audio Generation (TTS)** | ✅ | ✅ | ✅ |
 | **Content Moderation** | ✅ (native + fallback) | ❌ (via chat) | ❌ (via chat) |
+| **Classification** | ✅ | ❌ (via chat) | ❌ (via chat) |
 | **Translation** | ✅ | ❌ (via chat) | ❌ (via chat) |
 | **Proofreading** | ✅ | ❌ (via chat) | ❌ (via chat) |
 | **Summarization** | ✅ | ❌ (via chat) | ❌ (via chat) |
@@ -1070,7 +1094,7 @@ An `@Action` method is free to call an injected OmniHai `AIService`, which is pr
 ### Where OmniHai Shines
 
 - Ultra-lightweight - No external HTTP library, just [`java.net.http.HttpClient`](https://docs.oracle.com/en/java/javase/21/docs/api/java.net.http/java/net/http/HttpClient.html). Minimal deps. Transparent gzip compression for reduced bandwidth.
-- Built-in text utilities - Summarization, translation, transcription, proofreading, key point extraction, moderation as first-class features (not "build your own prompt")
+- Built-in text utilities - Summarization, translation, transcription, proofreading, key point extraction, classification, moderation as first-class features (not "build your own prompt")
 - Structured outputs - Get typed Java objects directly from AI responses: `service.chat(message, MyRecord.class)`
 - File attachments - Send documents, images, and other files alongside chat messages with help of `ChatInput`
 - Web search - Access up-to-date internet information via `service.webSearch(query)` or `ChatOptions.newBuilder().webSearch().build()`, with optional location context for localized results
@@ -1105,7 +1129,7 @@ No embeddings, RAG, vector stores, or agent orchestration. This isn't a gap - it
 OmniHai fills a different niche. For apps that need:
 
 - Multi-provider chat with easy switching
-- Text analysis (summarize, translate, proofread, moderate)
+- Text analysis (summarize, translate, proofread, classify, moderate)
 - Web search with optional location context
 - Image analysis (describe, generate alt text)
 - Audio analysis (transcribe) and generation (text-to-speech)
@@ -1149,7 +1173,7 @@ The design strongly suggests yes:
 
 **Choose OmniHai when:**
 - You need a lean, focused solution without pulling in a framework
-- Your use case is straightforward chat, translation, summarization, proofreading, or moderation
+- Your use case is straightforward chat, translation, summarization, proofreading, classification, or moderation
 - You want minimal dependencies and a small footprint
 - You prefer simplicity over feature completeness
 

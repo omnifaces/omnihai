@@ -37,6 +37,7 @@ import org.omnifaces.ai.model.ChatOptions;
 import org.omnifaces.ai.model.ChatOptions.Location;
 import org.omnifaces.ai.model.ChatOptions.ReasoningEffort;
 import org.omnifaces.ai.model.ChatUsage;
+import org.omnifaces.ai.model.ClassificationResult;
 import org.omnifaces.ai.model.ModerationOptions.Category;
 import org.opentest4j.TestAbortedException;
 
@@ -391,6 +392,30 @@ abstract class BaseAIServiceTextHandlerIT extends AIServiceIT {
     @Test
     void classifyWithTooFewLabels() {
         assertThrows(IllegalArgumentException.class, () -> service.classify("Anything", List.of("only-one")));
+    }
+
+    @Test
+    void classifyAll() {
+        var response = service.classifyAll("My package never arrived and I was charged for it twice.", List.of("billing", "shipping", "technical"));
+        log(response.toString());
+        assertAll(
+            () -> assertEquals(3, response.size(), "every offered label must be scored"),
+            () -> assertTrue(confidenceOf(response, "billing") > 0.5, "billing must apply to a double charge"),
+            () -> assertTrue(confidenceOf(response, "shipping") > 0.5, "shipping must apply to a package which never arrived"),
+            () -> assertTrue(confidenceOf(response, "technical") < 0.5, "technical must not apply"),
+            () -> assertTrue(response.get(0).confidence() >= response.get(2).confidence(), "the best fitting label must come first")
+        );
+    }
+
+    @Test
+    void classifyAllWithNoLabelFitting() {
+        var response = service.classifyAll("The mitochondrion is the powerhouse of the cell.", "billing", "shipping");
+        log(response.toString());
+        assertTrue(response.stream().allMatch(result -> result.confidence() < 0.5), "no label may fit an unrelated text");
+    }
+
+    private static double confidenceOf(List<ClassificationResult> results, String label) {
+        return results.stream().filter(result -> label.equals(result.label())).mapToDouble(ClassificationResult::confidence).findFirst().orElse(-1);
     }
 
     @Test

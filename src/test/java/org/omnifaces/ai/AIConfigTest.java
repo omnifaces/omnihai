@@ -746,6 +746,11 @@ class AIConfigTest {
         }
 
         @Override
+        public CompletableFuture<List<ClassificationResult>> classifyAllAsync(String text, List<String> labels) throws AIException {
+            return null;
+        }
+
+        @Override
         public CompletableFuture<String> analyzeImageAsync(byte[] image, String prompt) throws AIException {
             return null;
         }

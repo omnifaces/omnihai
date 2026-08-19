@@ -153,12 +153,20 @@ public interface AITextHandler extends Serializable {
     /**
      * Builds the system prompt for {@link AIService#classify(String, List)} and {@link AIService#classifyAsync(String, List)}.
      *
-     * @implNote The default implementation throws UnsupportedOperationException.
      * @param labels The labels to pick from, in the order they are offered to the AI.
      * @return The system prompt.
      * @since 1.7
      */
     String buildClassifyPrompt(List<String> labels);
+
+    /**
+     * Builds the system prompt for {@link AIService#classifyAll(String, List)} and {@link AIService#classifyAllAsync(String, List)}.
+     *
+     * @param labels The labels to score, in the order they are offered to the AI.
+     * @return The system prompt.
+     * @since 1.7
+     */
+    String buildClassifyAllPrompt(List<String> labels);
 
     /**
      * Builds the system prompt for {@link AIService#moderateContent(String, ModerationOptions)} and

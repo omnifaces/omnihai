@@ -391,6 +391,26 @@ public abstract class InterceptingAIServiceWrapper extends AIServiceWrapper {
         return interceptAsync(service -> service.classifyAsync(text, labels));
     }
 
+    @Override
+    public List<ClassificationResult> classifyAll(String text, List<String> labels) throws AIException {
+        return intercept(service -> service.classifyAll(text, labels));
+    }
+
+    @Override
+    public List<ClassificationResult> classifyAll(String text, String... labels) throws AIException {
+        return intercept(service -> service.classifyAll(text, labels));
+    }
+
+    @Override
+    public CompletableFuture<List<ClassificationResult>> classifyAllAsync(String text, List<String> labels) throws AIException {
+        return interceptAsync(service -> service.classifyAllAsync(text, labels));
+    }
+
+    @Override
+    public CompletableFuture<List<ClassificationResult>> classifyAllAsync(String text, String... labels) throws AIException {
+        return interceptAsync(service -> service.classifyAllAsync(text, labels));
+    }
+
     // Web Search Capabilities ----------------------------------------------------------------------------------------
 
     @Override

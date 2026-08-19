@@ -946,6 +946,75 @@ public interface AIService extends Serializable {
         return classifyAsync(text, List.of(labels));
     }
 
+    /**
+     * Scores how well each of the given labels applies to the given text.
+     * <p>
+     * Useful for tagging a text with several labels at once, for ranking them, or for finding out that none of them fits.
+     *
+     * @implNote The default implementation delegates to {@link #classifyAllAsync(String, List)}.
+     * @param text The text to classify.
+     * @param labels The labels to score, at least two.
+     * @return One result per label, the best fitting one first, never {@code null}.
+     * @throws IllegalArgumentException if text is blank, or if fewer than two distinct non-blank labels are given.
+     * @throws UnsupportedOperationException if structured output is not supported by the implementation.
+     * @throws AIException if classification fails.
+     * @since 1.7
+     */
+    default List<ClassificationResult> classifyAll(String text, List<String> labels) throws AIException {
+        return joinAsync(classifyAllAsync(text, labels));
+    }
+
+    /**
+     * Scores how well each of the given labels applies to the given text.
+     *
+     * @implNote The default implementation delegates to {@link #classifyAll(String, List)}.
+     * @param text The text to classify.
+     * @param labels The labels to score, at least two.
+     * @return One result per label, the best fitting one first, never {@code null}.
+     * @throws IllegalArgumentException if text is blank, or if fewer than two distinct non-blank labels are given.
+     * @throws UnsupportedOperationException if structured output is not supported by the implementation.
+     * @throws AIException if classification fails.
+     * @since 1.7
+     */
+    default List<ClassificationResult> classifyAll(String text, String... labels) throws AIException {
+        return classifyAll(text, List.of(labels));
+    }
+
+    /**
+     * Asynchronously scores how well each of the given labels applies to the given text.
+     * <p>
+     * This is the core method for multi-label classification. Every label is scored on its own merit, so several of them may score high, or none of them, and
+     * the scores are not divided among them. This is what tells it apart from {@link #classifyAsync(String, List)}, which picks exactly one label and states
+     * how sure it is of that pick.
+     * <p>
+     * A label which the AI leaves out scores {@code 0.0} and a label which it invents is left out, so the result always holds exactly the given labels.
+     *
+     * @param text The text to classify.
+     * @param labels The labels to score, at least two.
+     * @return A CompletableFuture that will contain one result per label, the best fitting one first, never {@code null}.
+     * @throws IllegalArgumentException if text is blank, or if fewer than two distinct non-blank labels are given.
+     * @throws UnsupportedOperationException if structured output is not supported by the implementation.
+     * @throws AIException if classification fails.
+     * @since 1.7
+     */
+    CompletableFuture<List<ClassificationResult>> classifyAllAsync(String text, List<String> labels) throws AIException;
+
+    /**
+     * Asynchronously scores how well each of the given labels applies to the given text.
+     *
+     * @implNote The default implementation delegates to {@link #classifyAllAsync(String, List)}.
+     * @param text The text to classify.
+     * @param labels The labels to score, at least two.
+     * @return A CompletableFuture that will contain one result per label, the best fitting one first, never {@code null}.
+     * @throws IllegalArgumentException if text is blank, or if fewer than two distinct non-blank labels are given.
+     * @throws UnsupportedOperationException if structured output is not supported by the implementation.
+     * @throws AIException if classification fails.
+     * @since 1.7
+     */
+    default CompletableFuture<List<ClassificationResult>> classifyAllAsync(String text, String... labels) throws AIException {
+        return classifyAllAsync(text, List.of(labels));
+    }
+
     // Text Moderation Capabilities -----------------------------------------------------------------------------------
 
     /**

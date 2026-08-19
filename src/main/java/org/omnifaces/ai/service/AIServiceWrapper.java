@@ -268,6 +268,26 @@ public abstract class AIServiceWrapper implements AIService {
     }
 
     @Override
+    public List<ClassificationResult> classifyAll(String text, List<String> labels) throws AIException {
+        return getWrapped().classifyAll(text, labels);
+    }
+
+    @Override
+    public List<ClassificationResult> classifyAll(String text, String... labels) throws AIException {
+        return getWrapped().classifyAll(text, labels);
+    }
+
+    @Override
+    public CompletableFuture<List<ClassificationResult>> classifyAllAsync(String text, List<String> labels) throws AIException {
+        return getWrapped().classifyAllAsync(text, labels);
+    }
+
+    @Override
+    public CompletableFuture<List<ClassificationResult>> classifyAllAsync(String text, String... labels) throws AIException {
+        return getWrapped().classifyAllAsync(text, labels);
+    }
+
+    @Override
     public String webSearch(String query) throws AIException {
         return getWrapped().webSearch(query);
     }
