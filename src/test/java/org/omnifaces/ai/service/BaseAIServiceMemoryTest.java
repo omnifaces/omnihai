@@ -24,7 +24,6 @@ import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
 
-import jakarta.json.Json;
 import jakarta.json.JsonObject;
 
 import org.junit.jupiter.api.Test;
@@ -212,8 +211,8 @@ class BaseAIServiceMemoryTest {
         }
 
         @Override
-        CompletableFuture<JsonObject> asyncUpload(String path, Attachment attachment) {
-            return CompletableFuture.completedFuture(Json.createObjectBuilder().add("id", "file-123").build());
+        protected CompletableFuture<String> asyncUploadAndParseFileIdResponse(String path, Attachment attachment) {
+            return CompletableFuture.completedFuture("file-123");
         }
 
         @Override

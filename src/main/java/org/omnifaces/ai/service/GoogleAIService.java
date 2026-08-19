@@ -68,7 +68,6 @@ public class GoogleAIService extends BaseAIService {
     private static final String FILE_STATE_UNSPECIFIED = "STATE_UNSPECIFIED";
     private static final String FILE_STATE_FAILED = "FAILED";
     private static final String FILE_ERROR_MESSAGE_PATH = "error.message";
-    private static final String UPLOADED_FILE_PROPERTY = "file";
 
     private static final Duration INITIAL_UPLOADED_FILE_POLL_INTERVAL = Duration.ofSeconds(2);
     private static final Duration MAX_UPLOADED_FILE_POLL_INTERVAL = Duration.ofSeconds(15);
@@ -167,7 +166,7 @@ public class GoogleAIService extends BaseAIService {
      * file which is already active on the first poll does not block at all.
      */
     @Override
-    protected void awaitUploadedFile(Attachment attachment, String fileId, JsonObject responseJson) throws AIException {
+    protected void awaitUploadedFile(Attachment attachment, String fileId) throws AIException {
         var index = fileId.lastIndexOf(getFilesPath() + "/");
 
         if (index < 0) {
@@ -175,16 +174,11 @@ public class GoogleAIService extends BaseAIService {
         }
 
         var filePath = fileId.substring(index);
-
-        if (!isStillProcessing(filePath, getUploadedFile(responseJson))) {
-            return; // The upload response already states the file is ready, which spares a poll altogether.
-        }
-
         var maxProcessingTime = maxProcessingTime(attachment);
         var startNanos = System.nanoTime();
         var pollInterval = INITIAL_UPLOADED_FILE_POLL_INTERVAL;
 
-        do {
+        while (isStillProcessing(filePath, pollUploadedFile(filePath))) {
             if (System.nanoTime() - startNanos >= maxProcessingTime.toNanos()) {
                 throw new AIException("Uploaded file " + filePath + " is still being processed after " + maxProcessingTime.toSeconds() + " seconds");
             }
@@ -192,17 +186,6 @@ public class GoogleAIService extends BaseAIService {
             sleep(pollInterval);
             pollInterval = nextPollInterval(pollInterval);
         }
-        while (isStillProcessing(filePath, pollUploadedFile(filePath)));
-    }
-
-    /**
-     * Returns the uploaded file resource which the upload response wraps, or {@code null} when it does not carry one, in which case its state is unknown.
-     *
-     * @param responseJson The upload response JSON.
-     * @return The uploaded file resource, or {@code null} if absent.
-     */
-    private static JsonObject getUploadedFile(JsonObject responseJson) {
-        return responseJson.containsKey(UPLOADED_FILE_PROPERTY) ? responseJson.getJsonObject(UPLOADED_FILE_PROPERTY) : null;
     }
 
     /**

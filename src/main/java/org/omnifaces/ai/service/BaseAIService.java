@@ -316,9 +316,8 @@ public abstract class BaseAIService implements AIService {
     @Override
     public String upload(Attachment attachment, ChatOptions options) throws AIException {
         try {
-            var responseJson = asyncUpload(getFilesPath(), attachment).join();
-            var fileId = textHandler.parseFileResponse(responseJson);
-            awaitUploadedFile(attachment, fileId, responseJson);
+            var fileId = asyncUploadAndParseFileIdResponse(getFilesPath(), attachment).join();
+            awaitUploadedFile(attachment, fileId);
 
             if (getUploadedFileJsonStructure() != null && staleUploadedFilesCleanupRunning.compareAndSet(false, true)) {
                 ExecutorServiceHelper.runAsync(() -> {
@@ -343,34 +342,16 @@ public abstract class BaseAIService implements AIService {
     }
 
     /**
-     * Upload file attachment to API at given path along with request headers obtained from {@link #getRequestHeaders()}. The caller parses the file ID from the
-     * returned response with help of {@link AITextHandler#parseFileResponse(JsonObject)}, and reads from it whatever else it needs, such as the state which
-     * {@link #awaitUploadedFile(Attachment, String, JsonObject)} acts on.
-     * <p>
-     * This is package private on purpose: it is the seam which {@link #upload(Attachment, ChatOptions)} is built on rather than an extension point, and
-     * {@link #asyncUploadAndParseFileIdResponse(String, Attachment)} is the one to call for just the file ID.
-     *
-     * @param path API path, relative to {@link #endpoint}.
-     * @param attachment The file attachment to upload.
-     * @return A CompletableFuture containing the upload response JSON.
-     * @throws AIException if anything fails during the process.
-     */
-    CompletableFuture<JsonObject> asyncUpload(String path, Attachment attachment) throws AIException {
-        return HTTP_CLIENT.upload(this, path, attachment);
-    }
-
-    /**
      * Awaits until the file uploaded by {@link #upload(Attachment, ChatOptions)} is ready to be referenced in a chat request. Providers which process an
      * uploaded file asynchronously, such as when extracting frames from a video, reject a chat request referencing a file which is still being processed.
      *
      * @implNote The default implementation does nothing, as most providers accept the file ID right away.
      * @param attachment The uploaded file attachment, whose {@link Attachment#size() size} indicates how long processing may reasonably take.
      * @param fileId The file ID as returned by the upload request.
-     * @param responseJson The upload response JSON, which may already state whether the file is ready.
      * @throws AIException if the file cannot be processed by the AI provider.
      * @since 1.7
      */
-    protected void awaitUploadedFile(Attachment attachment, String fileId, JsonObject responseJson) throws AIException {
+    protected void awaitUploadedFile(Attachment attachment, String fileId) throws AIException {
         // NOOP.
     }
 
@@ -771,11 +752,10 @@ public abstract class BaseAIService implements AIService {
      * @param attachment The file attachment to upload.
      * @return A CompletableFuture containing the file ID from the upload response.
      * @throws AIException if anything fails during the process.
-     * @implNote {@link #upload(Attachment, ChatOptions)} obtains the whole response instead, as {@link #awaitUploadedFile(Attachment, String, JsonObject)}
-     * needs the state which it states, so overriding this one does not intercept an upload; override {@link #asyncUpload(String, Attachment)} for that.
+     * @implNote This is what {@link #upload(Attachment, ChatOptions)} uploads with, so overriding it intercepts every file attachment.
      */
     protected CompletableFuture<String> asyncUploadAndParseFileIdResponse(String path, Attachment attachment) throws AIException {
-        return asyncUpload(path, attachment).thenApply(textHandler::parseFileResponse);
+        return HTTP_CLIENT.upload(this, path, attachment).thenApply(textHandler::parseFileResponse);
     }
 
     /**
