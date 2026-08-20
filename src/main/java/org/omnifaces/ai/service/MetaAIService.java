@@ -15,6 +15,7 @@ package org.omnifaces.ai.service;
 import java.util.Set;
 
 import org.omnifaces.ai.AIConfig;
+import org.omnifaces.ai.AIModality;
 import org.omnifaces.ai.AIProvider;
 import org.omnifaces.ai.AIService;
 
@@ -60,12 +61,59 @@ public class MetaAIService extends OpenAIService {
     }
 
     @Override
+    public boolean supportsModality(AIModality modality) {
+        return switch (modality) {
+            case IMAGE_ANALYSIS, VIDEO_ANALYSIS -> true;
+            default -> false;
+        };
+    }
+
+    @Override
+    public boolean supportsFileAttachments() {
+        return true; // Not version-bound, support is API-bound.
+    }
+
+    @Override
+    public boolean supportsStructuredOutput() {
+        return true; // Not version-bound, support is API-bound.
+    }
+
+    @Override
+    public boolean supportsReasoningEffort() {
+        return true; // Not version-bound, support is API-bound.
+    }
+
+    @Override
     public boolean supportsOpenAIResponsesApi() {
         return true;
     }
 
     @Override
     public boolean supportsOpenAIModerationCapability(Set<String> categories) {
+        return false;
+    }
+
+    /**
+     * Meta AI accepts {@code minimal} as lowest reasoning effort and rejects {@code none}.
+     */
+    @Override
+    public boolean supportsOpenAIReasoningEffortNone() {
+        return false;
+    }
+
+    /**
+     * Meta AI accepts only {@code auto} as tool choice.
+     */
+    @Override
+    public boolean supportsOpenAIToolChoiceRequired() {
+        return false;
+    }
+
+    /**
+     * Meta AI takes the {@code user_location} of its web search tool without applying it to the search.
+     */
+    @Override
+    public boolean supportsOpenAIWebSearchUserLocation() {
         return false;
     }
 

@@ -13,19 +13,29 @@
 package org.omnifaces.ai.modality;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.omnifaces.ai.AIProvider.META;
 import static org.omnifaces.ai.AIProvider.OPENAI;
 import static org.omnifaces.ai.helper.JsonHelper.parseJson;
 
 import java.util.Locale;
 
 import jakarta.json.Json;
+import jakarta.json.JsonObject;
 
 import org.junit.jupiter.api.Test;
 import org.omnifaces.ai.AIConfig;
+import org.omnifaces.ai.AIProvider;
 import org.omnifaces.ai.AIService;
+import org.omnifaces.ai.model.ChatInput;
+import org.omnifaces.ai.model.ChatOptions;
+import org.omnifaces.ai.model.ChatOptions.Location;
 import org.omnifaces.ai.model.ChatOptions.ReasoningEffort;
 
 class OpenAITextHandlerTest {
+
+    private static final Location MIAMI = new Location("US", null, "Miami");
 
     private final OpenAITextHandler handler = new OpenAITextHandler();
 
@@ -60,6 +70,72 @@ class OpenAITextHandlerTest {
         var responseJson = parseJson("{\"choices\":[{\"message\":{\"content\":\"The completions answer\"}}]}");
 
         assertEquals("The completions answer", handler.parseChatResponse(responseJson));
+    }
+
+    // =================================================================================================================
+    // Reasoning effort
+    // =================================================================================================================
+
+    @Test
+    void getEffectiveReasoningEffort_modelRejectingNone_fallsBackToTheLowestItAccepts() {
+        assertEquals(ReasoningEffort.LOW, effectiveReasoningEffort(newService(META, "muse-spark-1.2"), ReasoningEffort.NONE));
+        assertEquals(ReasoningEffort.LOW, effectiveReasoningEffort(newService(OPENAI, "gpt-5"), ReasoningEffort.NONE));
+    }
+
+    @Test
+    void getEffectiveReasoningEffort_modelRejectingNone_appliesTheProviderDefaultOnAuto() {
+        assertEquals(ReasoningEffort.MEDIUM, effectiveReasoningEffort(newService(META, "muse-spark-1.2"), ReasoningEffort.AUTO));
+        assertEquals(ReasoningEffort.MEDIUM, effectiveReasoningEffort(newService(OPENAI, "gpt-5"), ReasoningEffort.AUTO));
+    }
+
+    @Test
+    void getEffectiveReasoningEffort_modelAcceptingNone_appliesItAsRequested() {
+        assertEquals(ReasoningEffort.NONE, effectiveReasoningEffort(newService(), ReasoningEffort.NONE));
+    }
+
+    // =================================================================================================================
+    // Tool choice
+    // =================================================================================================================
+
+    @Test
+    void buildChatPayloadToolsWithResponsesApi_modelRejectingRequired_leavesTheToolChoiceToTheModel() {
+        assertFalse(webSearchPayload(newService(META, "muse-spark-1.2")).containsKey("tool_choice"));
+    }
+
+    @Test
+    void buildChatPayloadToolsWithResponsesApi_modelAcceptingRequired_forcesTheSearch() {
+        assertEquals("required", webSearchPayload(newService()).getString("tool_choice"));
+    }
+
+    @Test
+    void buildChatPayloadToolsWithResponsesApi_always_offersTheWebSearchTool() {
+        assertTrue(webSearchPayload(newService(META, "muse-spark-1.2")).containsKey("tools"));
+        assertTrue(webSearchPayload(newService()).containsKey("tools"));
+    }
+
+    // =================================================================================================================
+    // Web search location
+    // =================================================================================================================
+
+    @Test
+    void buildChatPayload_modelIgnoringUserLocation_repeatsTheLocationInTheInstructions() {
+        var payload = webSearchPayload(newService(META, "muse-spark-1.2"), MIAMI);
+
+        assertEquals("Search within Miami, US", payload.getString("instructions"));
+    }
+
+    @Test
+    void buildChatPayload_modelHonoringUserLocation_leavesTheInstructionsAlone() {
+        var payload = webSearchPayload(newService(), MIAMI);
+
+        assertFalse(payload.containsKey("instructions"));
+    }
+
+    @Test
+    void buildChatPayload_globalLocation_leavesTheInstructionsAlone() {
+        var payload = webSearchPayload(newService(META, "muse-spark-1.2"), Location.GLOBAL);
+
+        assertFalse(payload.containsKey("instructions"));
     }
 
     // =================================================================================================================
@@ -102,8 +178,28 @@ class OpenAITextHandlerTest {
         }
     }
 
+    private ReasoningEffort effectiveReasoningEffort(AIService service, ReasoningEffort requested) {
+        return handler.getEffectiveReasoningEffort(service, ChatOptions.newBuilder().reasoningEffort(requested).build());
+    }
+
+    private JsonObject webSearchPayload(AIService service) {
+        var payload = Json.createObjectBuilder();
+        handler.buildChatPayloadToolsWithResponsesApi(service, payload, ChatOptions.newBuilder().webSearch().build());
+        return payload.build();
+    }
+
+    private JsonObject webSearchPayload(AIService service, Location location) {
+        return handler.buildChatPayload(
+            service, ChatInput.newBuilder().message("What is the current weather?").build(), ChatOptions.newBuilder().webSearch(location).build(), false
+        );
+    }
+
     private static AIService newService() {
-        return AIConfig.of(OPENAI, "test-api-key").withModel("gpt-5.6-terra").createService();
+        return newService(OPENAI, "gpt-5.6-terra");
+    }
+
+    private static AIService newService(AIProvider provider, String model) {
+        return AIConfig.of(provider, "test-api-key").withModel(model).createService();
     }
 
 }

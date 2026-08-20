@@ -13,6 +13,7 @@
 package org.omnifaces.ai.service;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.omnifaces.ai.AIModality.IMAGE_GENERATION;
 
 import java.io.ByteArrayInputStream;
 import java.nio.file.Files;
@@ -22,6 +23,7 @@ import javax.imageio.ImageIO;
 
 import org.junit.jupiter.api.Test;
 import org.omnifaces.ai.mime.MimeType;
+import org.opentest4j.TestAbortedException;
 
 /**
  * Base class for IT on image-generator-related methods of AI service.
@@ -32,6 +34,10 @@ abstract class BaseAIServiceImageGeneratorIT extends AIServiceIT {
 
     @Test
     void generateImage() throws Exception {
+        if (!service.supportsModality(IMAGE_GENERATION)) {
+            throw new TestAbortedException("Not supported by " + getProvider());
+        }
+
         var response = service.generateImage("Willemstad, Curacao");
         assertTrue(response.length > 0, "Image response should not be empty");
         var mimeType = MimeType.guessMimeType(response);

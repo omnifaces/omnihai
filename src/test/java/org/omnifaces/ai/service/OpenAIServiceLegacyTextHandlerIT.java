@@ -38,4 +38,9 @@ class OpenAIServiceLegacyTextHandlerIT extends BaseAIServiceTextHandlerIT {
         return "gpt-3.5-turbo-0125";
     }
 
+    @Override
+    protected boolean supportsReasoningTokens() {
+        return true;
+    }
+
 }

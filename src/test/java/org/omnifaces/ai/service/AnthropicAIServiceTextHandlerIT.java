@@ -30,4 +30,9 @@ class AnthropicAIServiceTextHandlerIT extends BaseAIServiceTextHandlerIT {
         return API_KEY_ENV_NAME;
     }
 
+    @Override
+    protected boolean supportsFilesApi() {
+        return true;
+    }
+
 }

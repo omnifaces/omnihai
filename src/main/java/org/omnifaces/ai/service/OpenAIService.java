@@ -71,6 +71,7 @@ public class OpenAIService extends BaseAIService {
 
     private static final AIModelVersion GPT_4 = AIModelVersion.of("gpt", 4);
     private static final AIModelVersion GPT_5 = AIModelVersion.of("gpt", 5);
+    private static final AIModelVersion GPT_5_1 = AIModelVersion.of("gpt", 5, 1);
     private static final AIModelVersion DALL_E = AIModelVersion.of("dall-e");
 
     /**
@@ -141,6 +142,44 @@ public class OpenAIService extends BaseAIService {
      */
     public boolean supportsOpenAIFilesApi() {
         return supportsOpenAIResponsesApi();
+    }
+
+    /**
+     * Returns whether this OpenAI based service implementation supports {@code tool_choice=required}, forcing the model to invoke a tool rather than leaving
+     * the choice to it. When {@code false}, the field is omitted and the model decides by itself whether to invoke a tool.
+     *
+     * @implNote The default implementation returns true.
+     * @return Whether this OpenAI based service implementation supports {@code tool_choice=required}.
+     * @since 1.7
+     */
+    public boolean supportsOpenAIToolChoiceRequired() {
+        return true;
+    }
+
+    /**
+     * Returns whether this OpenAI based service implementation honors the {@code user_location} of the web search tool. When {@code false}, the location is
+     * appended to the system prompt instead.
+     *
+     * @implNote The default implementation returns true.
+     * @return Whether this OpenAI based service implementation honors the {@code user_location} of the web search tool.
+     * @since 1.7
+     */
+    public boolean supportsOpenAIWebSearchUserLocation() {
+        return true;
+    }
+
+    /**
+     * Returns whether this OpenAI based service implementation accepts {@code none} as reasoning effort, actively disabling reasoning. When {@code false}, a
+     * request for {@link org.omnifaces.ai.model.ChatOptions.ReasoningEffort#NONE} falls back to the lowest effort the model does accept,
+     * {@link org.omnifaces.ai.model.ChatOptions.ReasoningEffort#LOW}, and {@link org.omnifaces.ai.model.ChatOptions.ReasoningEffort#AUTO} falls back to
+     * {@link org.omnifaces.ai.model.ChatOptions.ReasoningEffort#MEDIUM}.
+     *
+     * @implNote The default implementation returns true if {@link #getModelVersion()} is at least {@code GPT-5.1}.
+     * @return Whether this OpenAI based service implementation accepts {@code none} as reasoning effort.
+     * @since 1.7
+     */
+    public boolean supportsOpenAIReasoningEffortNone() {
+        return getModelVersion().gte(GPT_5_1);
     }
 
     @Override

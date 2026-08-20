@@ -30,4 +30,9 @@ class OpenRouterAIServiceTextHandlerIT extends BaseAIServiceTextHandlerIT {
         return API_KEY_ENV_NAME;
     }
 
+    @Override
+    protected boolean supportsReasoningTokens() {
+        return true;
+    }
+
 }

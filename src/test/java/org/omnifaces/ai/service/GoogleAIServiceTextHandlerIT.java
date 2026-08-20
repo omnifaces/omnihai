@@ -30,4 +30,14 @@ class GoogleAIServiceTextHandlerIT extends BaseAIServiceTextHandlerIT {
         return API_KEY_ENV_NAME;
     }
 
+    @Override
+    protected boolean supportsReasoningTokens() {
+        return true;
+    }
+
+    @Override
+    protected boolean supportsFilesApi() {
+        return true;
+    }
+
 }

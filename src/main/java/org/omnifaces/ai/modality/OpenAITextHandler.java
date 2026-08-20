@@ -71,13 +71,14 @@ public class OpenAITextHandler extends DefaultAITextHandler {
     @Override
     public JsonObject buildChatPayload(AIService service, ChatInput input, ChatOptions options, boolean streaming) {
         var supportsResponsesApi = supportsResponsesApi(service);
+        var systemPromptOptions = supportsWebSearchUserLocation(service) ? options : appendWebSearchLocationToPromptIfNecessary(options);
         var messages = Json.createArrayBuilder();
         var payload = Json.createObjectBuilder()
             .add("model", service.getModelName());
 
         if (supportsResponsesApi) {
             buildChatPayloadToolsWithResponsesApi(service, payload, options);
-            buildChatPayloadSystemPromptWithResponsesApi(service, payload, options);
+            buildChatPayloadSystemPromptWithResponsesApi(service, payload, systemPromptOptions);
             buildChatPayloadHistoryMessagesWithResponsesApi(service, messages, input);
             buildChatPayloadUserContentWithResponsesApi(service, messages, input, options);
             payload.add("input", messages);
@@ -88,7 +89,7 @@ public class OpenAITextHandler extends DefaultAITextHandler {
                 checkSupportsWebSearch(service);
             }
 
-            buildChatPayloadSystemPromptWithChatCompletionsApi(service, messages, options);
+            buildChatPayloadSystemPromptWithChatCompletionsApi(service, messages, systemPromptOptions);
             buildChatPayloadHistoryMessagesWithChatCompletionsApi(service, messages, input);
             buildChatPayloadUserContentWithChatCompletionsApi(service, messages, input, options);
             payload.add("messages", messages);
@@ -116,9 +117,11 @@ public class OpenAITextHandler extends DefaultAITextHandler {
                 webSearchTool.add("user_location", userLocation);
             }
 
-            payload
-                .add("tool_choice", "required")
-                .add("tools", Json.createArrayBuilder().add(webSearchTool.build()));
+            if (supportsToolChoiceRequired(service)) {
+                payload.add("tool_choice", "required");
+            }
+
+            payload.add("tools", Json.createArrayBuilder().add(webSearchTool.build()));
         }
     }
 
@@ -450,18 +453,19 @@ public class OpenAITextHandler extends DefaultAITextHandler {
 
         var effort = options.getReasoningEffort();
 
-        if (service.getModelVersion().lt(GPT_5_1) && (effort == ReasoningEffort.AUTO || effort == ReasoningEffort.NONE)) {
-            return ReasoningEffort.MEDIUM;
-        }
-
-        if (
-            effort == ReasoningEffort.XHIGH
-                && !(service.getModelVersion().gte(GPT_5_1) && service.getModelName().toLowerCase(Locale.ROOT).contains("codex-max"))
-        ) {
+        if (effort == ReasoningEffort.XHIGH && !supportsReasoningEffortXhigh(service)) {
             return ReasoningEffort.HIGH;
         }
 
-        return effort == ReasoningEffort.AUTO ? ReasoningEffort.NONE : effort;
+        if (supportsReasoningEffortNone(service)) {
+            return effort == ReasoningEffort.AUTO ? ReasoningEffort.NONE : effort;
+        }
+
+        return switch (effort) {
+            case AUTO -> ReasoningEffort.MEDIUM;
+            case NONE -> ReasoningEffort.LOW;
+            default -> effort;
+        };
     }
 
     /**
@@ -493,7 +497,7 @@ public class OpenAITextHandler extends DefaultAITextHandler {
      * @return File upload metadata.
      */
     protected Map<String, String> getFileUploadMetadata(AIService service, Attachment file) {
-        var purpose = service.getModelVersion().gte(GPT_5) ? "user_data" : "assistants";
+        var purpose = service.getModelVersion().lt(GPT_5) ? "assistants" : "user_data";
         return Map.of("purpose", purpose, "expires_after[anchor]", "created_at", "expires_after[seconds]", String.valueOf(TimeUnit.DAYS.toSeconds(2)));
     }
 
@@ -628,6 +632,23 @@ public class OpenAITextHandler extends DefaultAITextHandler {
 
     private static boolean supportsFilesApi(AIService service) {
         return service instanceof OpenAIService openai && openai.supportsOpenAIFilesApi();
+    }
+
+    private static boolean supportsToolChoiceRequired(AIService service) {
+        return service instanceof OpenAIService openai && openai.supportsOpenAIToolChoiceRequired();
+    }
+
+    private static boolean supportsWebSearchUserLocation(AIService service) {
+        return service instanceof OpenAIService openai && openai.supportsOpenAIWebSearchUserLocation();
+    }
+
+    private static boolean supportsReasoningEffortNone(AIService service) {
+        return service instanceof OpenAIService openai && openai.supportsOpenAIReasoningEffortNone();
+    }
+
+    private static boolean supportsReasoningEffortXhigh(AIService service) {
+        return service instanceof OpenAIService && service.getModelVersion().gte(GPT_5_1)
+            && service.getModelName().toLowerCase(Locale.ROOT).contains("codex-max");
     }
 
     /**

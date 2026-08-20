@@ -19,15 +19,10 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
-import static org.omnifaces.ai.AIProvider.GOOGLE;
-import static org.omnifaces.ai.AIProvider.OPENAI;
-import static org.omnifaces.ai.AIProvider.OPENROUTER;
-import static org.omnifaces.ai.AIProvider.XAI;
 import static org.omnifaces.ai.model.ChatOptions.DETERMINISTIC;
 
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.Set;
 import java.util.regex.Pattern;
 
 import org.junit.jupiter.api.Test;
@@ -45,6 +40,24 @@ import org.opentest4j.TestAbortedException;
  * Base class for IT on text-analyzer-related methods of AI service.
  */
 abstract class BaseAIServiceTextHandlerIT extends AIServiceIT {
+
+    /**
+     * Whether the AI provider reports the reasoning tokens as part of the chat usage. A provider which does not report them leaves them at {@code -1}.
+     *
+     * @return Whether the AI provider reports the reasoning tokens.
+     */
+    protected boolean supportsReasoningTokens() {
+        return false;
+    }
+
+    /**
+     * Whether the AI provider uploads an attached file to its files API and references it by ID, rather than inlining it in the request payload.
+     *
+     * @return Whether the AI provider uploads an attached file to its files API.
+     */
+    protected boolean supportsFilesApi() {
+        return false;
+    }
 
     @Test
     void chat() {
@@ -141,7 +154,7 @@ abstract class BaseAIServiceTextHandlerIT extends AIServiceIT {
             () -> assertTrue(usage.totalTokens() == usage.inputTokens() + usage.outputTokens(), "totalTokens = inputTokens + outputTokens")
         );
 
-        if (Set.of(OPENAI, GOOGLE, XAI, OPENROUTER).contains(getProvider())) {
+        if (supportsReasoningTokens()) {
             assertTrue(usage.reasoningTokens() > -1, "reasoningTokens must be set: " + usage.reasoningTokens());
             assertTrue(usage.reasoningTokens() <= usage.outputTokens(), "reasoningTokens <= outputTokens");
         }
@@ -182,12 +195,11 @@ abstract class BaseAIServiceTextHandlerIT extends AIServiceIT {
         var response1 = service.chat(input, options);
 
         if (options.getHistory().get(0).uploadedFiles().isEmpty()) {
-            switch (getProvider()) {
-                case OPENAI, ANTHROPIC, GOOGLE, MISTRAL, XAI :
-                    fail(getProvider() + " is supposed to support files API!");
-                default :
-                    throw new TestAbortedException("Not supported by " + getProvider());
+            if (supportsFilesApi()) {
+                fail(getProvider() + " is supposed to support files API!");
             }
+
+            throw new TestAbortedException("Not supported by " + getProvider());
         }
 
         log(response1);

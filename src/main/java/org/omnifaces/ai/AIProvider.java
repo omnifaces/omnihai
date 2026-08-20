@@ -171,7 +171,7 @@ public enum AIProvider {
      * @see OpenAITextHandler
      * @see OpenAIImageHandler
      * @see DefaultAIAudioHandler
-     * @see <a href="https://developer.meta.com/ai/products/meta-model-api/">Manage Meta AI API Keys</a>
+     * @see <a href="https://dev.meta.ai/api-keys/">Manage Meta AI API Keys</a>
      * @see <a href="https://dev.meta.ai/docs/getting-started/overview/">Available Meta AI Models</a>
      */
     META(
