@@ -20,7 +20,7 @@ import jakarta.json.JsonObject;
 import org.omnifaces.ai.AIService;
 import org.omnifaces.ai.exception.AIResponseException;
 import org.omnifaces.ai.model.GenerateVideoOptions;
-import org.omnifaces.ai.model.GeneratedVideo;
+import org.omnifaces.ai.model.VideoGeneration;
 import org.omnifaces.ai.service.OpenRouterAIService;
 
 /**
@@ -70,20 +70,20 @@ public class OpenRouterAIVideoHandler extends DefaultAIVideoHandler {
     }
 
     @Override
-    public GeneratedVideo.Job parseSubmittedVideo(JsonObject responseJson) throws AIResponseException {
+    public VideoGeneration.Job parseSubmittedVideo(JsonObject responseJson) throws AIResponseException {
         var id = findFirstNonBlankByPath(responseJson, "id").orElseThrow(() -> new AIResponseException("No video generation job id found", responseJson));
         var status = findFirstNonBlankByPath(responseJson, "status")
             .orElseThrow(() -> new AIResponseException("No video generation job status found", responseJson));
-        return new GeneratedVideo.Job(
+        return new VideoGeneration.Job(
             id, parseVideoStatus(status, responseJson), findFirstNonBlankByPath(responseJson, "polling_url").orElse(null), null, null
         );
     }
 
     @Override
-    public GeneratedVideo.Job parseGeneratedVideo(JsonObject responseJson, String jobId) throws AIResponseException {
+    public VideoGeneration.Job parseVideoGeneration(JsonObject responseJson, String jobId) throws AIResponseException {
         var status = findFirstNonBlankByPath(responseJson, "status")
             .orElseThrow(() -> new AIResponseException("No video generation job status found", responseJson));
-        return new GeneratedVideo.Job(
+        return new VideoGeneration.Job(
             jobId, parseVideoStatus(status, responseJson), null, findFirstNonBlankByPath(responseJson, "unsigned_urls[0]").orElse(null),
             findFirstNonBlankByPath(responseJson, "error.message").orElse(null)
         );

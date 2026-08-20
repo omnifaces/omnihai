@@ -13,9 +13,9 @@
 package org.omnifaces.ai.modality;
 
 import static org.omnifaces.ai.helper.JsonHelper.findFirstNonBlankByPath;
-import static org.omnifaces.ai.model.GeneratedVideo.Status.COMPLETED;
-import static org.omnifaces.ai.model.GeneratedVideo.Status.FAILED;
-import static org.omnifaces.ai.model.GeneratedVideo.Status.RUNNING;
+import static org.omnifaces.ai.model.VideoGeneration.Status.COMPLETED;
+import static org.omnifaces.ai.model.VideoGeneration.Status.FAILED;
+import static org.omnifaces.ai.model.VideoGeneration.Status.RUNNING;
 
 import jakarta.json.Json;
 import jakarta.json.JsonObject;
@@ -23,7 +23,7 @@ import jakarta.json.JsonObject;
 import org.omnifaces.ai.AIService;
 import org.omnifaces.ai.exception.AIResponseException;
 import org.omnifaces.ai.model.GenerateVideoOptions;
-import org.omnifaces.ai.model.GeneratedVideo;
+import org.omnifaces.ai.model.VideoGeneration;
 import org.omnifaces.ai.service.GoogleAIService;
 
 /**
@@ -71,27 +71,27 @@ public class GoogleAIVideoHandler extends DefaultAIVideoHandler {
     }
 
     @Override
-    public GeneratedVideo.Job parseSubmittedVideo(JsonObject responseJson) throws AIResponseException {
+    public VideoGeneration.Job parseSubmittedVideo(JsonObject responseJson) throws AIResponseException {
         var name = findFirstNonBlankByPath(responseJson, "name")
             .orElseThrow(() -> new AIResponseException("No video generation operation name found", responseJson));
-        return GeneratedVideo.Job.pending(name, name);
+        return VideoGeneration.Job.pending(name, name);
     }
 
     @Override
-    public GeneratedVideo.Job parseGeneratedVideo(JsonObject responseJson, String jobId) throws AIResponseException {
+    public VideoGeneration.Job parseVideoGeneration(JsonObject responseJson, String jobId) throws AIResponseException {
         var failureReason = findFirstNonBlankByPath(responseJson, "error.message").orElse(null);
 
         if (failureReason != null) {
-            return new GeneratedVideo.Job(jobId, FAILED, jobId, null, failureReason);
+            return new VideoGeneration.Job(jobId, FAILED, jobId, null, failureReason);
         }
 
         if (!responseJson.getBoolean("done", false)) {
-            return new GeneratedVideo.Job(jobId, RUNNING, jobId, null, null);
+            return new VideoGeneration.Job(jobId, RUNNING, jobId, null, null);
         }
 
         var uri = findFirstNonBlankByPath(responseJson, VIDEO_URI_PATH)
             .orElseThrow(() -> new AIResponseException("No generated video URI found at path " + VIDEO_URI_PATH, responseJson));
-        return new GeneratedVideo.Job(jobId, COMPLETED, jobId, uri, null);
+        return new VideoGeneration.Job(jobId, COMPLETED, jobId, uri, null);
     }
 
 }

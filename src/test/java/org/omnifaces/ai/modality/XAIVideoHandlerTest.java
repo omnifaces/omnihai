@@ -24,7 +24,7 @@ import org.omnifaces.ai.AIConfig;
 import org.omnifaces.ai.AIService;
 import org.omnifaces.ai.exception.AIResponseException;
 import org.omnifaces.ai.model.GenerateVideoOptions;
-import org.omnifaces.ai.model.GeneratedVideo.Status;
+import org.omnifaces.ai.model.VideoGeneration.Status;
 
 class XAIVideoHandlerTest {
 
@@ -65,31 +65,31 @@ class XAIVideoHandlerTest {
     }
 
     @Test
-    void parseGeneratedVideo_whenDone_takesTheTemporaryUrl() {
+    void parseVideoGeneration_whenDone_takesTheTemporaryUrl() {
         var responseJson = "{\"status\":\"done\",\"video\":{\"url\":\"https://vidgen.x.ai/abc/video.mp4\",\"duration\":8}}";
-        var job = handler.parseGeneratedVideo(parseJson(responseJson), "req-1");
+        var job = handler.parseVideoGeneration(parseJson(responseJson), "req-1");
 
         assertEquals(Status.COMPLETED, job.status());
         assertEquals("https://vidgen.x.ai/abc/video.mp4", job.contentPath(), "the video is hosted outside the API endpoint");
     }
 
     @Test
-    void parseGeneratedVideo_whenPending_hasNoContentYet() {
-        var job = handler.parseGeneratedVideo(parseJson("{\"status\":\"pending\"}"), "req-1");
+    void parseVideoGeneration_whenPending_hasNoContentYet() {
+        var job = handler.parseVideoGeneration(parseJson("{\"status\":\"pending\"}"), "req-1");
 
         assertEquals(Status.PENDING, job.status());
         assertNull(job.contentPath());
     }
 
     @Test
-    void parseGeneratedVideo_whenExpired_isTerminal() {
-        assertEquals(Status.EXPIRED, handler.parseGeneratedVideo(parseJson("{\"status\":\"expired\"}"), "req-1").status());
+    void parseVideoGeneration_whenExpired_isTerminal() {
+        assertEquals(Status.EXPIRED, handler.parseVideoGeneration(parseJson("{\"status\":\"expired\"}"), "req-1").status());
     }
 
     @Test
-    void parseGeneratedVideo_whenFailed_takesTheErrorMessage() {
+    void parseVideoGeneration_whenFailed_takesTheErrorMessage() {
         var responseJson = "{\"status\":\"failed\",\"error\":{\"code\":\"invalid_argument\",\"message\":\"Prompt cannot be empty.\"}}";
-        var job = handler.parseGeneratedVideo(parseJson(responseJson), "req-1");
+        var job = handler.parseVideoGeneration(parseJson(responseJson), "req-1");
 
         assertEquals(Status.FAILED, job.status());
         assertEquals("Prompt cannot be empty.", job.failureReason());

@@ -46,8 +46,8 @@ class BaseAIServiceVideoPathTest {
         var service = newService(OPENROUTER, "google/veo-3.1-lite");
 
         assertEquals("videos", service.getGenerateVideoPath());
-        assertEquals("videos/" + JOB_ID, service.getGeneratedVideoPath(JOB_ID));
-        assertEquals("videos/" + JOB_ID + "/content", service.getGeneratedVideoContentPath(JOB_ID));
+        assertEquals("videos/" + JOB_ID, service.getVideoGenerationPath(JOB_ID));
+        assertEquals("videos/" + JOB_ID + "/content", service.getVideoGenerationContentPath(JOB_ID));
     }
 
     @Test
@@ -55,7 +55,7 @@ class BaseAIServiceVideoPathTest {
         var service = newService(XAI, "grok-imagine-video-1.5");
 
         assertEquals("videos/generations", service.getGenerateVideoPath());
-        assertEquals("videos/" + JOB_ID, service.getGeneratedVideoPath(JOB_ID), "xAI submits to videos/generations but polls at videos/{id}");
+        assertEquals("videos/" + JOB_ID, service.getVideoGenerationPath(JOB_ID), "xAI submits to videos/generations but polls at videos/{id}");
     }
 
     @Test
@@ -64,7 +64,7 @@ class BaseAIServiceVideoPathTest {
 
         assertEquals("predictLongRunning", service.getGenerateVideoPath());
         assertEquals(
-            "models/veo-3.1-generate-preview/operations/abc", service.getGeneratedVideoPath("models/veo-3.1-generate-preview/operations/abc"),
+            "models/veo-3.1-generate-preview/operations/abc", service.getVideoGenerationPath("models/veo-3.1-generate-preview/operations/abc"),
             "the job id is the operation name, so a revived job may not append it to the submit path"
         );
     }

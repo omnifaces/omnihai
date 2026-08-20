@@ -35,9 +35,9 @@ import org.omnifaces.ai.model.ClassificationResult;
 import org.omnifaces.ai.model.GenerateAudioOptions;
 import org.omnifaces.ai.model.GenerateImageOptions;
 import org.omnifaces.ai.model.GenerateVideoOptions;
-import org.omnifaces.ai.model.GeneratedVideo;
 import org.omnifaces.ai.model.ModerationOptions;
 import org.omnifaces.ai.model.ModerationResult;
+import org.omnifaces.ai.model.VideoGeneration;
 
 /**
  * Abstract {@link AIServiceWrapper} that funnels every service operation through a single interception hook.
@@ -632,12 +632,12 @@ public abstract class InterceptingAIServiceWrapper extends AIServiceWrapper {
     }
 
     @Override
-    public GeneratedVideo generateVideo(String prompt) throws AIException {
+    public VideoGeneration generateVideo(String prompt) throws AIException {
         return intercept(service -> service.generateVideo(prompt));
     }
 
     @Override
-    public GeneratedVideo generateVideo(String prompt, GenerateVideoOptions options) throws AIException {
+    public VideoGeneration generateVideo(String prompt, GenerateVideoOptions options) throws AIException {
         return intercept(service -> service.generateVideo(prompt, options));
     }
 
@@ -658,12 +658,12 @@ public abstract class InterceptingAIServiceWrapper extends AIServiceWrapper {
     }
 
     @Override
-    public CompletableFuture<GeneratedVideo> generateVideoAsync(String prompt) throws AIException {
+    public CompletableFuture<VideoGeneration> generateVideoAsync(String prompt) throws AIException {
         return interceptAsync(service -> service.generateVideoAsync(prompt));
     }
 
     @Override
-    public CompletableFuture<GeneratedVideo> generateVideoAsync(String prompt, GenerateVideoOptions options) throws AIException {
+    public CompletableFuture<VideoGeneration> generateVideoAsync(String prompt, GenerateVideoOptions options) throws AIException {
         return interceptAsync(service -> service.generateVideoAsync(prompt, options));
     }
 
@@ -678,8 +678,8 @@ public abstract class InterceptingAIServiceWrapper extends AIServiceWrapper {
     }
 
     @Override
-    public GeneratedVideo findGeneratedVideo(String jobId) {
-        return intercept(service -> service.findGeneratedVideo(jobId));
+    public VideoGeneration findVideoGeneration(String jobId) {
+        return intercept(service -> service.findVideoGeneration(jobId));
     }
 
 }

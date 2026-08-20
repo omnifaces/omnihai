@@ -31,9 +31,9 @@ import org.omnifaces.ai.model.ClassificationResult;
 import org.omnifaces.ai.model.GenerateAudioOptions;
 import org.omnifaces.ai.model.GenerateImageOptions;
 import org.omnifaces.ai.model.GenerateVideoOptions;
-import org.omnifaces.ai.model.GeneratedVideo;
 import org.omnifaces.ai.model.ModerationOptions;
 import org.omnifaces.ai.model.ModerationResult;
+import org.omnifaces.ai.model.VideoGeneration;
 
 /**
  * Abstract decorator wrapper for {@link AIService} instances.
@@ -490,12 +490,12 @@ public abstract class AIServiceWrapper implements AIService {
     }
 
     @Override
-    public GeneratedVideo generateVideo(String prompt) throws AIException {
+    public VideoGeneration generateVideo(String prompt) throws AIException {
         return getWrapped().generateVideo(prompt);
     }
 
     @Override
-    public GeneratedVideo generateVideo(String prompt, GenerateVideoOptions options) throws AIException {
+    public VideoGeneration generateVideo(String prompt, GenerateVideoOptions options) throws AIException {
         return getWrapped().generateVideo(prompt, options);
     }
 
@@ -510,12 +510,12 @@ public abstract class AIServiceWrapper implements AIService {
     }
 
     @Override
-    public CompletableFuture<GeneratedVideo> generateVideoAsync(String prompt) throws AIException {
+    public CompletableFuture<VideoGeneration> generateVideoAsync(String prompt) throws AIException {
         return getWrapped().generateVideoAsync(prompt);
     }
 
     @Override
-    public CompletableFuture<GeneratedVideo> generateVideoAsync(String prompt, GenerateVideoOptions options) throws AIException {
+    public CompletableFuture<VideoGeneration> generateVideoAsync(String prompt, GenerateVideoOptions options) throws AIException {
         return getWrapped().generateVideoAsync(prompt, options);
     }
 
@@ -530,8 +530,8 @@ public abstract class AIServiceWrapper implements AIService {
     }
 
     @Override
-    public GeneratedVideo findGeneratedVideo(String jobId) {
-        return getWrapped().findGeneratedVideo(jobId);
+    public VideoGeneration findVideoGeneration(String jobId) {
+        return getWrapped().findVideoGeneration(jobId);
     }
 
     @Override

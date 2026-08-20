@@ -268,7 +268,7 @@ public class GoogleAIService extends BaseAIService {
      * below the path it was submitted to.
      */
     @Override
-    protected String getGeneratedVideoPath(String jobId) {
+    protected String getVideoGenerationPath(String jobId) {
         return jobId;
     }
 

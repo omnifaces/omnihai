@@ -53,7 +53,7 @@ abstract class BaseAIServiceVideoGeneratorIT extends AIServiceIT {
         assertFalse(video.status().isTerminal(), "the job cannot be done yet, but was " + video.status());
         assertThrows(IllegalStateException.class, () -> video.writeTo(OutputStream.nullOutputStream()), "an unfinished job has nothing to write");
 
-        var revived = service.findGeneratedVideo(video.jobId()).refresh();
+        var revived = service.findVideoGeneration(video.jobId()).refresh();
 
         assertEquals(video.jobId(), revived.jobId());
         assertNotNull(revived.status(), "the revived job must be pollable by its id alone");

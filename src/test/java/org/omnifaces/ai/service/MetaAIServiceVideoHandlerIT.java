@@ -32,6 +32,7 @@ class MetaAIServiceVideoHandlerIT extends BaseAIServiceVideoHandlerIT {
 
     /**
      * Meta AI offers no sampling rate nor clip offsets to narrow it down with.
+     *
      * @see <a href="https://dev.meta.ai/docs/features/video-understanding">docs</a>
      */
     @Override

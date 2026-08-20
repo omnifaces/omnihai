@@ -641,16 +641,16 @@ Video generation is the only operation which does not fit in one request: the AI
 
 ```java
 // Submit and walk away; returns at once, PENDING
-GeneratedVideo video = service.generateVideo("A calico cat walking across a sunlit kitchen floor");
+VideoGeneration video = service.generateVideo("A calico cat walking across a sunlit kitchen floor");
 String jobId = video.jobId();
 
-GeneratedVideo.Status status = video.status(); // Pure getter, performs no I/O, free to call from a render pass
-GeneratedVideo.Status refreshedStatus = video.refresh().status(); // Caller-driven poll, exactly one request
+VideoGeneration.Status status = video.status(); // Pure getter, performs no I/O, free to call from a render pass
+VideoGeneration.Status refreshedStatus = video.refresh().status(); // Caller-driven poll, exactly one request
 
 // Revive the job from its id in a later request, possibly after a restart or on another node
-GeneratedVideo revived = service.findGeneratedVideo(jobId);
+VideoGeneration revived = service.findVideoGeneration(jobId);
 
-if (revived.refresh().status() == GeneratedVideo.Status.COMPLETED) {
+if (revived.refresh().status() == VideoGeneration.Status.COMPLETED) {
     revived.writeTo(Path.of("cat.mp4")); // And writeTo(OutputStream)
 }
 ```
@@ -663,7 +663,7 @@ service.generateVideo("A calico cat walking across a sunlit kitchen floor", Path
 CompletableFuture<Void> written = service.generateVideoAsync("A calico cat", Path.of("cat.mp4"));
 
 // With options (allowable options depend on AI provider)
-GeneratedVideo video = service.generateVideo("A calico cat",
+VideoGeneration video = service.generateVideo("A calico cat",
     GenerateVideoOptions.newBuilder()
         .aspectRatio("9:16")
         .resolution("720p")
@@ -674,7 +674,7 @@ GeneratedVideo video = service.generateVideo("A calico cat",
 ```
 
 The handle is serializable and carries the job id, so a web application can submit in one request and poll from later ones.
-A deserialized handle can still be read but no longer polled; hand its `jobId()` to `findGeneratedVideo` to get a pollable one back.
+A deserialized handle can still be read but no longer polled; hand its `jobId()` to `findVideoGeneration` to get a pollable one back.
 The library polls at `pollInterval`, five seconds by default, and stops as soon as the future returned by `generateVideoAsync` or `completion()` is completed or canceled, so a handle nobody watches costs nothing.
 A job which has not finished within `maxWait`, five minutes by default, fails the future rather than polling on, so a job the AI provider never finishes cannot block a caller forever. Raise it for a resolution or AI provider which takes longer.
 

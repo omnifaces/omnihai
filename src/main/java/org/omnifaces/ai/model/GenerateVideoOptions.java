@@ -146,7 +146,7 @@ public class GenerateVideoOptions implements Serializable {
     }
 
     /**
-     * Gets the interval to wait between two consecutive job status polls of {@link GeneratedVideo#completion()}. Defaults to
+     * Gets the interval to wait between two consecutive job status polls of {@link VideoGeneration#completion()}. Defaults to
      * {@value #DEFAULT_POLL_INTERVAL_SECONDS} seconds.
      *
      * @return The poll interval.
@@ -156,7 +156,7 @@ public class GenerateVideoOptions implements Serializable {
     }
 
     /**
-     * Gets the maximum time to wait for the job to reach a terminal status, after which {@link GeneratedVideo#completion()} fails rather than polls on.
+     * Gets the maximum time to wait for the job to reach a terminal status, after which {@link VideoGeneration#completion()} fails rather than polls on.
      * Defaults to {@value #DEFAULT_MAX_WAIT_MINUTES} minutes. Raise it for an AI provider or resolution which takes longer than that.
      *
      * @return The maximum wait.
@@ -329,7 +329,7 @@ public class GenerateVideoOptions implements Serializable {
         }
 
         /**
-         * Sets the interval to wait between two consecutive job status polls of {@link GeneratedVideo#completion()}. Defaults to
+         * Sets the interval to wait between two consecutive job status polls of {@link VideoGeneration#completion()}. Defaults to
          * {@value GenerateVideoOptions#DEFAULT_POLL_INTERVAL_SECONDS} seconds.
          *
          * @param pollInterval The poll interval, must be positive.
@@ -351,7 +351,7 @@ public class GenerateVideoOptions implements Serializable {
         }
 
         /**
-         * Sets the maximum time to wait for the job to reach a terminal status, after which {@link GeneratedVideo#completion()} fails rather than polls on.
+         * Sets the maximum time to wait for the job to reach a terminal status, after which {@link VideoGeneration#completion()} fails rather than polls on.
          * Defaults to {@value GenerateVideoOptions#DEFAULT_MAX_WAIT_MINUTES} minutes.
          *
          * @param maxWait The maximum wait, must be positive.

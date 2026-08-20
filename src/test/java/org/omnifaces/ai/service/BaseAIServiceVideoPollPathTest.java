@@ -17,8 +17,8 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
 import org.junit.jupiter.api.Test;
-import org.omnifaces.ai.model.GeneratedVideo.Job;
-import org.omnifaces.ai.model.GeneratedVideo.Status;
+import org.omnifaces.ai.model.VideoGeneration.Job;
+import org.omnifaces.ai.model.VideoGeneration.Status;
 
 /**
  * Tests that the poll path an AI provider states once, in the submit response, keeps being used by every poll after the first.

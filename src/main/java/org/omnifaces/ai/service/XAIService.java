@@ -125,7 +125,7 @@ public class XAIService extends OpenAIService {
      * Returns {@code videos/{jobId}}, as xAI polls the job outside the endpoint it was submitted to.
      */
     @Override
-    protected String getGeneratedVideoPath(String jobId) {
+    protected String getVideoGenerationPath(String jobId) {
         return "videos/" + jobId;
     }
 

@@ -29,8 +29,8 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
 import org.omnifaces.ai.exception.AIException;
 import org.omnifaces.ai.model.GenerateVideoOptions;
-import org.omnifaces.ai.model.GeneratedVideo.Job;
-import org.omnifaces.ai.model.GeneratedVideo.Status;
+import org.omnifaces.ai.model.VideoGeneration.Job;
+import org.omnifaces.ai.model.VideoGeneration.Status;
 
 class BaseAIServiceVideoPollingTest {
 

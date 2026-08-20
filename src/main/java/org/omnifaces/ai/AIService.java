@@ -39,10 +39,10 @@ import org.omnifaces.ai.model.ClassificationResult;
 import org.omnifaces.ai.model.GenerateAudioOptions;
 import org.omnifaces.ai.model.GenerateImageOptions;
 import org.omnifaces.ai.model.GenerateVideoOptions;
-import org.omnifaces.ai.model.GeneratedVideo;
 import org.omnifaces.ai.model.ModerationOptions;
 import org.omnifaces.ai.model.ModerationOptions.Category;
 import org.omnifaces.ai.model.ModerationResult;
+import org.omnifaces.ai.model.VideoGeneration;
 import org.omnifaces.ai.service.AIServiceWrapper;
 import org.omnifaces.ai.service.ToolCallingAIService;
 import org.omnifaces.ai.tool.AITool;
@@ -1832,13 +1832,13 @@ public interface AIService extends Serializable {
      *
      * @implNote The default implementation delegates to {@link #generateVideo(String, GenerateVideoOptions)} with {@link GenerateVideoOptions#DEFAULT}.
      * @param prompt The prompt describing the video to generate.
-     * @return A handle on the submitted job, initially {@link GeneratedVideo.Status#PENDING}, never {@code null}.
+     * @return A handle on the submitted job, initially {@link VideoGeneration.Status#PENDING}, never {@code null}.
      * @throws UnsupportedOperationException if video generation is not supported by the implementation.
      * @throws AIException if submitting the job fails.
      * @since 1.7
      * @see #generateVideo(String, GenerateVideoOptions)
      */
-    default GeneratedVideo generateVideo(String prompt) throws AIException {
+    default VideoGeneration generateVideo(String prompt) throws AIException {
         return generateVideo(prompt, GenerateVideoOptions.DEFAULT);
     }
 
@@ -1846,20 +1846,20 @@ public interface AIService extends Serializable {
      * Submits a video generation job and returns a handle on it as soon as the AI provider has accepted it.
      * <p>
      * This does <em>not</em> wait for the video: producing one takes minutes, and the AI provider never calls back. The returned handle is serializable and
-     * carries the job id, so that a web application can submit the job in one request and poll it from later ones. Use {@link GeneratedVideo#refresh()} to poll
-     * it on your own schedule, or {@link GeneratedVideo#completion()} to have the library poll it. To simply wait for the video and store it, use
+     * carries the job id, so that a web application can submit the job in one request and poll it from later ones. Use {@link VideoGeneration#refresh()} to
+     * poll it on your own schedule, or {@link VideoGeneration#completion()} to have the library poll it. To simply wait for the video and store it, use
      * {@link #generateVideo(String, Path, GenerateVideoOptions)} instead.
      *
      * @param prompt The prompt describing the video to generate.
      * @param options The video generation options.
-     * @return A handle on the submitted job, initially {@link GeneratedVideo.Status#PENDING}, never {@code null}.
+     * @return A handle on the submitted job, initially {@link VideoGeneration.Status#PENDING}, never {@code null}.
      * @throws NullPointerException if options is null.
      * @throws IllegalArgumentException if prompt is blank.
      * @throws UnsupportedOperationException if video generation is not supported by the implementation.
      * @throws AIException if submitting the job fails.
      * @since 1.7
      */
-    GeneratedVideo generateVideo(String prompt, GenerateVideoOptions options) throws AIException;
+    VideoGeneration generateVideo(String prompt, GenerateVideoOptions options) throws AIException;
 
     /**
      * Generates a video and writes it to the given path, waiting until the AI provider has produced it.
@@ -1905,14 +1905,14 @@ public interface AIService extends Serializable {
      * @since 1.7
      * @see #generateVideoAsync(String, GenerateVideoOptions)
      */
-    default CompletableFuture<GeneratedVideo> generateVideoAsync(String prompt) throws AIException {
+    default CompletableFuture<VideoGeneration> generateVideoAsync(String prompt) throws AIException {
         return generateVideoAsync(prompt, GenerateVideoOptions.DEFAULT);
     }
 
     /**
      * Asynchronously generates a video, completing when the AI provider has produced it.
      * <p>
-     * Unlike {@link #generateVideo(String, GenerateVideoOptions)}, which hands back a {@link GeneratedVideo.Status#PENDING} handle right after submitting, the
+     * Unlike {@link #generateVideo(String, GenerateVideoOptions)}, which hands back a {@link VideoGeneration.Status#PENDING} handle right after submitting, the
      * returned future completes only once the job has reached a terminal status. The library polls the job meanwhile, at
      * {@link GenerateVideoOptions#getPollInterval()}, and stops as soon as the future is completed or canceled.
      *
@@ -1925,7 +1925,7 @@ public interface AIService extends Serializable {
      * @throws AIException if video generation fails.
      * @since 1.7
      */
-    CompletableFuture<GeneratedVideo> generateVideoAsync(String prompt, GenerateVideoOptions options) throws AIException;
+    CompletableFuture<VideoGeneration> generateVideoAsync(String prompt, GenerateVideoOptions options) throws AIException;
 
     /**
      * Asynchronously generates a video and writes it to the given path, completing when the AI provider has produced it.
@@ -1970,9 +1970,9 @@ public interface AIService extends Serializable {
     /**
      * Returns a handle on a previously submitted video generation job.
      * <p>
-     * This is the counterpart of {@link GeneratedVideo#jobId()}: it revives a job whose id was stored elsewhere, such as in a database or an HTTP session,
-     * possibly after a restart or on another node. The returned handle is not polled yet, so its {@link GeneratedVideo#status()} is
-     * {@link GeneratedVideo.Status#PENDING} until {@link GeneratedVideo#refresh()} or {@link GeneratedVideo#completion()} says otherwise.
+     * This is the counterpart of {@link VideoGeneration#jobId()}: it revives a job whose id was stored elsewhere, such as in a database or an HTTP session,
+     * possibly after a restart or on another node. The returned handle is not polled yet, so its {@link VideoGeneration#status()} is
+     * {@link VideoGeneration.Status#PENDING} until {@link VideoGeneration#refresh()} or {@link VideoGeneration#completion()} says otherwise.
      * <p>
      * The job id is all a revived handle has, so it polls at {@link GenerateVideoOptions#DEFAULT} rather than at the options the job was submitted with, and an
      * AI provider which stated its own poll path in the submit response is polled at the derived one instead.
@@ -1982,7 +1982,7 @@ public interface AIService extends Serializable {
      * @throws IllegalArgumentException if job id is blank.
      * @since 1.7
      */
-    GeneratedVideo findGeneratedVideo(String jobId);
+    VideoGeneration findVideoGeneration(String jobId);
 
     // Service Metadata -----------------------------------------------------------------------------------------------
 

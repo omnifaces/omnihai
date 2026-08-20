@@ -23,7 +23,7 @@ import org.omnifaces.ai.AIConfig;
 import org.omnifaces.ai.AIService;
 import org.omnifaces.ai.exception.AIResponseException;
 import org.omnifaces.ai.model.GenerateVideoOptions;
-import org.omnifaces.ai.model.GeneratedVideo.Status;
+import org.omnifaces.ai.model.VideoGeneration.Status;
 
 class GoogleAIVideoHandlerTest {
 
@@ -66,29 +66,29 @@ class GoogleAIVideoHandlerTest {
     }
 
     @Test
-    void parseGeneratedVideo_whenNotDone_isRunning() {
-        var job = handler.parseGeneratedVideo(parseJson("{\"name\":\"" + OPERATION_NAME + "\"}"), OPERATION_NAME);
+    void parseVideoGeneration_whenNotDone_isRunning() {
+        var job = handler.parseVideoGeneration(parseJson("{\"name\":\"" + OPERATION_NAME + "\"}"), OPERATION_NAME);
 
         assertEquals(Status.RUNNING, job.status(), "an operation states completion as a flag rather than as a status word");
     }
 
     @Test
-    void parseGeneratedVideo_whenDone_takesTheVideoUri() {
+    void parseVideoGeneration_whenDone_takesTheVideoUri() {
         var responseJson = "{\"done\":true,\"response\":{\"generateVideoResponse\":{\"generatedSamples\":[{\"video\":{\"uri\":\"" + VIDEO_URI + "\"}}]}}}";
-        var job = handler.parseGeneratedVideo(parseJson(responseJson), OPERATION_NAME);
+        var job = handler.parseVideoGeneration(parseJson(responseJson), OPERATION_NAME);
 
         assertEquals(Status.COMPLETED, job.status());
         assertEquals(VIDEO_URI, job.contentPath());
     }
 
     @Test
-    void parseGeneratedVideo_whenDoneWithoutUri_throwsException() {
-        assertThrows(AIResponseException.class, () -> handler.parseGeneratedVideo(parseJson("{\"done\":true,\"response\":{}}"), OPERATION_NAME));
+    void parseVideoGeneration_whenDoneWithoutUri_throwsException() {
+        assertThrows(AIResponseException.class, () -> handler.parseVideoGeneration(parseJson("{\"done\":true,\"response\":{}}"), OPERATION_NAME));
     }
 
     @Test
-    void parseGeneratedVideo_whenErrored_isFailed() {
-        var job = handler.parseGeneratedVideo(parseJson("{\"error\":{\"code\":3,\"message\":\"Prompt rejected\"}}"), OPERATION_NAME);
+    void parseVideoGeneration_whenErrored_isFailed() {
+        var job = handler.parseVideoGeneration(parseJson("{\"error\":{\"code\":3,\"message\":\"Prompt rejected\"}}"), OPERATION_NAME);
 
         assertEquals(Status.FAILED, job.status());
         assertEquals("Prompt rejected", job.failureReason());

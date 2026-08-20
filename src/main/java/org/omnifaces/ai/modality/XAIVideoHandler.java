@@ -20,7 +20,7 @@ import jakarta.json.JsonObject;
 import org.omnifaces.ai.AIService;
 import org.omnifaces.ai.exception.AIResponseException;
 import org.omnifaces.ai.model.GenerateVideoOptions;
-import org.omnifaces.ai.model.GeneratedVideo;
+import org.omnifaces.ai.model.VideoGeneration;
 import org.omnifaces.ai.service.XAIService;
 
 /**
@@ -66,17 +66,17 @@ public class XAIVideoHandler extends DefaultAIVideoHandler {
     }
 
     @Override
-    public GeneratedVideo.Job parseSubmittedVideo(JsonObject responseJson) throws AIResponseException {
+    public VideoGeneration.Job parseSubmittedVideo(JsonObject responseJson) throws AIResponseException {
         var id = findFirstNonBlankByPath(responseJson, "request_id")
             .orElseThrow(() -> new AIResponseException("No video generation job id found", responseJson));
-        return GeneratedVideo.Job.pending(id, null);
+        return VideoGeneration.Job.pending(id, null);
     }
 
     @Override
-    public GeneratedVideo.Job parseGeneratedVideo(JsonObject responseJson, String jobId) throws AIResponseException {
+    public VideoGeneration.Job parseVideoGeneration(JsonObject responseJson, String jobId) throws AIResponseException {
         var status = findFirstNonBlankByPath(responseJson, "status")
             .orElseThrow(() -> new AIResponseException("No video generation job status found", responseJson));
-        return new GeneratedVideo.Job(
+        return new VideoGeneration.Job(
             jobId, parseVideoStatus(status, responseJson), null, findFirstNonBlankByPath(responseJson, "video.url").orElse(null),
             findFirstNonBlankByPath(responseJson, "error.message").orElse(null)
         );

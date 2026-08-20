@@ -84,11 +84,11 @@ import org.omnifaces.ai.model.ClassificationResult;
 import org.omnifaces.ai.model.GenerateAudioOptions;
 import org.omnifaces.ai.model.GenerateImageOptions;
 import org.omnifaces.ai.model.GenerateVideoOptions;
-import org.omnifaces.ai.model.GeneratedVideo;
-import org.omnifaces.ai.model.GeneratedVideo.Source;
 import org.omnifaces.ai.model.ModerationOptions;
 import org.omnifaces.ai.model.ModerationResult;
 import org.omnifaces.ai.model.Sse.Event;
+import org.omnifaces.ai.model.VideoGeneration;
+import org.omnifaces.ai.model.VideoGeneration.Source;
 
 /**
  * Base class for AI service implementations providing common API functionality.
@@ -843,7 +843,7 @@ public abstract class BaseAIService implements AIService, Source {
      * @return The path to poll the video generation job at.
      * @since 1.7
      */
-    protected String getGeneratedVideoPath(String jobId) {
+    protected String getVideoGenerationPath(String jobId) {
         return getGenerateVideoPath() + "/" + jobId;
     }
 
@@ -851,23 +851,23 @@ public abstract class BaseAIService implements AIService, Source {
      * Returns the path to download the video of the completed job with the given id from. This is consulted only when the AI provider did not state its own
      * content path in the poll response.
      *
-     * @implNote The default implementation appends {@code /content} to {@link #getGeneratedVideoPath(String)}.
+     * @implNote The default implementation appends {@code /content} to {@link #getVideoGenerationPath(String)}.
      * @param jobId The id of the video generation job.
      * @return The path to download the generated video from.
      * @since 1.7
      */
-    protected String getGeneratedVideoContentPath(String jobId) {
-        return getGeneratedVideoPath(jobId) + "/content";
+    protected String getVideoGenerationContentPath(String jobId) {
+        return getVideoGenerationPath(jobId) + "/content";
     }
 
     @Override
-    public GeneratedVideo generateVideo(String prompt, GenerateVideoOptions options) throws AIException {
+    public VideoGeneration generateVideo(String prompt, GenerateVideoOptions options) throws AIException {
         return joinAsync(submitVideoAsync(prompt, options));
     }
 
     @Override
-    public CompletableFuture<GeneratedVideo> generateVideoAsync(String prompt, GenerateVideoOptions options) throws AIException {
-        var generation = new CompletableFuture<GeneratedVideo>();
+    public CompletableFuture<VideoGeneration> generateVideoAsync(String prompt, GenerateVideoOptions options) throws AIException {
+        var generation = new CompletableFuture<VideoGeneration>();
 
         submitVideoAsync(prompt, options).whenComplete((video, submitFailure) -> {
             if (submitFailure != null) {
@@ -893,30 +893,30 @@ public abstract class BaseAIService implements AIService, Source {
     }
 
     @Override
-    public GeneratedVideo findGeneratedVideo(String jobId) {
-        return new GeneratedVideo(GeneratedVideo.Job.pending(requireNonBlank(jobId, "jobId"), null), GenerateVideoOptions.DEFAULT, this);
+    public VideoGeneration findVideoGeneration(String jobId) {
+        return new VideoGeneration(VideoGeneration.Job.pending(requireNonBlank(jobId, "jobId"), null), GenerateVideoOptions.DEFAULT, this);
     }
 
-    private CompletableFuture<GeneratedVideo> submitVideoAsync(String prompt, GenerateVideoOptions options) throws AIException {
+    private CompletableFuture<VideoGeneration> submitVideoAsync(String prompt, GenerateVideoOptions options) throws AIException {
         requireNonNull(options, "options");
         var payload = videoHandler.buildGenerateVideoPayload(this, requireNonBlank(prompt, "prompt"), options);
         return HTTP_CLIENT.post(this, getGenerateVideoPath(), payload)
             .thenApply(videoHandler::parseSubmittedVideo)
-            .thenApply(job -> new GeneratedVideo(job, options, this));
+            .thenApply(job -> new VideoGeneration(job, options, this));
     }
 
     @Override
-    public GeneratedVideo.Job pollVideo(GeneratedVideo.Job job) {
+    public VideoGeneration.Job pollVideo(VideoGeneration.Job job) {
         return joinAsync(pollVideoAsync(job));
     }
 
     @Override
-    public InputStream downloadVideo(GeneratedVideo.Job job) {
-        return joinAsync(HTTP_CLIENT.download(this, ofNullable(job.contentPath()).orElseGet(() -> getGeneratedVideoContentPath(job.id()))));
+    public InputStream downloadVideo(VideoGeneration.Job job) {
+        return joinAsync(HTTP_CLIENT.download(this, ofNullable(job.contentPath()).orElseGet(() -> getVideoGenerationContentPath(job.id()))));
     }
 
     @Override
-    public CompletableFuture<GeneratedVideo.Job> awaitVideoCompletion(GeneratedVideo.Job job, GenerateVideoOptions options) {
+    public CompletableFuture<VideoGeneration.Job> awaitVideoCompletion(VideoGeneration.Job job, GenerateVideoOptions options) {
         return awaitVideoCompletion(job, options, this::pollVideoAsync);
     }
 
@@ -932,35 +932,35 @@ public abstract class BaseAIService implements AIService, Source {
      * @param poller The poller, performing exactly one request per invocation.
      * @return A future which completes with the terminal state of the job.
      */
-    static CompletableFuture<GeneratedVideo.Job> awaitVideoCompletion(
-        GeneratedVideo.Job job, GenerateVideoOptions options, Function<GeneratedVideo.Job, CompletableFuture<GeneratedVideo.Job>> poller
+    static CompletableFuture<VideoGeneration.Job> awaitVideoCompletion(
+        VideoGeneration.Job job, GenerateVideoOptions options, Function<VideoGeneration.Job, CompletableFuture<VideoGeneration.Job>> poller
     )
     {
-        var completion = new CompletableFuture<GeneratedVideo.Job>();
+        var completion = new CompletableFuture<VideoGeneration.Job>();
         pollVideoUntilTerminal(job, options, poller, completion);
         return completion.orTimeout(options.getMaxWait().toMillis(), MILLISECONDS);
     }
 
-    private CompletableFuture<GeneratedVideo.Job> pollVideoAsync(GeneratedVideo.Job job) {
-        var path = ofNullable(job.pollPath()).orElseGet(() -> getGeneratedVideoPath(job.id()));
-        return HTTP_CLIENT.get(this, path).thenApply(responseJson -> retainPollPath(videoHandler.parseGeneratedVideo(responseJson, job.id()), job));
+    private CompletableFuture<VideoGeneration.Job> pollVideoAsync(VideoGeneration.Job job) {
+        var path = ofNullable(job.pollPath()).orElseGet(() -> getVideoGenerationPath(job.id()));
+        return HTTP_CLIENT.get(this, path).thenApply(responseJson -> retainPollPath(videoHandler.parseVideoGeneration(responseJson, job.id()), job));
     }
 
     /**
      * Carries the AI provider's own poll path forward, as it is generally stated once in the submit response rather than repeated in every poll response, while
      * every poll after the first must reach the same target as the first.
      */
-    static GeneratedVideo.Job retainPollPath(GeneratedVideo.Job polled, GeneratedVideo.Job previous) {
+    static VideoGeneration.Job retainPollPath(VideoGeneration.Job polled, VideoGeneration.Job previous) {
         if (polled.pollPath() != null || previous.pollPath() == null) {
             return polled;
         }
 
-        return new GeneratedVideo.Job(polled.id(), polled.status(), previous.pollPath(), polled.contentPath(), polled.failureReason());
+        return new VideoGeneration.Job(polled.id(), polled.status(), previous.pollPath(), polled.contentPath(), polled.failureReason());
     }
 
     private static void pollVideoUntilTerminal(
-        GeneratedVideo.Job job, GenerateVideoOptions options, Function<GeneratedVideo.Job, CompletableFuture<GeneratedVideo.Job>> poller,
-        CompletableFuture<GeneratedVideo.Job> completion
+        VideoGeneration.Job job, GenerateVideoOptions options, Function<VideoGeneration.Job, CompletableFuture<VideoGeneration.Job>> poller,
+        CompletableFuture<VideoGeneration.Job> completion
     )
     {
         if (completion.isDone()) {

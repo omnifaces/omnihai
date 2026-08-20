@@ -45,11 +45,11 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledOnOs;
 import org.junit.jupiter.api.condition.OS;
 import org.omnifaces.ai.exception.AIException;
-import org.omnifaces.ai.model.GeneratedVideo.Job;
-import org.omnifaces.ai.model.GeneratedVideo.Source;
-import org.omnifaces.ai.model.GeneratedVideo.Status;
+import org.omnifaces.ai.model.VideoGeneration.Job;
+import org.omnifaces.ai.model.VideoGeneration.Source;
+import org.omnifaces.ai.model.VideoGeneration.Status;
 
-class GeneratedVideoTest {
+class VideoGenerationTest {
 
     private static final byte[] VIDEO_CONTENT = "video".getBytes(UTF_8);
     private static final GenerateVideoOptions OPTIONS = GenerateVideoOptions.newBuilder().pollInterval(Duration.ofMillis(1)).build();
@@ -57,7 +57,7 @@ class GeneratedVideoTest {
     @Test
     void status_performsNoRequest() {
         var source = new RecordingSource();
-        var video = new GeneratedVideo(Job.pending("job-1", null), OPTIONS, source);
+        var video = new VideoGeneration(Job.pending("job-1", null), OPTIONS, source);
 
         assertEquals(Status.PENDING, video.status());
         assertEquals("job-1", video.jobId());
@@ -67,7 +67,7 @@ class GeneratedVideoTest {
     @Test
     void refresh_pollsExactlyOnce() {
         var source = new RecordingSource(new Job("job-1", Status.RUNNING, null, null, null));
-        var video = new GeneratedVideo(Job.pending("job-1", null), OPTIONS, source);
+        var video = new VideoGeneration(Job.pending("job-1", null), OPTIONS, source);
 
         assertSame(video, video.refresh());
         assertEquals(Status.RUNNING, video.status());
@@ -77,7 +77,7 @@ class GeneratedVideoTest {
     @Test
     void refresh_onTerminalJob_pollsNoMore() {
         var source = new RecordingSource();
-        var video = new GeneratedVideo(new Job("job-1", Status.COMPLETED, null, null, null), OPTIONS, source);
+        var video = new VideoGeneration(new Job("job-1", Status.COMPLETED, null, null, null), OPTIONS, source);
 
         video.refresh();
 
@@ -89,7 +89,7 @@ class GeneratedVideoTest {
         var source = new RecordingSource(
             new Job("job-1", Status.RUNNING, null, null, null), new Job("job-1", Status.COMPLETED, null, null, null)
         );
-        var video = new GeneratedVideo(Job.pending("job-1", null), OPTIONS, source);
+        var video = new VideoGeneration(Job.pending("job-1", null), OPTIONS, source);
 
         assertSame(video, video.completion().get(5, SECONDS));
         assertEquals(Status.COMPLETED, video.status());
@@ -98,7 +98,7 @@ class GeneratedVideoTest {
     @Test
     void completion_calledTwiceWhileWaiting_joinsTheSameWait() {
         var source = new PollingSource(new CompletableFuture<>());
-        var video = new GeneratedVideo(Job.pending("job-1", null), OPTIONS, source);
+        var video = new VideoGeneration(Job.pending("job-1", null), OPTIONS, source);
 
         var first = video.completion();
         var second = video.completion();
@@ -110,7 +110,7 @@ class GeneratedVideoTest {
     @Test
     void completion_afterTheWaitWasCanceled_startsANewOne() {
         var source = new PollingSource(new CompletableFuture<>());
-        var video = new GeneratedVideo(Job.pending("job-1", null), OPTIONS, source);
+        var video = new VideoGeneration(Job.pending("job-1", null), OPTIONS, source);
 
         var canceled = video.completion();
         canceled.cancel(true);
@@ -123,7 +123,7 @@ class GeneratedVideoTest {
     @Test
     void completion_onTerminalJob_completesWithoutPolling() throws Exception {
         var source = new RecordingSource();
-        var video = new GeneratedVideo(new Job("job-1", Status.COMPLETED, null, null, null), OPTIONS, source);
+        var video = new VideoGeneration(new Job("job-1", Status.COMPLETED, null, null, null), OPTIONS, source);
 
         assertSame(video, video.completion().get(5, SECONDS));
         assertEquals(0, source.polls);
@@ -132,7 +132,7 @@ class GeneratedVideoTest {
     @Test
     void canceledCompletion_cancelsThePolling() {
         var polling = new CompletableFuture<Job>();
-        var video = new GeneratedVideo(Job.pending("job-1", null), OPTIONS, new PollingSource(polling));
+        var video = new VideoGeneration(Job.pending("job-1", null), OPTIONS, new PollingSource(polling));
 
         var completion = video.completion();
         completion.cancel(true);
@@ -142,14 +142,14 @@ class GeneratedVideoTest {
 
     @Test
     void writeTo_whileUnfinished_throwsIllegalState() {
-        var video = new GeneratedVideo(Job.pending("job-1", null), OPTIONS, new RecordingSource());
+        var video = new VideoGeneration(Job.pending("job-1", null), OPTIONS, new RecordingSource());
 
         assertThrows(IllegalStateException.class, () -> video.writeTo(new ByteArrayOutputStream()));
     }
 
     @Test
     void writeTo_whenFailed_throwsAIExceptionStatingTheReason() {
-        var video = new GeneratedVideo(new Job("job-1", Status.FAILED, null, null, "moderation blocked"), OPTIONS, new RecordingSource());
+        var video = new VideoGeneration(new Job("job-1", Status.FAILED, null, null, "moderation blocked"), OPTIONS, new RecordingSource());
 
         var exception = assertThrows(AIException.class, () -> video.writeTo(new ByteArrayOutputStream()));
         assertTrue(exception.getMessage().contains("moderation blocked"), "the provider's reason must survive: " + exception.getMessage());
@@ -157,14 +157,14 @@ class GeneratedVideoTest {
 
     @Test
     void writeTo_whenExpired_throwsAIException() {
-        var video = new GeneratedVideo(new Job("job-1", Status.EXPIRED, null, null, null), OPTIONS, new RecordingSource());
+        var video = new VideoGeneration(new Job("job-1", Status.EXPIRED, null, null, null), OPTIONS, new RecordingSource());
 
         assertThrows(AIException.class, () -> video.writeTo(new ByteArrayOutputStream()));
     }
 
     @Test
     void writeTo_whenCompleted_writesTheContent() throws Exception {
-        var video = new GeneratedVideo(new Job("job-1", Status.COMPLETED, null, null, null), OPTIONS, new RecordingSource());
+        var video = new VideoGeneration(new Job("job-1", Status.COMPLETED, null, null, null), OPTIONS, new RecordingSource());
         var output = new ByteArrayOutputStream();
 
         video.writeTo(output);
@@ -175,7 +175,7 @@ class GeneratedVideoTest {
     @Test
     void writeTo_toAnUnusablePath_failsBeforeDownloading() {
         var source = new RecordingSource();
-        var video = new GeneratedVideo(new Job("job-1", Status.COMPLETED, null, null, null), OPTIONS, source);
+        var video = new VideoGeneration(new Job("job-1", Status.COMPLETED, null, null, null), OPTIONS, source);
         var missingDirectory = Path.of("no", "such", "directory", "video.mp4");
 
         assertThrows(IllegalArgumentException.class, () -> video.writeTo(missingDirectory));
@@ -184,7 +184,7 @@ class GeneratedVideoTest {
 
     @Test
     void writeTo_toAFileSystemRoot_isRejected() {
-        var video = new GeneratedVideo(new Job("job-1", Status.COMPLETED, null, null, null), OPTIONS, new RecordingSource());
+        var video = new VideoGeneration(new Job("job-1", Status.COMPLETED, null, null, null), OPTIONS, new RecordingSource());
 
         assertThrows(IllegalArgumentException.class, () -> video.writeTo(Path.of("/")));
     }
@@ -193,7 +193,7 @@ class GeneratedVideoTest {
     void writeTo_toAnExistingDirectory_isRejected() throws Exception {
         var directory = Files.createTempDirectory("omnihai-generated-video-");
         var source = new RecordingSource();
-        var video = new GeneratedVideo(new Job("job-1", Status.COMPLETED, null, null, null), OPTIONS, source);
+        var video = new VideoGeneration(new Job("job-1", Status.COMPLETED, null, null, null), OPTIONS, source);
 
         try {
             assertThrows(IllegalArgumentException.class, () -> video.writeTo(directory));
@@ -212,7 +212,7 @@ class GeneratedVideoTest {
         Files.writeString(path, "previous");
         path.toFile().setWritable(false);
         assumeFalse(Files.isWritable(path), "the permission bits must bite for this to prove anything, which they do not for a superuser");
-        var video = new GeneratedVideo(new Job("job-1", Status.COMPLETED, null, null, null), OPTIONS, new RecordingSource());
+        var video = new VideoGeneration(new Job("job-1", Status.COMPLETED, null, null, null), OPTIONS, new RecordingSource());
 
         try {
             video.writeTo(path);
@@ -227,7 +227,7 @@ class GeneratedVideoTest {
 
     @Test
     void writeTo_path_writesTheContent() throws Exception {
-        var video = new GeneratedVideo(new Job("job-1", Status.COMPLETED, null, null, null), OPTIONS, new RecordingSource());
+        var video = new VideoGeneration(new Job("job-1", Status.COMPLETED, null, null, null), OPTIONS, new RecordingSource());
         var path = Files.createTempFile("omnihai-generated-video-", ".mp4");
 
         try {
@@ -244,7 +244,7 @@ class GeneratedVideoTest {
         var directory = Files.createTempDirectory("omnihai-generated-video-");
         var path = directory.resolve("video.mp4");
         Files.writeString(path, "previous");
-        var video = new GeneratedVideo(new Job("job-1", Status.COMPLETED, null, null, null), OPTIONS, new FailingDownloadSource());
+        var video = new VideoGeneration(new Job("job-1", Status.COMPLETED, null, null, null), OPTIONS, new FailingDownloadSource());
 
         try {
             assertThrows(UncheckedIOException.class, () -> video.writeTo(path));
@@ -262,7 +262,7 @@ class GeneratedVideoTest {
 
     @Test
     void deserialized_isReadableButNotPollable() throws Exception {
-        var video = new GeneratedVideo(new Job("job-1", Status.RUNNING, "poll/job-1", null, null), OPTIONS, new RecordingSource());
+        var video = new VideoGeneration(new Job("job-1", Status.RUNNING, "poll/job-1", null, null), OPTIONS, new RecordingSource());
 
         var revived = roundTrip(video);
 
@@ -284,7 +284,7 @@ class GeneratedVideoTest {
         assertEquals(List.of(false, false, true, true, true), List.of(Status.values()).stream().map(Status::isTerminal).toList());
     }
 
-    private static GeneratedVideo roundTrip(Serializable object) throws IOException, ClassNotFoundException {
+    private static VideoGeneration roundTrip(Serializable object) throws IOException, ClassNotFoundException {
         var bytes = new ByteArrayOutputStream();
 
         try (var output = new ObjectOutputStream(bytes)) {
@@ -292,7 +292,7 @@ class GeneratedVideoTest {
         }
 
         try (var input = new ObjectInputStream(new ByteArrayInputStream(bytes.toByteArray()))) {
-            return (GeneratedVideo) input.readObject();
+            return (VideoGeneration) input.readObject();
         }
     }
 

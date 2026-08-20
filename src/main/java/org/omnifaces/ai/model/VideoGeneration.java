@@ -40,11 +40,11 @@ import org.omnifaces.ai.exception.AIException;
  *
  * <pre>
  *
- * GeneratedVideo video = service.generateVideo(prompt); // Returns at once, PENDING.
+ * VideoGeneration video = service.generateVideo(prompt); // Returns at once, PENDING.
  *
  * Status status = video.status(); // Pure getter, performs no I/O.
- * GeneratedVideo refreshed = video.refresh(); // Caller-driven poll, exactly one request.
- * CompletableFuture&lt;GeneratedVideo&gt; completed = video.completion(); // Library-driven poll, completes when the job reaches a terminal status.
+ * VideoGeneration refreshed = video.refresh(); // Caller-driven poll, exactly one request.
+ * CompletableFuture&lt;VideoGeneration&gt; completed = video.completion(); // Library-driven poll, completes when the job reaches a terminal status.
  * video.writeTo(path); // Once it has completed.
  * </pre>
  * <p>
@@ -52,20 +52,20 @@ import org.omnifaces.ai.exception.AIException;
  * restart or on another node. It is bound to the AI service which submitted the job rather than to any wrapper around it, so a decorator such as
  * {@code RetryingAIService} covers the submission but not the polling and the download; those reach the AI provider directly, which is what lets the handle
  * outlive the call that produced it. A deserialized handle has lost its connection to the AI service and can therefore only be read; revive it with
- * {@link AIService#findGeneratedVideo(String)} to poll or download it again.
+ * {@link AIService#findVideoGeneration(String)} to poll or download it again.
  *
  * @author Bauke Scholtz
  * @since 1.7
  * @see AIService#generateVideo(String, GenerateVideoOptions)
- * @see AIService#findGeneratedVideo(String)
+ * @see AIService#findVideoGeneration(String)
  */
-public class GeneratedVideo implements Serializable {
+public class VideoGeneration implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
     private static final String TEMP_FILE_SUFFIX = ".omnihai.tmp";
 
-    private static final String REVIVE_MESSAGE = "This generated video is deserialized. Use AIService#findGeneratedVideo(String) to obtain a pollable one.";
+    private static final String REVIVE_MESSAGE = "This video generation is deserialized. Use AIService#findVideoGeneration(String) to obtain a pollable one.";
 
     /**
      * The status of a video generation job.
@@ -81,7 +81,7 @@ public class GeneratedVideo implements Serializable {
         /** The job has finished and the video is available for download. */
         COMPLETED,
 
-        /** The job has failed. The reason, when the AI provider states one, is in {@link GeneratedVideo#failureReason()}. */
+        /** The job has failed. The reason, when the AI provider states one, is in {@link VideoGeneration#failureReason()}. */
         FAILED,
 
         /** The job has finished, but the AI provider has meanwhile deleted the video. Provider-hosted results live about a day. */
@@ -186,7 +186,7 @@ public class GeneratedVideo implements Serializable {
     /** The AI service which submitted the job, absent after deserialization. */
     private final transient Source source;
     /** The wait which {@link #completion()} started, so that a second caller joins it rather than polling the same job again. */
-    private transient volatile CompletableFuture<GeneratedVideo> completion;
+    private transient volatile CompletableFuture<VideoGeneration> completion;
 
     /**
      * Constructs a new handle on the given job.
@@ -196,14 +196,14 @@ public class GeneratedVideo implements Serializable {
      * @param source The AI service which submitted the job.
      * @throws NullPointerException when any argument is null.
      */
-    public GeneratedVideo(Job job, GenerateVideoOptions options, Source source) {
+    public VideoGeneration(Job job, GenerateVideoOptions options, Source source) {
         this.job = requireNonNull(job, "job");
         this.options = requireNonNull(options, "options");
         this.source = requireNonNull(source, "source");
     }
 
     /**
-     * Returns the id which the AI provider assigned to this job. This is the value to hand to {@link AIService#findGeneratedVideo(String)} later on.
+     * Returns the id which the AI provider assigned to this job. This is the value to hand to {@link AIService#findVideoGeneration(String)} later on.
      *
      * @return The job id, never {@code null}.
      */
@@ -236,7 +236,7 @@ public class GeneratedVideo implements Serializable {
      * @throws IllegalStateException if this handle is deserialized and the job is not already terminal.
      * @throws AIException if the poll request fails.
      */
-    public GeneratedVideo refresh() {
+    public VideoGeneration refresh() {
         if (!job.status().isTerminal()) {
             job = requireSource().pollVideo(job);
         }
@@ -257,7 +257,7 @@ public class GeneratedVideo implements Serializable {
      * @return A future which completes with this handle once the job is no longer {@link Status#PENDING} or {@link Status#RUNNING}.
      * @throws IllegalStateException if this handle is deserialized and the job is not already terminal.
      */
-    public CompletableFuture<GeneratedVideo> completion() {
+    public CompletableFuture<VideoGeneration> completion() {
         if (job.status().isTerminal()) {
             return completedFuture(this);
         }
@@ -277,7 +277,7 @@ public class GeneratedVideo implements Serializable {
         }
     }
 
-    private CompletableFuture<GeneratedVideo> startPolling() {
+    private CompletableFuture<VideoGeneration> startPolling() {
         var polling = requireSource().awaitVideoCompletion(job, options);
         var awaited = polling.thenApply(polled -> {
             job = polled;
@@ -371,7 +371,7 @@ public class GeneratedVideo implements Serializable {
 
     @Override
     public String toString() {
-        return "GeneratedVideo[" + job.id() + ", " + job.status() + "]";
+        return "VideoGeneration[" + job.id() + ", " + job.status() + "]";
     }
 
 }

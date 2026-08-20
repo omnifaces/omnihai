@@ -23,7 +23,7 @@ import org.omnifaces.ai.AIConfig;
 import org.omnifaces.ai.AIService;
 import org.omnifaces.ai.exception.AIResponseException;
 import org.omnifaces.ai.model.GenerateVideoOptions;
-import org.omnifaces.ai.model.GeneratedVideo.Status;
+import org.omnifaces.ai.model.VideoGeneration.Status;
 
 class OpenRouterAIVideoHandlerTest {
 
@@ -60,34 +60,34 @@ class OpenRouterAIVideoHandlerTest {
     }
 
     @Test
-    void parseGeneratedVideo_whenCompleted_takesTheFirstContentUrl() {
-        var job = handler.parseGeneratedVideo(parseJson("{\"status\":\"completed\",\"unsigned_urls\":[\"" + CONTENT_URL + "\"]}"), "abc123");
+    void parseVideoGeneration_whenCompleted_takesTheFirstContentUrl() {
+        var job = handler.parseVideoGeneration(parseJson("{\"status\":\"completed\",\"unsigned_urls\":[\"" + CONTENT_URL + "\"]}"), "abc123");
 
         assertEquals(Status.COMPLETED, job.status());
         assertEquals(CONTENT_URL, job.contentPath());
     }
 
     @Test
-    void parseGeneratedVideo_whenInProgress_hasNoContentYet() {
-        var job = handler.parseGeneratedVideo(parseJson("{\"status\":\"in_progress\"}"), "abc123");
+    void parseVideoGeneration_whenInProgress_hasNoContentYet() {
+        var job = handler.parseVideoGeneration(parseJson("{\"status\":\"in_progress\"}"), "abc123");
 
         assertEquals(Status.RUNNING, job.status());
         assertNull(job.contentPath());
     }
 
     @Test
-    void parseGeneratedVideo_whenCanceled_isFailed() {
-        assertEquals(Status.FAILED, handler.parseGeneratedVideo(parseJson("{\"status\":\"cancelled\"}"), "abc123").status());
+    void parseVideoGeneration_whenCanceled_isFailed() {
+        assertEquals(Status.FAILED, handler.parseVideoGeneration(parseJson("{\"status\":\"cancelled\"}"), "abc123").status());
     }
 
     @Test
-    void parseGeneratedVideo_whenExpired_isExpired() {
-        assertEquals(Status.EXPIRED, handler.parseGeneratedVideo(parseJson("{\"status\":\"expired\"}"), "abc123").status());
+    void parseVideoGeneration_whenExpired_isExpired() {
+        assertEquals(Status.EXPIRED, handler.parseVideoGeneration(parseJson("{\"status\":\"expired\"}"), "abc123").status());
     }
 
     @Test
-    void parseGeneratedVideo_withUnknownStatus_throwsException() {
-        assertThrows(AIResponseException.class, () -> handler.parseGeneratedVideo(parseJson("{\"status\":\"levitating\"}"), "abc123"));
+    void parseVideoGeneration_withUnknownStatus_throwsException() {
+        assertThrows(AIResponseException.class, () -> handler.parseVideoGeneration(parseJson("{\"status\":\"levitating\"}"), "abc123"));
     }
 
     private static AIService newService() {

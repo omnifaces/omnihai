@@ -19,7 +19,7 @@ import jakarta.json.JsonObject;
 import org.omnifaces.ai.exception.AIResponseException;
 import org.omnifaces.ai.modality.DefaultAIVideoHandler;
 import org.omnifaces.ai.model.GenerateVideoOptions;
-import org.omnifaces.ai.model.GeneratedVideo;
+import org.omnifaces.ai.model.VideoGeneration;
 
 /**
  * Handler for video-based AI operations.
@@ -73,7 +73,7 @@ public interface AIVideoHandler extends Serializable {
      * @return The submitted video generation job.
      * @throws AIResponseException If the response JSON contains an error object, or is missing the job id.
      */
-    default GeneratedVideo.Job parseSubmittedVideo(JsonObject responseJson) throws AIResponseException {
+    default VideoGeneration.Job parseSubmittedVideo(JsonObject responseJson) throws AIResponseException {
         throw new UnsupportedOperationException("Please implement parseSubmittedVideo(JsonObject responseJson) for this AI provider");
     }
 
@@ -87,8 +87,8 @@ public interface AIVideoHandler extends Serializable {
      * @return The current state of the video generation job.
      * @throws AIResponseException If the response JSON contains an error object, or is missing the job status.
      */
-    default GeneratedVideo.Job parseGeneratedVideo(JsonObject responseJson, String jobId) throws AIResponseException {
-        throw new UnsupportedOperationException("Please implement parseGeneratedVideo(JsonObject responseJson, String jobId) for this AI provider");
+    default VideoGeneration.Job parseVideoGeneration(JsonObject responseJson, String jobId) throws AIResponseException {
+        throw new UnsupportedOperationException("Please implement parseVideoGeneration(JsonObject responseJson, String jobId) for this AI provider");
     }
 
 }

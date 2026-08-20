@@ -18,7 +18,7 @@ import jakarta.json.JsonObject;
 
 import org.omnifaces.ai.AIVideoHandler;
 import org.omnifaces.ai.exception.AIResponseException;
-import org.omnifaces.ai.model.GeneratedVideo.Status;
+import org.omnifaces.ai.model.VideoGeneration.Status;
 
 /**
  * Default video handler, holding the provider-independent video analysis prompt and job status vocabulary.
