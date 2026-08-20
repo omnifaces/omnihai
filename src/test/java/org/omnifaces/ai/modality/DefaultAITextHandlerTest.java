@@ -15,6 +15,7 @@ package org.omnifaces.ai.modality;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
+import java.util.Locale;
 
 import org.junit.jupiter.api.Test;
 import org.omnifaces.ai.model.ModerationOptions;
@@ -29,6 +30,13 @@ class DefaultAITextHandlerTest {
 
         assertTrue(prompt.indexOf("- billing") < prompt.indexOf("- technical"), "the labels reach the AI in the order they were given");
         assertTrue(prompt.indexOf("- technical") < prompt.indexOf("- other"), "the labels reach the AI in the order they were given");
+    }
+
+    @Test
+    void buildClassifyPrompt_namesTheShapeOfTheAnswer() {
+        var prompt = handler.buildClassifyPrompt(List.of("spam", "ham")).toLowerCase(Locale.ROOT);
+
+        assertTrue(prompt.contains("json"), "a prompt describing a two part answer without naming a shape gets two lines instead of an object");
     }
 
     @Test
