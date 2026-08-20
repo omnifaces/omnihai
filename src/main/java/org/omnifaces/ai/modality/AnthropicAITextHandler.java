@@ -24,6 +24,7 @@ import static org.omnifaces.ai.model.Sse.Event.Type.DATA;
 import static org.omnifaces.ai.model.Sse.Event.Type.EVENT;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.function.Consumer;
 
 import jakarta.json.Json;
@@ -275,7 +276,7 @@ public class AnthropicAITextHandler extends DefaultAITextHandler {
                 /* Omit thinking; the model applies its own adaptive default. */ }
             case LOW, MEDIUM, HIGH, XHIGH -> {
                 payload.add("thinking", Json.createObjectBuilder().add("type", "adaptive"));
-                payload.add("output_config", Json.createObjectBuilder().add("effort", effort.name().toLowerCase()));
+                payload.add("output_config", Json.createObjectBuilder().add("effort", effort.name().toLowerCase(Locale.ROOT)));
             }
         }
     }

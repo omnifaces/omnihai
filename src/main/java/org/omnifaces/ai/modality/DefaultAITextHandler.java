@@ -21,6 +21,7 @@ import static org.omnifaces.ai.helper.JsonHelper.findLastNonBlankByPaths;
 import static org.omnifaces.ai.helper.JsonHelper.parseJson;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.function.Predicate;
 import java.util.logging.Logger;
 
@@ -124,7 +125,7 @@ public class DefaultAITextHandler implements AITextHandler {
     public String buildTranslatePrompt(String sourceLang, String targetLang) {
         var sourcePrompt = sourceLang == null
             ? "Detect the source language automatically."
-            : "Translate from ISO 639-1 code '%s'".formatted(sourceLang.toLowerCase());
+            : "Translate from ISO 639-1 code '%s'".formatted(sourceLang.toLowerCase(Locale.ROOT));
         return """
                 You are a professional translator.
                 %s
@@ -138,7 +139,7 @@ public class DefaultAITextHandler implements AITextHandler {
                 - Only the translated input.
                 - No explanations, no notes, no extra text, no markdown formatting.
                 - Keep exact same line breaks, spacing and structure where possible.
-            """.formatted(sourcePrompt, targetLang.toLowerCase());
+            """.formatted(sourcePrompt, targetLang.toLowerCase(Locale.ROOT));
     }
 
     @Override

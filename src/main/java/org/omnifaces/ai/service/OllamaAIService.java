@@ -12,6 +12,8 @@
  */
 package org.omnifaces.ai.service;
 
+import java.util.Locale;
+
 import org.omnifaces.ai.AIConfig;
 import org.omnifaces.ai.AIModality;
 import org.omnifaces.ai.AIModelVersion;
@@ -62,7 +64,7 @@ public class OllamaAIService extends BaseAIService {
     @Override
     public boolean supportsModality(AIModality modality) {
         var currentModelVersion = getModelVersion();
-        var fullModelName = getModelName().toLowerCase();
+        var fullModelName = getModelName().toLowerCase(Locale.ROOT);
 
         return switch (modality) {
             case IMAGE_ANALYSIS ->

@@ -16,6 +16,7 @@ import static java.util.Arrays.stream;
 import static org.omnifaces.ai.helper.TextHelper.requireNonBlank;
 
 import java.io.Serializable;
+import java.util.Locale;
 
 /**
  * A record that holds AI model version information and provides comparison utilities.
@@ -187,8 +188,8 @@ public final record AIModelVersion(String modelName, int majorVersion, int minor
      * @return {@code true} if either model name prefix contains the other.
      */
     private boolean hasMatchingModel(AIModelVersion other) {
-        var thisModelName = modelName.toLowerCase();
-        var otherModelName = getModelPrefix(other.modelName).toLowerCase();
+        var thisModelName = modelName.toLowerCase(Locale.ROOT);
+        var otherModelName = getModelPrefix(other.modelName).toLowerCase(Locale.ROOT);
         return thisModelName.contains(otherModelName) || otherModelName.contains(thisModelName);
     }
 

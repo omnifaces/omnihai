@@ -43,6 +43,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
+import java.util.Locale;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.logging.Logger;
@@ -457,11 +458,11 @@ final class AIHttpClient {
             .filter(IOException.class::isInstance)
             .findFirst()
             .map(
-                ioException -> ioException instanceof java.net.ConnectException
+                ioException -> ioException instanceof ConnectException
                     || iterate(ioException, Objects::nonNull, Throwable::getCause)
                         .map(Throwable::getMessage)
                         .filter(Objects::nonNull)
-                        .map(String::toLowerCase)
+                        .map(message -> message.toLowerCase(Locale.ROOT))
                         .anyMatch(
                             msg -> msg.contains("timed")
                                 || msg.contains("terminated")

@@ -16,6 +16,7 @@ import static org.omnifaces.ai.service.ModelModalitiesRegistry.findModelModaliti
 
 import java.nio.file.Path;
 import java.util.EnumSet;
+import java.util.Locale;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
@@ -90,7 +91,7 @@ public class HuggingFaceAIService extends OpenAIService {
     }
 
     private boolean supportsModalityByModelName(AIModality modality) {
-        var fullModelName = getModelName().toLowerCase();
+        var fullModelName = getModelName().toLowerCase(Locale.ROOT);
 
         return switch (modality) {
             case IMAGE_ANALYSIS -> true;

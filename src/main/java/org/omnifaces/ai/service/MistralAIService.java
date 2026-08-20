@@ -12,6 +12,7 @@
  */
 package org.omnifaces.ai.service;
 
+import java.util.Locale;
 import java.util.Set;
 
 import org.omnifaces.ai.AIConfig;
@@ -83,7 +84,7 @@ public class MistralAIService extends OpenAIService {
 
     @Override
     public boolean supportsStreaming() {
-        return isAtLeast(MISTRAL_2402, MISTRAL_3_5) || getModelName().toLowerCase().endsWith("latest");
+        return isAtLeast(MISTRAL_2402, MISTRAL_3_5) || getModelName().toLowerCase(Locale.ROOT).endsWith("latest");
     }
 
     @Override
@@ -98,7 +99,7 @@ public class MistralAIService extends OpenAIService {
 
     @Override
     public boolean supportsReasoningEffort() {
-        return isAtLeast(MISTRAL_2603, MISTRAL_3_5) || getModelName().toLowerCase().endsWith("latest");
+        return isAtLeast(MISTRAL_2603, MISTRAL_3_5) || getModelName().toLowerCase(Locale.ROOT).endsWith("latest");
     }
 
     @Override

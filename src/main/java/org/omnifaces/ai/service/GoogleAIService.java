@@ -17,6 +17,7 @@ import static org.omnifaces.ai.helper.JsonHelper.findFirstByPath;
 
 import java.net.URI;
 import java.time.Duration;
+import java.util.Locale;
 
 import jakarta.json.JsonObject;
 
@@ -91,7 +92,7 @@ public class GoogleAIService extends BaseAIService {
     @Override
     public boolean supportsModality(AIModality modality) {
         var currentModelVersion = getModelVersion();
-        var fullModelName = getModelName().toLowerCase();
+        var fullModelName = getModelName().toLowerCase(Locale.ROOT);
 
         return switch (modality) {
             case IMAGE_ANALYSIS -> true;

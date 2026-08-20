@@ -18,6 +18,7 @@ import static org.omnifaces.ai.helper.JsonHelper.isEmpty;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -85,7 +86,7 @@ public class OpenAIService extends BaseAIService {
     @Override
     public boolean supportsModality(AIModality modality) {
         var currentModelVersion = getModelVersion();
-        var fullModelName = getModelName().toLowerCase();
+        var fullModelName = getModelName().toLowerCase(Locale.ROOT);
 
         return switch (modality) {
             case IMAGE_ANALYSIS -> currentModelVersion.gte(GPT_4) || fullModelName.contains("vision");

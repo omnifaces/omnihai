@@ -13,9 +13,17 @@
 package org.omnifaces.ai.modality;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.omnifaces.ai.AIProvider.OPENAI;
 import static org.omnifaces.ai.helper.JsonHelper.parseJson;
 
+import java.util.Locale;
+
+import jakarta.json.Json;
+
 import org.junit.jupiter.api.Test;
+import org.omnifaces.ai.AIConfig;
+import org.omnifaces.ai.AIService;
+import org.omnifaces.ai.model.ChatOptions.ReasoningEffort;
 
 class OpenAITextHandlerTest {
 
@@ -52,6 +60,50 @@ class OpenAITextHandlerTest {
         var responseJson = parseJson("{\"choices\":[{\"message\":{\"content\":\"The completions answer\"}}]}");
 
         assertEquals("The completions answer", handler.parseChatResponse(responseJson));
+    }
+
+    // =================================================================================================================
+    // Locale independence
+    // =================================================================================================================
+
+    @Test
+    void addReasoningEffort_underADottedIlessLocale_staysAscii() {
+        var service = newService();
+        var payload = Json.createObjectBuilder();
+        var defaultLocale = Locale.getDefault();
+
+        try {
+            Locale.setDefault(Locale.forLanguageTag("tr"));
+
+            handler.addReasoningEffort(service, payload, ReasoningEffort.HIGH, false);
+
+            assertEquals("high", payload.build().getString("reasoning_effort"), "an AI provider takes its own enum value, not the default locale's rendering");
+        }
+        finally {
+            Locale.setDefault(defaultLocale);
+        }
+    }
+
+    @Test
+    void addReasoningEffort_underADottedIlessLocale_staysAsciiOnTheResponsesApi() {
+        var service = newService();
+        var payload = Json.createObjectBuilder();
+        var defaultLocale = Locale.getDefault();
+
+        try {
+            Locale.setDefault(Locale.forLanguageTag("tr"));
+
+            handler.addReasoningEffort(service, payload, ReasoningEffort.XHIGH, true);
+
+            assertEquals("xhigh", payload.build().getJsonObject("reasoning").getString("effort"), "XHIGH is the value a dotted-I-less locale mangles worst");
+        }
+        finally {
+            Locale.setDefault(defaultLocale);
+        }
+    }
+
+    private static AIService newService() {
+        return AIConfig.of(OPENAI, "test-api-key").withModel("gpt-5.6-terra").createService();
     }
 
 }

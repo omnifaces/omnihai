@@ -14,6 +14,7 @@ package org.omnifaces.ai.modality;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 import jakarta.json.Json;
 import jakarta.json.JsonArrayBuilder;
@@ -117,7 +118,7 @@ public class OpenRouterAITextHandler extends OpenAITextHandler {
      */
     @Override
     protected void addReasoningEffort(AIService service, JsonObjectBuilder payload, ReasoningEffort effort, boolean supportsResponsesApi) {
-        payload.add("reasoning", Json.createObjectBuilder().add("effort", effort.name().toLowerCase()));
+        payload.add("reasoning", Json.createObjectBuilder().add("effort", effort.name().toLowerCase(Locale.ROOT)));
     }
 
 }

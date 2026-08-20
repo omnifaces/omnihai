@@ -19,6 +19,7 @@ import java.io.Serializable;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -223,7 +224,7 @@ public class ModerationOptions implements Serializable {
                     throw new IllegalArgumentException(category + " may only contain alphabetic characters or hyphens");
                 }
 
-                this.categories.add(category.toLowerCase());
+                this.categories.add(category.toLowerCase(Locale.ROOT));
             }
 
             return this;

@@ -19,6 +19,7 @@ import static org.omnifaces.ai.model.Sse.Event.Type.DATA;
 import static org.omnifaces.ai.model.Sse.Event.Type.EVENT;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
@@ -453,7 +454,10 @@ public class OpenAITextHandler extends DefaultAITextHandler {
             return ReasoningEffort.MEDIUM;
         }
 
-        if (effort == ReasoningEffort.XHIGH && !(service.getModelVersion().gte(GPT_5_1) && service.getModelName().toLowerCase().contains("codex-max"))) {
+        if (
+            effort == ReasoningEffort.XHIGH
+                && !(service.getModelVersion().gte(GPT_5_1) && service.getModelName().toLowerCase(Locale.ROOT).contains("codex-max"))
+        ) {
             return ReasoningEffort.HIGH;
         }
 
@@ -471,7 +475,7 @@ public class OpenAITextHandler extends DefaultAITextHandler {
      * @since 1.4
      */
     protected void addReasoningEffort(AIService service, JsonObjectBuilder payload, ReasoningEffort effort, boolean supportsResponsesApi) {
-        var value = effort.name().toLowerCase();
+        var value = effort.name().toLowerCase(Locale.ROOT);
 
         if (supportsResponsesApi) {
             payload.add("reasoning", Json.createObjectBuilder().add("effort", value));

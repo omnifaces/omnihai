@@ -12,6 +12,7 @@
  */
 package org.omnifaces.ai.service;
 
+import java.util.Locale;
 import java.util.Set;
 
 import org.omnifaces.ai.AIConfig;
@@ -67,7 +68,7 @@ public class XAIService extends OpenAIService {
     @Override
     public boolean supportsModality(AIModality modality) {
         var currentModelVersion = getModelVersion();
-        var fullModelName = getModelName().toLowerCase();
+        var fullModelName = getModelName().toLowerCase(Locale.ROOT);
 
         return switch (modality) {
             case IMAGE_ANALYSIS -> currentModelVersion.gte(GROK_4) || fullModelName.contains("vision");
@@ -88,7 +89,7 @@ public class XAIService extends OpenAIService {
 
     @Override
     public boolean supportsReasoningEffort() {
-        return getModelVersion().gte(GROK_4_20) && getModelName().toLowerCase().contains("multi-agent");
+        return getModelVersion().gte(GROK_4_20) && getModelName().toLowerCase(Locale.ROOT).contains("multi-agent");
     }
 
     @Override

@@ -20,6 +20,7 @@ import static org.omnifaces.ai.model.Sse.Event.Type.DATA;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.function.Consumer;
 
@@ -285,7 +286,7 @@ public class GoogleAITextHandler extends DefaultAITextHandler {
         var effort = getEffectiveReasoningEffort(service, options);
 
         if (effort != ReasoningEffort.AUTO) {
-            generationConfig.add("thinkingConfig", Json.createObjectBuilder().add("thinkingLevel", effort.name().toLowerCase()));
+            generationConfig.add("thinkingConfig", Json.createObjectBuilder().add("thinkingLevel", effort.name().toLowerCase(Locale.ROOT)));
         }
 
         payload.add("generationConfig", generationConfig);
