@@ -154,13 +154,13 @@ MicroProfile Config expressions additionally need an MP Config implementation an
 
 | Provider | Default Model | API Key Required | Available Models |
 |----------|---------------|------------------|------------------|
-| OpenAI | gpt-5.6-terra | [Yes](https://platform.openai.com/api-keys) | [List](https://platform.openai.com/docs/models) |
+| OpenAI | gpt-5.6-terra | [Yes](https://platform.openai.com/api-keys) | [List](https://developers.openai.com/api/docs/models) |
 | Anthropic | claude-sonnet-5 | [Yes](https://platform.claude.com/settings/keys) | [List](https://platform.claude.com/docs/en/about-claude/models/overview) |
-| Google AI | gemini-3.5-flash | [Yes](https://aistudio.google.com/app/api-keys) | [List](https://ai.google.dev/gemini-api/docs/models) |
-| xAI | grok-4.5 | [Yes](https://console.x.ai) | [List](https://docs.x.ai/developers/models) |
-| Mistral | mistral-medium-3-5 | [Yes](https://console.mistral.ai/home?workspace_dialog=apiKeys) | [List](https://docs.mistral.ai/getting-started/models) |
-| Meta AI | muse-spark-1.1 | [Yes](https://developer.meta.com/ai/products/meta-model-api/) | [List](https://dev.meta.ai/docs/getting-started/overview/) |
-| Azure OpenAI | gpt-5.5 | [Yes](https://portal.azure.com) | [List](https://ai.azure.com/catalog) |
+| Google AI | gemini-3.7-flash | [Yes](https://aistudio.google.com/app/api-keys) | [List](https://ai.google.dev/gemini-api/docs/models) |
+| xAI | grok-4.6 | [Yes](https://console.x.ai) | [List](https://docs.x.ai/developers/models) |
+| Mistral | mistral-medium-3-5 | [Yes](https://console.mistral.ai/home?profile_dialog=api-keys) | [List](https://docs.mistral.ai/models) |
+| Meta AI | muse-spark-1.2 | [Yes](https://developer.meta.com/ai/products/meta-model-api/) | [List](https://dev.meta.ai/docs/getting-started/overview/) |
+| Azure OpenAI | gpt-5.6-terra | [Yes](https://portal.azure.com) | [List](https://ai.azure.com/catalog) |
 | OpenRouter | deepseek/deepseek-v4-pro | [Yes](https://openrouter.ai/settings/keys) | [List](https://openrouter.ai/models) |
 | Hugging Face | google/gemma-4-31B-it | [Yes](https://huggingface.co/settings/tokens) | [List](https://huggingface.co/models) |
 | Ollama | gemma4 | No (localhost) | [List](https://ollama.com/library) |
@@ -202,7 +202,7 @@ private AIService jakartaExpert;
 @Inject
 @AI(provider = AIProvider.XAI,
     apiKey = "#{configBean.xaiApiKey}",
-    model = "grok-imagine-image")
+    model = "grok-imagine-image-2.0")
 private AIService imageGenerator;
 ```
 

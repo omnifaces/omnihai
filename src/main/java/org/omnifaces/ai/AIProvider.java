@@ -87,7 +87,7 @@ public enum AIProvider {
      * @see OpenAIImageHandler
      * @see OpenAIAudioHandler
      * @see <a href="https://platform.openai.com/api-keys">Manage OpenAI API Keys</a>
-     * @see <a href="https://platform.openai.com/docs/models">Available OpenAI Models</a>
+     * @see <a href="https://developers.openai.com/api/docs/models">Available OpenAI Models</a>
      */
     OPENAI(
         "OpenAI", OpenAIService.class, true, "gpt-5.6-terra", "https://api.openai.com/v1", OpenAITextHandler.class, OpenAIImageHandler.class,
@@ -113,7 +113,7 @@ public enum AIProvider {
     /**
      * Google AI: Gemini Pro, Gemini Flash, Gemini Flash Lite, etc.
      * <p>
-     * Defaults currently to model {@code gemini-3.5-flash} at endpoint {@code https://generativelanguage.googleapis.com/v1beta}.
+     * Defaults currently to model {@code gemini-3.7-flash} at endpoint {@code https://generativelanguage.googleapis.com/v1beta}.
      *
      * @see GoogleAIService
      * @see GoogleAITextHandler
@@ -124,14 +124,14 @@ public enum AIProvider {
      * @see <a href="https://ai.google.dev/gemini-api/docs/models">Available Google AI Models</a>
      */
     GOOGLE(
-        "Google AI", GoogleAIService.class, true, "gemini-3.5-flash", "https://generativelanguage.googleapis.com/v1beta", GoogleAITextHandler.class,
+        "Google AI", GoogleAIService.class, true, "gemini-3.7-flash", "https://generativelanguage.googleapis.com/v1beta", GoogleAITextHandler.class,
         GoogleAIImageHandler.class, GoogleAIAudioHandler.class, GoogleAIVideoHandler.class
     ),
 
     /**
      * xAI: Grok Fast Reasoning, Grok Non Reasoning, Grok Code, etc.
      * <p>
-     * Defaults currently to model {@code grok-4.5} at endpoint {@code https://api.x.ai/v1}.
+     * Defaults currently to model {@code grok-4.6} at endpoint {@code https://api.x.ai/v1}.
      *
      * @see XAIService
      * @see OpenAITextHandler
@@ -142,7 +142,7 @@ public enum AIProvider {
      * @see <a href="https://docs.x.ai/developers/models">Available xAI Models</a>
      */
     XAI(
-        "xAI", XAIService.class, true, "grok-4.5", "https://api.x.ai/v1", OpenAITextHandler.class, XAIImageHandler.class, DefaultAIAudioHandler.class,
+        "xAI", XAIService.class, true, "grok-4.6", "https://api.x.ai/v1", OpenAITextHandler.class, XAIImageHandler.class, DefaultAIAudioHandler.class,
         XAIVideoHandler.class
     ),
 
@@ -155,8 +155,8 @@ public enum AIProvider {
      * @see MistralAITextHandler
      * @see OpenAIImageHandler
      * @see DefaultAIAudioHandler
-     * @see <a href="https://console.mistral.ai/home?workspace_dialog=apiKeys">Manage Mistral AI API Keys</a>
-     * @see <a href="https://docs.mistral.ai/getting-started/models/">Available Mistral AI Models</a>
+     * @see <a href="https://console.mistral.ai/home?profile_dialog=api-keys">Manage Mistral AI API Keys</a>
+     * @see <a href="https://docs.mistral.ai/models">Available Mistral AI Models</a>
      */
     MISTRAL(
         "Mistral AI", MistralAIService.class, true, "mistral-medium-3-5", "https://api.mistral.ai/v1", MistralAITextHandler.class, OpenAIImageHandler.class
@@ -165,7 +165,7 @@ public enum AIProvider {
     /**
      * Meta AI: Muse Spark, accessed via the OpenAI-compatible Meta Model API.
      * <p>
-     * Defaults currently to model {@code muse-spark-1.1} at endpoint {@code https://api.meta.ai/v1}.
+     * Defaults currently to model {@code muse-spark-1.2} at endpoint {@code https://api.meta.ai/v1}.
      *
      * @see MetaAIService
      * @see OpenAITextHandler
@@ -175,14 +175,14 @@ public enum AIProvider {
      * @see <a href="https://dev.meta.ai/docs/getting-started/overview/">Available Meta AI Models</a>
      */
     META(
-        "Meta AI", MetaAIService.class, true, "muse-spark-1.1", "https://api.meta.ai/v1", OpenAITextHandler.class,
+        "Meta AI", MetaAIService.class, true, "muse-spark-1.2", "https://api.meta.ai/v1", OpenAITextHandler.class,
         OpenAIImageHandler.class
     ),
 
     /**
      * Azure OpenAI: Aggregates a broad range of AI models via a unified OpenAI-compatible API.
      * <p>
-     * Defaults currently to model {@code gpt-5.5} at endpoint {@code https://{org.omnifaces.ai.AZURE_RESOURCE}.openai.azure.com/openai/v1}.
+     * Defaults currently to model {@code gpt-5.6-terra} at endpoint {@code https://{org.omnifaces.ai.AZURE_RESOURCE}.openai.azure.com/openai/v1}.
      *
      * @see AzureAIService
      * @see AzureAITextHandler
@@ -192,7 +192,7 @@ public enum AIProvider {
      * @see <a href="https://ai.azure.com/catalog">Available Azure OpenAI Models</a>
      */
     AZURE(
-        "Azure OpenAI", AzureAIService.class, true, "gpt-5.5", "https://{org.omnifaces.ai.AZURE_RESOURCE}.openai.azure.com/openai/v1",
+        "Azure OpenAI", AzureAIService.class, true, "gpt-5.6-terra", "https://{org.omnifaces.ai.AZURE_RESOURCE}.openai.azure.com/openai/v1",
         AzureAITextHandler.class, OpenAIImageHandler.class
     ),
 
