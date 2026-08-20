@@ -62,7 +62,7 @@ public class OpenRouterAITextHandler extends OpenAITextHandler {
                     return super.getModelName() + ":online";
                 }
 
-            }, input, appendWebSearchLocationToPromptIfNecessary(options.withWebSearch(null)), streaming);
+            }, input, appendWebSearchLocationToPromptIfNecessary(options).withWebSearch(null), streaming);
         }
         else {
             return super.buildChatPayload(service, input, options, streaming);
