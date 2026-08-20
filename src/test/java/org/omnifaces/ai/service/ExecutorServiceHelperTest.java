@@ -106,4 +106,35 @@ class ExecutorServiceHelperTest {
         assertTrue(latch.await(5, TimeUnit.SECONDS));
     }
 
+    @Test
+    void longRunningTask_doesNotDelayAShortOneBehindIt() throws Exception {
+        var blocking = new CountDownLatch(1);
+        var occupied = new CountDownLatch(1);
+        var completed = new CountDownLatch(1);
+
+        ExecutorServiceHelper.runAsync(() -> {
+            occupied.countDown();
+            await(blocking);
+        });
+
+        assertTrue(occupied.await(5, TimeUnit.SECONDS), "the blocking task must have taken a thread");
+        ExecutorServiceHelper.runAsync(completed::countDown);
+
+        try {
+            assertTrue(completed.await(5, TimeUnit.SECONDS), "a task which waits on I/O may not hold up every task behind it");
+        }
+        finally {
+            blocking.countDown();
+        }
+    }
+
+    private static void await(CountDownLatch latch) {
+        try {
+            latch.await(10, TimeUnit.SECONDS);
+        }
+        catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+    }
+
 }

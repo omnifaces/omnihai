@@ -13,7 +13,8 @@
 package org.omnifaces.ai.service;
 
 import static java.lang.Runtime.getRuntime;
-import static java.util.concurrent.Executors.newSingleThreadScheduledExecutor;
+import static java.util.concurrent.Executors.newCachedThreadPool;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.logging.Level.WARNING;
 
@@ -25,6 +26,10 @@ import java.util.logging.Logger;
  * Package-private helper for fire-and-forget async tasks.
  *
  * @author Bauke Scholtz
+ * <p>
+ * Without CDI the tasks run on a pool which grows on demand and reaps its idle threads, as the ones which occupy a thread the longest, such as consuming a
+ * server-sent event stream, spend that time waiting on I/O rather than on a processor: how many are needed follows from how many calls the application has in
+ * flight rather than from how many processors it has.
  * @since 1.1
  */
 final class ExecutorServiceHelper {
@@ -43,7 +48,7 @@ final class ExecutorServiceHelper {
             managedExecutorService = true;
         }
         else {
-            executorService = newSingleThreadScheduledExecutor(runnable -> {
+            executorService = newCachedThreadPool(runnable -> {
                 var thread = new Thread(runnable, "omnihai.executorService");
                 thread.setDaemon(true);
                 return thread;
