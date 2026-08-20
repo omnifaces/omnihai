@@ -12,7 +12,9 @@
  */
 package org.omnifaces.ai.exception;
 
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.ExecutionException;
 
 /**
  * Base exception for all AI service-related errors.
@@ -39,15 +41,16 @@ public class AIException extends RuntimeException {
     private static final long serialVersionUID = 1L;
 
     /**
-     * Unwraps an {@link AIException} from a {@link CompletionException} propagated to the caller thread.
+     * Unwraps an {@link AIException} from an exception propagated to the caller thread by an async operation, such as a {@link CompletionException} or a
+     * {@link CancellationException}.
      * <p>
      * If the cause is already an {@code AIException}, it is returned directly. Otherwise, a new {@code AIException} wrapping the cause is created. Then a
      * suppressed exception is added, preserving the stack trace of the current thread.
      *
-     * @param exception The completion exception from an async operation.
+     * @param exception The exception from an async operation.
      * @return The unwrapped or newly created AI exception.
      */
-    public static AIException asyncRequestFailed(CompletionException exception) {
+    public static AIException asyncRequestFailed(Throwable exception) {
         return asyncRequestFailed(exception, new Exception("Caller stack trace"));
     }
 
@@ -61,10 +64,19 @@ public class AIException extends RuntimeException {
      * @return The unwrapped or newly created AI exception.
      */
     public static AIException asyncRequestFailed(Throwable exception, Exception suppressed) {
-        var cause = exception instanceof CompletionException casted ? casted.getCause() : exception;
+        var cause = unwrapAsyncExceptionCause(exception);
         var aiException = cause instanceof AIException casted ? casted : new AIException("Async request failed", cause);
         aiException.addSuppressed(suppressed);
         return aiException;
+    }
+
+    /**
+     * Returns the cause which the given async exception wraps, or the exception itself when it wraps none. Only the exceptions which exist to wrap another are
+     * unwrapped; a {@link CancellationException} carries no cause and is therefore itself the most it can state.
+     */
+    private static Throwable unwrapAsyncExceptionCause(Throwable exception) {
+        var cause = exception instanceof CompletionException || exception instanceof ExecutionException ? exception.getCause() : null;
+        return cause != null ? cause : exception;
     }
 
     /**
