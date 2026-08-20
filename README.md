@@ -1084,6 +1084,8 @@ What you give up is everything `@AITool` does for you: the manifest is prose whi
 | **Image Generation** | ✅ | ✅ | ✅ |
 | **Audio Transcription** | ✅ (native + fallback) | ✅ | ✅ |
 | **Audio Generation (TTS)** | ✅ | ✅ | ✅ |
+| **Video Analysis** | ✅ | ✅ | ✅ |
+| **Video Generation** | ✅ | ❌ | ❌ |
 | **Content Moderation** | ✅ (native + fallback) | ❌ (via chat) | ❌ (via chat) |
 | **Classification** | ✅ | ❌ (via chat) | ❌ (via chat) |
 | **Translation** | ✅ | ❌ (via chat) | ❌ (via chat) |
