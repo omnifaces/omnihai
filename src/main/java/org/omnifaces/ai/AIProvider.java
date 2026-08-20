@@ -17,7 +17,6 @@ import static java.util.Arrays.stream;
 import org.omnifaces.ai.cdi.AI;
 import org.omnifaces.ai.modality.AnthropicAITextHandler;
 import org.omnifaces.ai.modality.AzureAITextHandler;
-import org.omnifaces.ai.modality.AzureAIVideoHandler;
 import org.omnifaces.ai.modality.DefaultAIAudioHandler;
 import org.omnifaces.ai.modality.DefaultAIImageHandler;
 import org.omnifaces.ai.modality.DefaultAITextHandler;
@@ -189,13 +188,12 @@ public enum AIProvider {
      * @see AzureAITextHandler
      * @see OpenAIImageHandler
      * @see DefaultAIAudioHandler
-     * @see AzureAIVideoHandler
      * @see <a href="https://portal.azure.com/">Manage Azure OpenAI API Keys</a>
      * @see <a href="https://ai.azure.com/catalog">Available Azure OpenAI Models</a>
      */
     AZURE(
         "Azure OpenAI", AzureAIService.class, true, "gpt-5.5", "https://{org.omnifaces.ai.AZURE_RESOURCE}.openai.azure.com/openai/v1",
-        AzureAITextHandler.class, OpenAIImageHandler.class, DefaultAIAudioHandler.class, AzureAIVideoHandler.class
+        AzureAITextHandler.class, OpenAIImageHandler.class
     ),
 
     /**

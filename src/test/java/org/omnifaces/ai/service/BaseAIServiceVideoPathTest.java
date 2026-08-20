@@ -59,15 +59,6 @@ class BaseAIServiceVideoPathTest {
     }
 
     @Test
-    void azure_addsTheApiVersionAndKeysTheDownloadByTheGeneration() {
-        var service = newService(AZURE, "sora-2");
-
-        assertEquals("video/generations/jobs?api-version=preview", service.getGenerateVideoPath());
-        assertEquals("video/generations/jobs/" + JOB_ID + "?api-version=preview", service.getGeneratedVideoPath(JOB_ID));
-        assertEquals("video/generations/gen-2/content/video?api-version=preview", AzureAIService.getVideoGenerationContentPath("gen-2"));
-    }
-
-    @Test
     void google_pollsTheOperationTheJobIdNames() {
         var service = newService(GOOGLE, "veo-3.1-generate-preview");
 
@@ -104,14 +95,6 @@ class BaseAIServiceVideoPathTest {
         assertFalse(uri.toString().contains(API_KEY), "a URI the AI provider names elsewhere may never carry the API key");
     }
 
-    @Test
-    void azure_resolvesVideoPathsOutsideTheDeployment() {
-        var service = newService(AZURE, "sora-2");
-
-        assertTrue(service.resolveURI(service.getGenerateVideoPath()).toString().endsWith("/openai/v1/video/generations/jobs?api-version=preview"));
-        assertFalse(service.resolveURI(service.getGenerateVideoPath()).toString().contains("deployments"), "the video endpoints are not below a deployment");
-    }
-
     // =================================================================================================================
     // Same origin
     // =================================================================================================================
@@ -139,8 +122,7 @@ class BaseAIServiceVideoPathTest {
         assertFalse(newService(GOOGLE, "gemini-3.5-flash").supportsModality(VIDEO_GENERATION));
         assertTrue(newService(XAI, "grok-imagine-video-1.5").supportsModality(VIDEO_GENERATION));
         assertFalse(newService(XAI, "grok-4.5").supportsModality(VIDEO_GENERATION));
-        assertTrue(newService(AZURE, "sora-2").supportsModality(VIDEO_GENERATION));
-        assertFalse(newService(AZURE, "gpt-5.5").supportsModality(VIDEO_GENERATION));
+        assertFalse(newService(AZURE, "sora-2").supportsModality(VIDEO_GENERATION), "Azure OpenAI retires Sora without a successor to route to");
     }
 
     @Test

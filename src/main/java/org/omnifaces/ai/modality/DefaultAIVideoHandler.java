@@ -13,13 +13,11 @@
 package org.omnifaces.ai.modality;
 
 import java.util.Locale;
-import java.util.Optional;
 
 import jakarta.json.JsonObject;
 
 import org.omnifaces.ai.AIVideoHandler;
 import org.omnifaces.ai.exception.AIResponseException;
-import org.omnifaces.ai.model.GenerateVideoOptions;
 import org.omnifaces.ai.model.GeneratedVideo.Status;
 
 /**
@@ -34,12 +32,6 @@ import org.omnifaces.ai.model.GeneratedVideo.Status;
 public class DefaultAIVideoHandler implements AIVideoHandler {
 
     private static final long serialVersionUID = 1L;
-
-    /** The 720p size of a portrait video, for an AI provider which takes a pixel size but no aspect ratio. */
-    private static final String PORTRAIT_SIZE = "720x1280";
-
-    /** The 720p size of a landscape video, for an AI provider which takes a pixel size but no aspect ratio. */
-    private static final String LANDSCAPE_SIZE = "1280x720";
 
     /**
      * Constructs a new instance of this AI handler.
@@ -60,26 +52,6 @@ public class DefaultAIVideoHandler implements AIVideoHandler {
                 - Plain text description only.
                 - No explanations, no notes, no extra text, no markdown formatting.
             """;
-    }
-
-    /**
-     * Returns the size to generate at for an AI provider which takes a pixel size but no aspect ratio of its own: the stated size, or the 720p size which the
-     * stated aspect ratio amounts to, or empty for a square aspect ratio, which such an AI provider generally offers no size for.
-     *
-     * @param options The video generation options.
-     * @return The size to generate at, or empty to leave the choice to the AI provider.
-     * @since 1.7
-     */
-    protected static Optional<String> findSize(GenerateVideoOptions options) {
-        if (!options.useDefaultSize()) {
-            return Optional.of(options.getSize());
-        }
-
-        if (options.isPortrait()) {
-            return Optional.of(PORTRAIT_SIZE);
-        }
-
-        return options.isLandscape() ? Optional.of(LANDSCAPE_SIZE) : Optional.empty();
     }
 
     /**
