@@ -39,6 +39,8 @@ import org.omnifaces.ai.model.ChatOptions;
 import org.omnifaces.ai.model.ClassificationResult;
 import org.omnifaces.ai.model.GenerateAudioOptions;
 import org.omnifaces.ai.model.GenerateImageOptions;
+import org.omnifaces.ai.model.GenerateVideoOptions;
+import org.omnifaces.ai.model.GeneratedVideo;
 import org.omnifaces.ai.model.ModerationOptions;
 import org.omnifaces.ai.model.ModerationResult;
 import org.omnifaces.ai.service.OpenAIService;
@@ -772,6 +774,21 @@ class AIConfigTest {
 
         @Override
         public CompletableFuture<byte[]> generateImageAsync(String prompt, GenerateImageOptions options) throws AIException {
+            return null;
+        }
+
+        @Override
+        public GeneratedVideo generateVideo(String prompt, GenerateVideoOptions options) throws AIException {
+            return null;
+        }
+
+        @Override
+        public CompletableFuture<GeneratedVideo> generateVideoAsync(String prompt, GenerateVideoOptions options) throws AIException {
+            return null;
+        }
+
+        @Override
+        public GeneratedVideo findGeneratedVideo(String jobId) {
             return null;
         }
 

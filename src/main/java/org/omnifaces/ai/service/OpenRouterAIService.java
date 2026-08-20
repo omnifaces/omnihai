@@ -12,10 +12,10 @@
  */
 package org.omnifaces.ai.service;
 
-import static org.omnifaces.ai.AIModality.AUDIO_GENERATION;
 import static org.omnifaces.ai.service.ModelModalitiesRegistry.findModelModalities;
 
-import java.util.EnumSet;
+import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 
 import org.omnifaces.ai.AIConfig;
@@ -54,8 +54,8 @@ public class OpenRouterAIService extends OpenAIService {
 
     private static final long serialVersionUID = 1L;
 
-    /** The modality which the listing may report but no call can serve, as OmniHai has no video generation API at all. */
-    private static final Set<AIModality> UNSERVEABLE_MODALITIES = EnumSet.of(AIModality.VIDEO_GENERATION);
+    /** The model listing paths, as OpenRouter omits the video generators from its default one. */
+    private static final List<String> MODELS_PATHS = List.of("models", "models?output_modalities=video");
 
     /**
      * Constructs an OpenRouter AI service with the specified configuration.
@@ -75,23 +75,28 @@ public class OpenRouterAIService extends OpenAIService {
      */
     @Override
     public boolean supportsModality(AIModality modality) {
-        if (UNSERVEABLE_MODALITIES.contains(modality)) {
-            return false;
-        }
-
         return findModelModalities(this).map(modalities -> modalities.contains(modality)).orElseGet(() -> supportsModalityByModelName(modality));
+    }
+
+    /**
+     * OpenRouter enumerates the video generators only under {@code output_modalities=video}, so that listing is consulted next to the default one.
+     */
+    @Override
+    protected List<String> getModelsPaths() {
+        return MODELS_PATHS;
     }
 
     /**
      * Matches the model name against the modality name, which a model offering that modality as output is generally named after, such as
      * {@code google/gemini-3-flash-image}. A model offering it as input is named after its family instead, so image analysis is assumed rather than matched, as
-     * nearly every routed model accepts an image, and audio and video analysis are assumed absent rather than guessed.
+     * nearly every routed model accepts an image, and audio and video analysis are assumed absent rather than guessed. Video generation is left to the listing
+     * alone, as a model offering it is named after neither.
      *
      * @param modality The modality to check.
      * @return Whether the model name suggests the given modality.
      */
     private boolean supportsModalityByModelName(AIModality modality) {
-        var fullModelName = getModelName().toLowerCase();
+        var fullModelName = getModelName().toLowerCase(Locale.ROOT);
 
         return switch (modality) {
             case IMAGE_ANALYSIS -> true;

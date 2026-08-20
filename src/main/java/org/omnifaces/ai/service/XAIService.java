@@ -73,6 +73,7 @@ public class XAIService extends OpenAIService {
         return switch (modality) {
             case IMAGE_ANALYSIS -> currentModelVersion.gte(GROK_4) || fullModelName.contains("vision");
             case IMAGE_GENERATION -> fullModelName.contains("image");
+            case VIDEO_GENERATION -> fullModelName.contains("video");
             default -> false;
         };
     }
@@ -110,6 +111,22 @@ public class XAIService extends OpenAIService {
     @Override
     public boolean supportsOpenAITranscriptionCapability() {
         return false;
+    }
+
+    /**
+     * Returns {@code videos/generations}.
+     */
+    @Override
+    protected String getGenerateVideoPath() {
+        return "videos/generations";
+    }
+
+    /**
+     * Returns {@code videos/{jobId}}, as xAI polls the job outside the endpoint it was submitted to.
+     */
+    @Override
+    protected String getGeneratedVideoPath(String jobId) {
+        return "videos/" + jobId;
     }
 
 }

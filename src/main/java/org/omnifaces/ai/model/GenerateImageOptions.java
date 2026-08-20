@@ -13,9 +13,11 @@
 package org.omnifaces.ai.model;
 
 import static java.util.Objects.requireNonNull;
+import static org.omnifaces.ai.model.Dimensions.calculateAspectRatioBasedOnSize;
+import static org.omnifaces.ai.model.Dimensions.requireValidAspectRatio;
+import static org.omnifaces.ai.model.Dimensions.requireValidSize;
 
 import java.io.Serializable;
-import java.util.regex.Pattern;
 
 /**
  * Options for AI image generation.
@@ -152,9 +154,6 @@ public class GenerateImageOptions implements Serializable {
      */
     public static class Builder {
 
-        private static final Pattern SIZE_PATTERN = Pattern.compile("\\d+x\\d+");
-        private static final Pattern ASPECT_RATIO_PATTERN = Pattern.compile("\\d+:\\d+");
-
         private String size = GenerateImageOptions.DEFAULT_SIZE;
         private String aspectRatio = GenerateImageOptions.DEFAULT_ASPECT_RATIO;
         private String quality = GenerateImageOptions.DEFAULT_QUALITY;
@@ -182,13 +181,7 @@ public class GenerateImageOptions implements Serializable {
          * @throws IllegalArgumentException when size is invalid.
          */
         public Builder size(String size) {
-            requireNonNull(size, "size");
-
-            if (!SIZE_PATTERN.matcher(size).matches()) {
-                throw new IllegalArgumentException("Invalid size: " + size);
-            }
-
-            this.size = size;
+            this.size = requireValidSize(size);
             this.aspectRatio = calculateAspectRatioBasedOnSize(size);
             return this;
         }
@@ -211,13 +204,7 @@ public class GenerateImageOptions implements Serializable {
          * @throws IllegalArgumentException when aspect ratio is invalid.
          */
         public Builder aspectRatio(String aspectRatio) {
-            requireNonNull(aspectRatio, "aspectRatio");
-
-            if (!ASPECT_RATIO_PATTERN.matcher(aspectRatio).matches()) {
-                throw new IllegalArgumentException("Invalid aspect ratio: " + aspectRatio);
-            }
-
-            this.aspectRatio = aspectRatio;
+            this.aspectRatio = requireValidAspectRatio(aspectRatio);
             this.size = DEFAULT_SIZE;
             return this;
         }
@@ -268,18 +255,6 @@ public class GenerateImageOptions implements Serializable {
          */
         public GenerateImageOptions build() {
             return new GenerateImageOptions(this);
-        }
-
-        private static String calculateAspectRatioBasedOnSize(String size) {
-            var parts = size.split("x");
-            var width = Integer.parseInt(parts[0]);
-            var height = Integer.parseInt(parts[1]);
-            var greatestCommonDivisor = calculateGreatestCommonDivisor(width, height);
-            return (width / greatestCommonDivisor) + ":" + (height / greatestCommonDivisor);
-        }
-
-        private static int calculateGreatestCommonDivisor(int a, int b) {
-            return b == 0 ? a : calculateGreatestCommonDivisor(b, a % b);
         }
 
     }

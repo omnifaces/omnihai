@@ -15,10 +15,12 @@ package org.omnifaces.ai.service;
 import static java.util.Optional.ofNullable;
 
 import java.net.URI;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
 import org.omnifaces.ai.AIConfig;
+import org.omnifaces.ai.AIModality;
 import org.omnifaces.ai.AIProvider;
 import org.omnifaces.ai.AIService;
 
@@ -64,6 +66,9 @@ public class AzureAIService extends OpenAIService {
     public static final String OPTION_AZURE_RESOURCE = AIConfig.createPropertyKey("AZURE_RESOURCE");
 
     private static final String RESOURCE_SUBSTITUTION = "{" + OPTION_AZURE_RESOURCE + "}";
+    private static final String SORA_MODEL_NAME = "sora";
+    private static final String VIDEO_PATH_PREFIX = "video/";
+    private static final String API_VERSION_QUERY = "?api-version=preview";
 
     /**
      * Constructs an Azure AI service with the specified configuration.
@@ -91,6 +96,11 @@ public class AzureAIService extends OpenAIService {
     }
 
     @Override
+    public boolean supportsModality(AIModality modality) {
+        return modality == AIModality.VIDEO_GENERATION ? getModelName().toLowerCase(Locale.ROOT).contains(SORA_MODEL_NAME) : super.supportsModality(modality);
+    }
+
+    @Override
     public boolean supportsOpenAIResponsesApi() {
         return false;
     }
@@ -107,7 +117,32 @@ public class AzureAIService extends OpenAIService {
 
     @Override
     protected URI resolveURI(String path) {
-        return super.resolveURI(String.format("openai/v1/deployments/%s/%s", model, path));
+        return path.startsWith(VIDEO_PATH_PREFIX) ? super.resolveURI(path) : super.resolveURI(String.format("openai/v1/deployments/%s/%s", model, path));
+    }
+
+    /**
+     * Returns {@code video/generations/jobs}, which answers with a job to poll rather than with the video itself.
+     */
+    @Override
+    protected String getGenerateVideoPath() {
+        return VIDEO_PATH_PREFIX + "generations/jobs" + API_VERSION_QUERY;
+    }
+
+    @Override
+    protected String getGeneratedVideoPath(String jobId) {
+        return VIDEO_PATH_PREFIX + "generations/jobs/" + jobId + API_VERSION_QUERY;
+    }
+
+    /**
+     * Returns the path to download the video of the given generation from. Azure OpenAI keys this by the id of the generation rather than by the id of the job
+     * which produced it, so this is reached from {@link org.omnifaces.ai.modality.AzureAIVideoHandler} rather than from the job id.
+     *
+     * @param generationId The id of the video generation.
+     * @return The path to download the generated video from.
+     * @since 1.7
+     */
+    public static String getVideoGenerationContentPath(String generationId) {
+        return VIDEO_PATH_PREFIX + "generations/" + generationId + "/content/video" + API_VERSION_QUERY;
     }
 
 }

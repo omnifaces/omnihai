@@ -13,6 +13,7 @@
 package org.omnifaces.ai;
 
 import static java.util.Objects.requireNonNull;
+import static org.omnifaces.ai.helper.FileHelper.requireWritableFile;
 import static org.omnifaces.ai.helper.JsonSchemaHelper.buildJsonSchema;
 import static org.omnifaces.ai.helper.JsonSchemaHelper.fromJson;
 import static org.omnifaces.ai.model.ChatOptions.DEFAULT;
@@ -22,6 +23,7 @@ import java.io.Serializable;
 import java.lang.annotation.Annotation;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.function.Consumer;
@@ -36,6 +38,8 @@ import org.omnifaces.ai.model.ChatOptions.Location;
 import org.omnifaces.ai.model.ClassificationResult;
 import org.omnifaces.ai.model.GenerateAudioOptions;
 import org.omnifaces.ai.model.GenerateImageOptions;
+import org.omnifaces.ai.model.GenerateVideoOptions;
+import org.omnifaces.ai.model.GeneratedVideo;
 import org.omnifaces.ai.model.ModerationOptions;
 import org.omnifaces.ai.model.ModerationOptions.Category;
 import org.omnifaces.ai.model.ModerationResult;
@@ -1821,6 +1825,165 @@ public interface AIService extends Serializable {
      */
     CompletableFuture<String> analyzeVideoAsync(Path video, String prompt, AnalyzeVideoOptions options) throws AIException;
 
+    // Video Generation -----------------------------------------------------------------------------------------------
+
+    /**
+     * Submits a video generation job and returns a handle on it as soon as the AI provider has accepted it.
+     *
+     * @implNote The default implementation delegates to {@link #generateVideo(String, GenerateVideoOptions)} with {@link GenerateVideoOptions#DEFAULT}.
+     * @param prompt The prompt describing the video to generate.
+     * @return A handle on the submitted job, initially {@link GeneratedVideo.Status#PENDING}, never {@code null}.
+     * @throws UnsupportedOperationException if video generation is not supported by the implementation.
+     * @throws AIException if submitting the job fails.
+     * @since 1.7
+     * @see #generateVideo(String, GenerateVideoOptions)
+     */
+    default GeneratedVideo generateVideo(String prompt) throws AIException {
+        return generateVideo(prompt, GenerateVideoOptions.DEFAULT);
+    }
+
+    /**
+     * Submits a video generation job and returns a handle on it as soon as the AI provider has accepted it.
+     * <p>
+     * This does <em>not</em> wait for the video: producing one takes minutes, and the AI provider never calls back. The returned handle is serializable and
+     * carries the job id, so that a web application can submit the job in one request and poll it from later ones. Use {@link GeneratedVideo#refresh()} to poll
+     * it on your own schedule, or {@link GeneratedVideo#completion()} to have the library poll it. To simply wait for the video and store it, use
+     * {@link #generateVideo(String, Path, GenerateVideoOptions)} instead.
+     *
+     * @param prompt The prompt describing the video to generate.
+     * @param options The video generation options.
+     * @return A handle on the submitted job, initially {@link GeneratedVideo.Status#PENDING}, never {@code null}.
+     * @throws NullPointerException if options is null.
+     * @throws IllegalArgumentException if prompt is blank.
+     * @throws UnsupportedOperationException if video generation is not supported by the implementation.
+     * @throws AIException if submitting the job fails.
+     * @since 1.7
+     */
+    GeneratedVideo generateVideo(String prompt, GenerateVideoOptions options) throws AIException;
+
+    /**
+     * Generates a video and writes it to the given path, waiting until the AI provider has produced it.
+     *
+     * @implNote The default implementation delegates to {@link #generateVideo(String, Path, GenerateVideoOptions)} with {@link GenerateVideoOptions#DEFAULT}.
+     * @param prompt The prompt describing the video to generate.
+     * @param path The path to write the video to.
+     * @throws IllegalArgumentException when path names no file, or its directory does not exist or cannot be written to.
+     * @throws UnsupportedOperationException if video generation is not supported by the implementation.
+     * @throws AIException if video generation fails.
+     * @since 1.7
+     */
+    default void generateVideo(String prompt, Path path) throws AIException {
+        generateVideo(prompt, path, GenerateVideoOptions.DEFAULT);
+    }
+
+    /**
+     * Generates a video and writes it to the given path, waiting until the AI provider has produced it.
+     * <p>
+     * This blocks for as long as the generation takes, which is typically minutes.
+     *
+     * @implNote The default implementation delegates to {@link #generateVideoAsync(String, Path, GenerateVideoOptions)}.
+     * @param prompt The prompt describing the video to generate.
+     * @param path The path to write the video to.
+     * @param options The video generation options.
+     * @throws IllegalArgumentException when path names no file, or its directory does not exist or cannot be written to.
+     * @throws UnsupportedOperationException if video generation is not supported by the implementation.
+     * @throws AIException if video generation fails.
+     * @since 1.7
+     */
+    default void generateVideo(String prompt, Path path, GenerateVideoOptions options) throws AIException {
+        joinAsync(generateVideoAsync(prompt, path, options));
+    }
+
+    /**
+     * Asynchronously generates a video, completing when the AI provider has produced it.
+     *
+     * @implNote The default implementation delegates to {@link #generateVideoAsync(String, GenerateVideoOptions)} with {@link GenerateVideoOptions#DEFAULT}.
+     * @param prompt The prompt describing the video to generate.
+     * @return A CompletableFuture that will contain the completed job handle, never {@code null}.
+     * @throws UnsupportedOperationException if video generation is not supported by the implementation.
+     * @throws AIException if video generation fails.
+     * @since 1.7
+     * @see #generateVideoAsync(String, GenerateVideoOptions)
+     */
+    default CompletableFuture<GeneratedVideo> generateVideoAsync(String prompt) throws AIException {
+        return generateVideoAsync(prompt, GenerateVideoOptions.DEFAULT);
+    }
+
+    /**
+     * Asynchronously generates a video, completing when the AI provider has produced it.
+     * <p>
+     * Unlike {@link #generateVideo(String, GenerateVideoOptions)}, which hands back a {@link GeneratedVideo.Status#PENDING} handle right after submitting, the
+     * returned future completes only once the job has reached a terminal status. The library polls the job meanwhile, at
+     * {@link GenerateVideoOptions#getPollInterval()}, and stops as soon as the future is completed or canceled.
+     *
+     * @param prompt The prompt describing the video to generate.
+     * @param options The video generation options.
+     * @return A CompletableFuture that will contain the completed job handle, never {@code null}.
+     * @throws NullPointerException if options is null.
+     * @throws IllegalArgumentException if prompt is blank.
+     * @throws UnsupportedOperationException if video generation is not supported by the implementation.
+     * @throws AIException if video generation fails.
+     * @since 1.7
+     */
+    CompletableFuture<GeneratedVideo> generateVideoAsync(String prompt, GenerateVideoOptions options) throws AIException;
+
+    /**
+     * Asynchronously generates a video and writes it to the given path, completing when the AI provider has produced it.
+     *
+     * @implNote The default implementation delegates to {@link #generateVideoAsync(String, Path, GenerateVideoOptions)} with
+     * {@link GenerateVideoOptions#DEFAULT}.
+     * @param prompt The prompt describing the video to generate.
+     * @param path The path to write the video to.
+     * @return A CompletableFuture that completes when the video is written.
+     * @throws IllegalArgumentException when path names no file, or its directory does not exist or cannot be written to.
+     * @throws UnsupportedOperationException if video generation is not supported by the implementation.
+     * @throws AIException if video generation fails.
+     * @since 1.7
+     */
+    default CompletableFuture<Void> generateVideoAsync(String prompt, Path path) throws AIException {
+        return generateVideoAsync(prompt, path, GenerateVideoOptions.DEFAULT);
+    }
+
+    /**
+     * Asynchronously generates a video and writes it to the given path, completing when the AI provider has produced it.
+     *
+     * @implNote The default implementation delegates to {@link #generateVideoAsync(String, GenerateVideoOptions)} and then writes the result to the path,
+     * canceling the generation when the returned future is canceled. The write runs on its own thread, as it downloads the video and would otherwise occupy the
+     * thread which completed the generation.
+     * @param prompt The prompt describing the video to generate.
+     * @param path The path to write the video to.
+     * @param options The video generation options.
+     * @return A CompletableFuture that completes when the video is written.
+     * @throws IllegalArgumentException when path names no file, or its directory does not exist or cannot be written to.
+     * @throws UnsupportedOperationException if video generation is not supported by the implementation.
+     * @throws AIException if video generation fails.
+     * @since 1.7
+     */
+    default CompletableFuture<Void> generateVideoAsync(String prompt, Path path, GenerateVideoOptions options) throws AIException {
+        requireWritableFile(path);
+        var generation = generateVideoAsync(prompt, options);
+        var written = generation.thenAcceptAsync(video -> video.writeTo(path));
+        written.whenComplete((ignored, cancellation) -> generation.cancel(true));
+        return written;
+    }
+
+    /**
+     * Returns a handle on a previously submitted video generation job.
+     * <p>
+     * This is the counterpart of {@link GeneratedVideo#jobId()}: it revives a job whose id was stored elsewhere, such as in a database or an HTTP session,
+     * possibly after a restart or on another node. The returned handle is not polled yet, so its {@link GeneratedVideo#status()} is
+     * {@link GeneratedVideo.Status#PENDING} until {@link GeneratedVideo#refresh()} or {@link GeneratedVideo#completion()} says otherwise.
+     * <p>
+     * The job id is all a revived handle has, so it polls at {@link GenerateVideoOptions#DEFAULT} rather than at the options the job was submitted with, and an
+     * AI provider which stated its own poll path in the submit response is polled at the derived one instead.
+     *
+     * @param jobId The id of the previously submitted job.
+     * @return A handle on the job, never {@code null}.
+     * @throws IllegalArgumentException if job id is blank.
+     * @since 1.7
+     */
+    GeneratedVideo findGeneratedVideo(String jobId);
+
     // Service Metadata -----------------------------------------------------------------------------------------------
 
     /**
@@ -2059,7 +2222,7 @@ public interface AIService extends Serializable {
         try {
             return future.join();
         }
-        catch (CompletionException e) {
+        catch (CompletionException | CancellationException e) {
             throw AIException.asyncRequestFailed(e);
         }
     }

@@ -60,6 +60,9 @@ public class GoogleAIService extends BaseAIService {
     private static final long serialVersionUID = 1L;
 
     private static final AIModelVersion GEMINI_1_5 = AIModelVersion.of("gemini", 1, 5);
+    private static final String VEO_MODEL_NAME = "veo";
+    private static final String OPERATIONS_PATH_PREFIX = "operations/";
+    private static final String ABSOLUTE_URI_PREFIX = "https://";
     private static final AIModelVersion GEMINI_2 = AIModelVersion.of("gemini", 2);
     private static final AIModelVersion GEMINI_2_5 = AIModelVersion.of("gemini", 2, 5);
     private static final AIModelVersion GEMINI_3 = AIModelVersion.of("gemini", 3);
@@ -100,6 +103,7 @@ public class GoogleAIService extends BaseAIService {
             case AUDIO_ANALYSIS -> currentModelVersion.gte(GEMINI_1_5);
             case AUDIO_GENERATION -> currentModelVersion.gte(GEMINI_2_5) || fullModelName.contains("tts");
             case VIDEO_ANALYSIS -> currentModelVersion.gte(GEMINI_1_5);
+            case VIDEO_GENERATION -> fullModelName.startsWith(VEO_MODEL_NAME);
             default -> false;
         };
     }
@@ -140,7 +144,11 @@ public class GoogleAIService extends BaseAIService {
 
     @Override
     protected URI resolveURI(String path) {
-        if (path.equals(getFilesPath())) {
+        if (path.startsWith(OPERATIONS_PATH_PREFIX) || path.contains("/" + OPERATIONS_PATH_PREFIX) || path.startsWith(ABSOLUTE_URI_PREFIX)) {
+            var uri = super.resolveURI(path);
+            return isSameOrigin(uri) ? super.resolveURI(path + (path.contains("?") ? "&" : "?") + format("key=%s", apiKey)) : uri;
+        }
+        else if (path.equals(getFilesPath())) {
             return super.resolveURI("../upload/v1beta/" + format(getFilesPath() + "?key=%s", apiKey));
         }
         else if (path.startsWith(getFilesPath() + "/")) {
@@ -245,6 +253,23 @@ public class GoogleAIService extends BaseAIService {
     @Override
     protected String getFilesPath() {
         return "files";
+    }
+
+    /**
+     * Returns {@code predictLongRunning}, as Veo is submitted as a long running operation.
+     */
+    @Override
+    protected String getGenerateVideoPath() {
+        return "predictLongRunning";
+    }
+
+    /**
+     * Returns the job id unchanged, as the id which Google assigns a video generation job is the name of the operation to poll it at, rather than a segment
+     * below the path it was submitted to.
+     */
+    @Override
+    protected String getGeneratedVideoPath(String jobId) {
+        return jobId;
     }
 
 }

@@ -12,7 +12,13 @@
  */
 package org.omnifaces.ai.service;
 
+import static java.net.http.HttpClient.Redirect.NEVER;
 import static java.net.http.HttpClient.newBuilder;
+import static java.net.http.HttpRequest.BodyPublishers.concat;
+import static java.net.http.HttpRequest.BodyPublishers.noBody;
+import static java.net.http.HttpRequest.BodyPublishers.ofByteArray;
+import static java.net.http.HttpRequest.BodyPublishers.ofFile;
+import static java.net.http.HttpRequest.BodyPublishers.ofString;
 import static java.net.http.HttpResponse.BodyHandlers.ofInputStream;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.concurrent.CompletableFuture.completedFuture;
@@ -25,6 +31,7 @@ import static java.util.function.Function.identity;
 import static java.util.logging.Level.FINER;
 import static java.util.stream.Stream.iterate;
 import static org.omnifaces.ai.exception.AIHttpException.fromStatusCode;
+import static org.omnifaces.ai.helper.FileHelper.closeQuietly;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -34,16 +41,15 @@ import java.net.ConnectException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpRequest.BodyPublisher;
-import java.net.http.HttpRequest.BodyPublishers;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
-import java.util.Locale;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.logging.Logger;
@@ -80,6 +86,8 @@ final class AIHttpClient {
 
     private static final String APPLICATION_JSON = "application/json";
     private static final String EVENT_STREAM = "text/event-stream";
+    private static final String ANY_MEDIA_TYPE = "*/*";
+    private static final int MIN_REDIRECT_STATUS_CODE = 300;
     private static final String MULTIPART_FORM_DATA = "multipart/form-data";
 
     /** Default max retries: {@value} */
@@ -87,7 +95,7 @@ final class AIHttpClient {
     /** Initial retry backoff time: {@value}ms (increases exponentially on every retry) */
     public static final long INITIAL_BACKOFF_MS = 1000;
 
-    private final HttpClient client;
+    final HttpClient client;
     private final Duration requestTimeout;
     private final String userAgent;
     private final String multipartBoundaryPrefix;
@@ -109,7 +117,7 @@ final class AIHttpClient {
      * @return A new HTTP client instance
      */
     public static AIHttpClient newInstance(Duration connectTimeout, Duration requestTimeout) {
-        return new AIHttpClient(newBuilder().connectTimeout(connectTimeout).build(), requestTimeout);
+        return new AIHttpClient(newBuilder().connectTimeout(connectTimeout).followRedirects(NEVER).build(), requestTimeout);
     }
 
     /**
@@ -124,8 +132,34 @@ final class AIHttpClient {
      * @since 1.1
      */
     public CompletableFuture<JsonObject> get(BaseAIService service, String path) throws AIHttpException {
-        return sendWithRetryAsync(service, path, GET, newRequest(service, path, GET, null, APPLICATION_JSON, BodyPublishers.noBody()))
-            .thenApply(JsonHelper::parseJson);
+        return sendWithRetryAsync(service, path, GET, newRequest(service, path, GET, null, APPLICATION_JSON, noBody())).thenApply(JsonHelper::parseJson);
+    }
+
+    /**
+     * Sends a GET request for the specified {@link BaseAIService} and returns the response body as a stream, for downloading binary content such as a generated
+     * video. Will retry at most {@value #MAX_RETRIES} times in case of a connection error with exponentially incremental backoff of
+     * {@value #INITIAL_BACKOFF_MS}ms.
+     *
+     * @param service The {@link BaseAIService} to extract URI and headers from.
+     * @param path The API path, or an absolute URI stated by the AI provider.
+     * @return The response body as a stream.
+     * @throws AIHttpException if the request fails
+     * @since 1.7
+     */
+    public CompletableFuture<InputStream> download(BaseAIService service, String path) throws AIHttpException {
+        return sendWithRetryAsync(service, path, GET, newRequest(service, path, GET, null, ANY_MEDIA_TYPE, noBody()), AIHttpClient::decompressDownloadIfNeeded);
+    }
+
+    /**
+     * Redirects are not followed, as the JDK carries the authorization header across hosts when it does. A redirect therefore has an empty body, which must not
+     * reach the caller as if it were the content. Anything from {@link AIBadRequestException#STATUS_CODE} up has already failed the response.
+     */
+    static InputStream decompressDownloadIfNeeded(HttpResponse<InputStream> response) {
+        if (response.statusCode() >= MIN_REDIRECT_STATUS_CODE) {
+            throw new AIHttpException(response.uri(), response.statusCode(), readBody(response));
+        }
+
+        return decompressIfNeeded(response);
     }
 
     /**
@@ -221,13 +255,12 @@ final class AIHttpClient {
      * @since 1.1
      */
     public CompletableFuture<JsonObject> delete(BaseAIService service, String path) throws AIHttpException {
-        return sendWithRetryAsync(service, path, DELETE, newRequest(service, path, DELETE, null, APPLICATION_JSON, BodyPublishers.noBody()))
-            .thenApply(JsonHelper::parseJson);
+        return sendWithRetryAsync(service, path, DELETE, newRequest(service, path, DELETE, null, APPLICATION_JSON, noBody())).thenApply(JsonHelper::parseJson);
     }
 
     private static BodyPublisher toBody(Attachment attachment) {
         try {
-            return attachment.source() != null ? BodyPublishers.ofFile(attachment.source()) : BodyPublishers.ofByteArray(attachment.content());
+            return attachment.source() != null ? ofFile(attachment.source()) : ofByteArray(attachment.content());
         }
         catch (IOException e) {
             throw new AIException("Cannot read attachment " + attachment, e);
@@ -262,7 +295,7 @@ final class AIHttpClient {
     }
 
     private HttpRequest newJsonRequest(BaseAIService service, String path, JsonObject payload, String accept) {
-        return newRequest(service, path, POST, APPLICATION_JSON, accept, BodyPublishers.ofString(payload.toString()));
+        return newRequest(service, path, POST, APPLICATION_JSON, accept, ofString(payload.toString()));
     }
 
     private HttpRequest newUploadRequest(BaseAIService service, String path, Attachment attachment, String accept) {
@@ -270,15 +303,25 @@ final class AIHttpClient {
         return newRequest(service, path, POST, MULTIPART_FORM_DATA + "; boundary=" + multipart.boundary, accept, multipart.body);
     }
 
-    private HttpRequest newRequest(BaseAIService service, String path, String method, String contentType, String accept, BodyPublisher body) {
-        var builder = HttpRequest.newBuilder(service.resolveURI(path)).timeout(requestTimeout).method(method, body);
+    /**
+     * Builds a request for the given path, which may also be an absolute URI stated by the AI provider.
+     * <p>
+     * The request headers of {@link BaseAIService#getRequestHeaders()}, which carry the authorization, are applied only when the resolved URI is on the same
+     * origin as the service's endpoint, so that a URI which the AI provider hosts elsewhere, such as a pre-signed one for generated content, does not receive
+     * the API key.
+     */
+    HttpRequest newRequest(BaseAIService service, String path, String method, String contentType, String accept, BodyPublisher body) {
+        var uri = service.resolveURI(path);
+        var builder = HttpRequest.newBuilder(uri).timeout(requestTimeout).method(method, body);
         builder.header("User-Agent", userAgent);
         if (contentType != null) {
             builder.header("Content-Type", contentType);
         }
         builder.header("Accept", accept);
         builder.header("Accept-Encoding", "gzip");
-        service.getRequestHeaders().forEach(builder::header);
+        if (service.isSameOrigin(uri)) {
+            service.getRequestHeaders().forEach(builder::header);
+        }
         return builder.build();
     }
 
@@ -409,6 +452,7 @@ final class AIHttpClient {
             return "gzip".equalsIgnoreCase(encoding) ? new GZIPInputStream(response.body()) : response.body();
         }
         catch (IOException e) {
+            closeQuietly(response.body());
             throw new AIException("Cannot decompress response body", e);
         }
     }
@@ -491,10 +535,10 @@ final class AIHttpClient {
 
                 prependFilePart(textPartBuilder, "file", uploadedFileNamePrefix + attachment.fileName(), attachment.mimeType().value());
 
-                this.body = BodyPublishers.concat(
-                    BodyPublishers.ofString(textPartBuilder.toString(), UTF_8),
-                    (attachment.source() != null) ? BodyPublishers.ofFile(attachment.source()) : BodyPublishers.ofByteArray(attachment.content()),
-                    BodyPublishers.ofString(closeFilePart(), UTF_8)
+                this.body = concat(
+                    ofString(textPartBuilder.toString(), UTF_8),
+                    (attachment.source() != null) ? ofFile(attachment.source()) : ofByteArray(attachment.content()),
+                    ofString(closeFilePart(), UTF_8)
                 );
             }
             catch (IOException e) {

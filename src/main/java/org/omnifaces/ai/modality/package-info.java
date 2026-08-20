@@ -24,12 +24,12 @@
  * {@link org.omnifaces.ai.modality.OpenAIAudioHandler} - OpenAI-specific handling</li>
  * <li>{@link org.omnifaces.ai.modality.AnthropicAITextHandler} - Anthropic-specific handling</li>
  * <li>{@link org.omnifaces.ai.modality.GoogleAITextHandler} / {@link org.omnifaces.ai.modality.GoogleAIImageHandler} /
- * {@link org.omnifaces.ai.modality.GoogleAIAudioHandler} - Google AI-specific handling</li>
- * <li>{@link org.omnifaces.ai.modality.XAIImageHandler} - xAI-specific handling</li>
+ * {@link org.omnifaces.ai.modality.GoogleAIAudioHandler} / {@link org.omnifaces.ai.modality.GoogleAIVideoHandler} - Google AI-specific handling</li>
+ * <li>{@link org.omnifaces.ai.modality.XAIImageHandler} / {@link org.omnifaces.ai.modality.XAIVideoHandler} - xAI-specific handling</li>
  * <li>{@link org.omnifaces.ai.modality.MistralAITextHandler} - Mistral-specific handling</li>
- * <li>{@link org.omnifaces.ai.modality.AzureAITextHandler} - Azure AI-specific handling</li>
- * <li>{@link org.omnifaces.ai.modality.OpenRouterAITextHandler} / {@link org.omnifaces.ai.modality.OpenRouterAIAudioHandler} - OpenRouter-specific
- * handling</li>
+ * <li>{@link org.omnifaces.ai.modality.AzureAITextHandler} / {@link org.omnifaces.ai.modality.AzureAIVideoHandler} - Azure AI-specific handling</li>
+ * <li>{@link org.omnifaces.ai.modality.OpenRouterAITextHandler} / {@link org.omnifaces.ai.modality.OpenRouterAIAudioHandler} /
+ * {@link org.omnifaces.ai.modality.OpenRouterAIVideoHandler} - OpenRouter-specific handling</li>
  * <li>{@link org.omnifaces.ai.modality.OllamaAITextHandler} - Ollama-specific handling</li>
  * </ul>
  * Custom handlers can be specified via {@link org.omnifaces.ai.cdi.AI#textHandler()}, {@link org.omnifaces.ai.cdi.AI#imageHandler()},

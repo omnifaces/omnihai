@@ -180,4 +180,22 @@ class GenerateImageOptionsTest {
         }
     }
 
+    @Test
+    void builder_size_withAZeroDimension_throwsException() {
+        var builder = GenerateImageOptions.newBuilder();
+
+        assertThrows(IllegalArgumentException.class, () -> builder.size("0x0"), "a zero size has no aspect ratio to derive");
+        assertThrows(IllegalArgumentException.class, () -> builder.size("1920x0"));
+        assertThrows(IllegalArgumentException.class, () -> builder.size("0x1080"));
+    }
+
+    @Test
+    void builder_aspectRatio_withAZeroDimension_throwsException() {
+        var builder = GenerateImageOptions.newBuilder();
+
+        assertThrows(IllegalArgumentException.class, () -> builder.aspectRatio("0:0"));
+        assertThrows(IllegalArgumentException.class, () -> builder.aspectRatio("16:0"));
+        assertThrows(IllegalArgumentException.class, () -> builder.aspectRatio("0:9"));
+    }
+
 }

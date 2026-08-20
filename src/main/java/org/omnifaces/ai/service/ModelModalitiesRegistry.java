@@ -21,6 +21,7 @@ import static org.omnifaces.ai.service.BaseAIService.HTTP_CLIENT;
 import java.net.URI;
 import java.time.Duration;
 import java.util.EnumSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -58,7 +59,6 @@ final class ModelModalitiesRegistry {
 
     private static final Logger logger = Logger.getLogger(ModelModalitiesRegistry.class.getPackageName());
 
-    private static final String MODELS_PATH = "models";
     private static final String ARCHITECTURE_PROPERTY = "architecture";
     private static final String ID_PROPERTY = "id";
     private static final String DATA_PROPERTY = "data";
@@ -96,28 +96,58 @@ final class ModelModalitiesRegistry {
      * @return The modalities of the currently configured model, or empty if unknown.
      */
     static Optional<Set<AIModality>> findModelModalities(BaseAIService service) {
-        var models = getModels(service);
-        var model = service.getModelName();
-        var modalities = models.get(model);
-
-        if (modalities == null) {
-            var index = model.indexOf(MODEL_VARIANT_SEPARATOR);
-            modalities = index > 0 ? models.get(model.substring(0, index)) : null;
-        }
-
-        return Optional.ofNullable(modalities);
+        return findModelModalities(service.getModelsPaths().stream().map(path -> getModels(service, path)).toList(), service.getModelName());
     }
 
     /**
-     * Returns the listing of the given AI service's endpoint, fetching it first if it is absent or expired.
+     * Returns the modalities which the given listings state for the given model, unioned across them, or empty when none of them knows it. A provider which
+     * does not enumerate every model in one listing states one per listing, and a model which appears in several keeps every modality any of them states.
+     * <p>
+     * A model name carrying a variant suffix such as {@code :batch} or {@code :free} falls back to the base name, as a listing enumerates those as separate
+     * entries with equal modalities.
+     *
+     * @param listings The model listings to consult, in order.
+     * @param model The model name to look up.
+     * @return The modalities of the model, or empty if no listing knows it.
+     */
+    static Optional<Set<AIModality>> findModelModalities(List<Map<String, Set<AIModality>>> listings, String model) {
+        var modalities = EnumSet.noneOf(AIModality.class);
+        var known = false;
+
+        for (var listing : listings) {
+            var stated = findModalities(listing, model);
+
+            if (stated != null) {
+                modalities.addAll(stated);
+                known = true;
+            }
+        }
+
+        return known ? Optional.of(unmodifiableSet(modalities)) : Optional.empty();
+    }
+
+    private static Set<AIModality> findModalities(Map<String, Set<AIModality>> listing, String model) {
+        var modalities = listing.get(model);
+
+        if (modalities != null) {
+            return modalities;
+        }
+
+        var index = model.indexOf(MODEL_VARIANT_SEPARATOR);
+        return index > 0 ? listing.get(model.substring(0, index)) : null;
+    }
+
+    /**
+     * Returns one listing of the given AI service's endpoint, fetching it first if it is absent or expired.
      *
      * @param service The AI service to obtain the model listing from.
+     * @param path The path of the model listing.
      * @return The listing, keyed by model name.
      */
-    private static Map<String, Set<AIModality>> getModels(BaseAIService service) {
-        var uri = service.resolveURI(MODELS_PATH);
+    private static Map<String, Set<AIModality>> getModels(BaseAIService service, String path) {
+        var uri = service.resolveURI(path);
         var models = MODELS.get(uri);
-        return (models == null || models.isExpired() ? refreshModels(uri, service) : models).byModelName();
+        return (models == null || models.isExpired() ? refreshModels(uri, service, path) : models).byModelName();
     }
 
     /**
@@ -128,16 +158,17 @@ final class ModelModalitiesRegistry {
      *
      * @param uri The endpoint's model listing URI.
      * @param service The AI service to obtain the model listing from.
+     * @param path The path of the model listing.
      * @return The freshly fetched listing, or the one another thread fetched while this one waited.
      */
-    private static synchronized CachedModels refreshModels(URI uri, BaseAIService service) {
+    private static synchronized CachedModels refreshModels(URI uri, BaseAIService service, String path) {
         var models = MODELS.get(uri);
 
         if (models != null && !models.isExpired()) {
             return models;
         }
 
-        var refreshed = fetchModels(service, models);
+        var refreshed = fetchModels(service, path, models);
         MODELS.put(uri, refreshed);
         return refreshed;
     }
@@ -146,15 +177,15 @@ final class ModelModalitiesRegistry {
      * Fetches the model listing, never throwing: a listing which cannot be obtained or parsed yields the last known one, or an empty one when there is none, so
      * that a listing already in hand keeps being served rather than being discarded in favor of guessing from the model name.
      */
-    private static CachedModels fetchModels(BaseAIService service, CachedModels previous) {
+    private static CachedModels fetchModels(BaseAIService service, String path, CachedModels previous) {
         try {
-            return new CachedModels(parseModels(HTTP_CLIENT.get(service, MODELS_PATH).join()), System.nanoTime(), 0);
+            return new CachedModels(parseModels(HTTP_CLIENT.get(service, path).join()), System.nanoTime(), 0);
         }
         catch (Exception e) {
             var lastKnown = previous != null ? previous.byModelName() : Map.<String, Set<AIModality>>of();
             var failures = previous != null ? previous.consecutiveFailures() + 1 : 1;
             logger.log(
-                WARNING, e, () -> "Cannot obtain " + MODELS_PATH + " from " + service.getName()
+                WARNING, e, () -> "Cannot obtain " + path + " from " + service.getName()
                     + (lastKnown.isEmpty() ? "; falling back to model name matching" : "; keeping the last known listing of " + lastKnown.size() + " models")
             );
             return new CachedModels(lastKnown, System.nanoTime(), failures);

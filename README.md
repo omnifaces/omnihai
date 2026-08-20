@@ -575,7 +575,7 @@ if (service.supportsModality(AIModality.VIDEO_ANALYSIS)) {
 }
 ```
 
-Most providers derive the answer from the model name and version. OpenRouter and Hugging Face instead publish the input and output modalities per routed model, which OmniHai looks up rather than guesses: of the OpenRouter models accepting video, not one carries "video" in its name. That listing is fetched at most once a day per endpoint and shared by every service instance on it, so the first call blocks on one HTTP request and the rest are answered from memory; when it cannot be obtained, matching the model name is the fallback.
+Most providers derive the answer from the model name and version. OpenRouter and Hugging Face instead publish the input and output modalities per routed model, which OmniHai looks up rather than guesses: of the OpenRouter models accepting video, not one carries "video" in its name. Each listing is fetched at most once a day per endpoint and shared by every service instance on it, so the first call blocks on one HTTP request per listing and the rest are answered from memory; when a listing cannot be obtained, matching the model name is the fallback. OpenRouter omits its video generators from the default listing, so the one under `output_modalities=video` is fetched and cached next to it, which makes its first call two requests rather than one.
 
 It answers about the service rather than about the model alone: a modality which no operation of the service can perform is reported as unsupported, whatever the provider publishes about the model.
 
@@ -634,6 +634,54 @@ String sampled = service.analyzeVideo(Path.of("match.mp4"), "When does the goal 
 
 Video input is accepted by Gemini and by the video-capable models routed through OpenRouter, which [modality support](#modality-support) tells apart. The sampling options are honored by Gemini only, as OpenRouter takes the video as a plain data URI with nowhere to put them.
 
+### Video Generation
+
+Video generation is the only operation which does not fit in one request: the AI provider answers the submission with a job id within seconds, then takes minutes to produce the video, and never calls back.
+`generateVideo` therefore hands back a handle on the job as soon as it is accepted, and `generateVideoAsync` waits for the video itself.
+
+```java
+// Submit and walk away; returns at once, PENDING
+GeneratedVideo video = service.generateVideo("A calico cat walking across a sunlit kitchen floor");
+String jobId = video.jobId();
+
+video.status();   // Pure getter, performs no I/O, free to call from a render pass
+video.refresh();  // Caller-driven poll, exactly one request
+
+// Revive the job from its id in a later request, possibly after a restart or on another node
+GeneratedVideo revived = service.findGeneratedVideo(jobId);
+
+if (revived.refresh().status() == GeneratedVideo.Status.COMPLETED) {
+    revived.writeTo(Path.of("cat.mp4")); // And writeTo(OutputStream)
+}
+```
+
+```java
+// Or wait for the video; the library polls meanwhile
+service.generateVideo("A calico cat walking across a sunlit kitchen floor", Path.of("cat.mp4"));
+
+// Or wait without blocking the calling thread
+CompletableFuture<Void> written = service.generateVideoAsync("A calico cat", Path.of("cat.mp4"));
+
+// With options (allowable options depend on AI provider)
+GeneratedVideo video = service.generateVideo("A calico cat",
+    GenerateVideoOptions.newBuilder()
+        .aspectRatio("9:16")
+        .resolution("720p")
+        .seconds(8)
+        .pollInterval(Duration.ofSeconds(30))
+        .maxWait(Duration.ofMinutes(10))
+        .build());
+```
+
+The handle is serializable and carries the job id, so a web application can submit in one request and poll from later ones.
+A deserialized handle can still be read but no longer polled; hand its `jobId()` to `findGeneratedVideo` to get a pollable one back.
+The library polls at `pollInterval`, five seconds by default, and stops as soon as the future returned by `generateVideoAsync` or `completion()` is completed or canceled, so a handle nobody watches costs nothing.
+A job which has not finished within `maxWait`, five minutes by default, fails the future rather than polling on, so a job the AI provider never finishes cannot block a caller forever. Raise it for a resolution or AI provider which takes longer.
+
+Video generation is offered by Google (Veo), xAI (Grok Imagine), Azure OpenAI (Sora) and OpenRouter, which routes generators of several labs. It is absent on OpenAI, whose Sora API is scheduled to shut down, and on Anthropic, Mistral, Meta, Hugging Face and Ollama, where [modality support](#modality-support) reports `VIDEO_GENERATION` as unsupported. Each AI provider states sizing in its own vocabulary, so `aspectRatio` as `16:9`, `size` as `{width}x{height}` and `resolution` as `720p` are reconciled per provider: setting a size recalculates the aspect ratio and setting an aspect ratio resets the size, so the two can never contradict each other. The aspect ratio always reaches the request, defaulting to landscape; an AI provider which takes no aspect ratio of its own, such as Azure OpenAI, receives the size it amounts to instead, or nothing at all for a square, which such an AI provider generally offers no size for. A `size`, `resolution` or duration left at its default is omitted, so that the AI provider applies its own.
+
+Generated videos are hosted by the AI provider for about a day and are then deleted, upon which the status becomes `EXPIRED`. Some AI providers host them on a separate host and hand out a pre-signed URL; OmniHai downloads such a URL without the API key.
+
 ### Audio Transcription
 
 ```java
@@ -661,7 +709,7 @@ byte[] audio = gpt.generateAudio("Hello!",
 
 OpenAI honors the output format and defaults to MP3. Gemini and OpenRouter emit bare PCM which OmniHai prepends a WAV header to, so they answer WAV whichever format was asked for, and a file named `.mp3` would hold a WAV. Use `MimeType.guessMimeType(audio)` to learn what actually came back, as the audio generation IT does.
 
-All methods have async variants returning `CompletableFuture` (e.g., `chatAsync`, `summarizeAsync`, `translateAsync`, `proofreadAsync`, `generateImageAsync`, `analyzeVideoAsync`, `transcribeAsync`, `generateAudioAsync`, etc.).
+All methods have async variants returning `CompletableFuture` (e.g., `chatAsync`, `summarizeAsync`, `translateAsync`, `proofreadAsync`, `generateImageAsync`, `analyzeVideoAsync`, `generateVideoAsync`, `transcribeAsync`, `generateAudioAsync`, etc.).
 
 ## Custom Providers
 

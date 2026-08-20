@@ -374,6 +374,10 @@ abstract class BaseAIServiceTextHandlerIT extends AIServiceIT {
 
     @Test
     void classify() {
+        if (!service.supportsStructuredOutput()) {
+            throw new TestAbortedException("Not supported by " + getProvider());
+        }
+
         var response = service.classify("My package never arrived and the tracking has not moved in a week.", List.of("billing", "shipping", "technical"));
         log(response.toString());
         assertAll(
@@ -384,6 +388,10 @@ abstract class BaseAIServiceTextHandlerIT extends AIServiceIT {
 
     @Test
     void classifyWithVarargs() {
+        if (!service.supportsStructuredOutput()) {
+            throw new TestAbortedException("Not supported by " + getProvider());
+        }
+
         var response = service.classify("Buy cheap watches now!!!", "spam", "ham");
         log(response.toString());
         assertEquals("spam", response.label(), "response must be classified as spam");
@@ -396,6 +404,10 @@ abstract class BaseAIServiceTextHandlerIT extends AIServiceIT {
 
     @Test
     void classifyAll() {
+        if (!service.supportsStructuredOutput()) {
+            throw new TestAbortedException("Not supported by " + getProvider());
+        }
+
         var response = service.classifyAll("My package never arrived and I was charged for it twice.", List.of("billing", "shipping", "technical"));
         log(response.toString());
         assertAll(
@@ -409,6 +421,10 @@ abstract class BaseAIServiceTextHandlerIT extends AIServiceIT {
 
     @Test
     void classifyAllWithNoLabelFitting() {
+        if (!service.supportsStructuredOutput()) {
+            throw new TestAbortedException("Not supported by " + getProvider());
+        }
+
         var response = service.classifyAll("The mitochondrion is the powerhouse of the cell.", "billing", "shipping");
         log(response.toString());
         assertTrue(response.stream().allMatch(result -> result.confidence() < 0.5), "no label may fit an unrelated text");

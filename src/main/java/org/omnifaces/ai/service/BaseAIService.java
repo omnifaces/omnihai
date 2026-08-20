@@ -17,6 +17,7 @@ import static java.util.Comparator.comparingDouble;
 import static java.util.Objects.requireNonNull;
 import static java.util.Optional.ofNullable;
 import static java.util.concurrent.CompletableFuture.completedFuture;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.function.Predicate.not;
 import static java.util.logging.Level.WARNING;
 import static org.omnifaces.ai.AIConfig.PROPERTY_API_KEY;
@@ -29,6 +30,7 @@ import static org.omnifaces.ai.helper.TextHelper.requireNonBlank;
 import static org.omnifaces.ai.mime.MimeType.guessMimeType;
 import static org.omnifaces.ai.model.ChatOptions.DETERMINISTIC;
 import static org.omnifaces.ai.model.ChatOptions.DETERMINISTIC_TEMPERATURE;
+import static org.omnifaces.ai.service.ExecutorServiceHelper.delayedExecutor;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -43,12 +45,15 @@ import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.logging.Logger;
 
@@ -78,6 +83,9 @@ import org.omnifaces.ai.model.ChatUsage;
 import org.omnifaces.ai.model.ClassificationResult;
 import org.omnifaces.ai.model.GenerateAudioOptions;
 import org.omnifaces.ai.model.GenerateImageOptions;
+import org.omnifaces.ai.model.GenerateVideoOptions;
+import org.omnifaces.ai.model.GeneratedVideo;
+import org.omnifaces.ai.model.GeneratedVideo.Source;
 import org.omnifaces.ai.model.ModerationOptions;
 import org.omnifaces.ai.model.ModerationResult;
 import org.omnifaces.ai.model.Sse.Event;
@@ -90,13 +98,15 @@ import org.omnifaces.ai.model.Sse.Event;
  * @author Bauke Scholtz
  * @since 1.0
  */
-public abstract class BaseAIService implements AIService {
+public abstract class BaseAIService implements AIService, Source {
 
     private static final long serialVersionUID = 1L;
 
     private static final Logger logger = Logger.getLogger(BaseAIService.class.getPackageName());
     private static final Duration DEFAULT_CONNECT_TIMEOUT = Duration.ofSeconds(10);
     private static final Duration DEFAULT_REQUEST_TIMEOUT = Duration.ofSeconds(60);
+    private static final String DEFAULT_MODELS_PATH = "models";
+    private static final String DEFAULT_VIDEOS_PATH = "videos";
 
     /** Whether the "stale uploaded files cleanup" task is running. */
     private final AtomicBoolean staleUploadedFilesCleanupRunning = new AtomicBoolean();
@@ -489,7 +499,7 @@ public abstract class BaseAIService implements AIService {
                 throw new AIResponseException("Response is empty", response);
             }
 
-            return response.strip().toLowerCase().replaceAll("[^a-z]", "");
+            return response.strip().toLowerCase(Locale.ROOT).replaceAll("[^a-z]", "");
         });
     }
 
@@ -811,6 +821,187 @@ public abstract class BaseAIService implements AIService {
         return asyncPostAndParseChatResponse(getChatPath(false), textHandler.buildChatPayload(this, input, options, false), null);
     }
 
+    // Video Generator Implementation ---------------------------------------------------------------------------------
+
+    /**
+     * Returns the path of the video generation endpoint, where the job is submitted. E.g. {@code videos}.
+     *
+     * @implNote The default implementation returns {@value #DEFAULT_VIDEOS_PATH}.
+     * @return The path of the video generation endpoint.
+     * @since 1.7
+     */
+    protected String getGenerateVideoPath() {
+        return DEFAULT_VIDEOS_PATH;
+    }
+
+    /**
+     * Returns the path to poll the video generation job with the given id at. This is consulted only when the AI provider did not state its own poll path in
+     * the submit response.
+     *
+     * @implNote The default implementation appends the job id to {@link #getGenerateVideoPath()}.
+     * @param jobId The id of the video generation job.
+     * @return The path to poll the video generation job at.
+     * @since 1.7
+     */
+    protected String getGeneratedVideoPath(String jobId) {
+        return getGenerateVideoPath() + "/" + jobId;
+    }
+
+    /**
+     * Returns the path to download the video of the completed job with the given id from. This is consulted only when the AI provider did not state its own
+     * content path in the poll response.
+     *
+     * @implNote The default implementation appends {@code /content} to {@link #getGeneratedVideoPath(String)}.
+     * @param jobId The id of the video generation job.
+     * @return The path to download the generated video from.
+     * @since 1.7
+     */
+    protected String getGeneratedVideoContentPath(String jobId) {
+        return getGeneratedVideoPath(jobId) + "/content";
+    }
+
+    @Override
+    public GeneratedVideo generateVideo(String prompt, GenerateVideoOptions options) throws AIException {
+        return joinAsync(submitVideoAsync(prompt, options));
+    }
+
+    @Override
+    public CompletableFuture<GeneratedVideo> generateVideoAsync(String prompt, GenerateVideoOptions options) throws AIException {
+        var generation = new CompletableFuture<GeneratedVideo>();
+
+        submitVideoAsync(prompt, options).whenComplete((video, submitFailure) -> {
+            if (submitFailure != null) {
+                generation.completeExceptionally(submitFailure);
+            }
+            else {
+                var completion = video.completion();
+                completion.whenComplete((completed, pollFailure) -> complete(generation, completed, pollFailure));
+                generation.whenComplete((ignored, cancellation) -> completion.cancel(true));
+            }
+        });
+
+        return generation;
+    }
+
+    private static <T> void complete(CompletableFuture<T> future, T value, Throwable throwable) {
+        if (throwable != null) {
+            future.completeExceptionally(throwable);
+        }
+        else {
+            future.complete(value);
+        }
+    }
+
+    @Override
+    public GeneratedVideo findGeneratedVideo(String jobId) {
+        return new GeneratedVideo(GeneratedVideo.Job.pending(requireNonBlank(jobId, "jobId"), null), GenerateVideoOptions.DEFAULT, this);
+    }
+
+    private CompletableFuture<GeneratedVideo> submitVideoAsync(String prompt, GenerateVideoOptions options) throws AIException {
+        requireNonNull(options, "options");
+        var payload = videoHandler.buildGenerateVideoPayload(this, requireNonBlank(prompt, "prompt"), options);
+        return HTTP_CLIENT.post(this, getGenerateVideoPath(), payload)
+            .thenApply(videoHandler::parseSubmittedVideo)
+            .thenApply(job -> new GeneratedVideo(job, options, this));
+    }
+
+    @Override
+    public GeneratedVideo.Job pollVideo(GeneratedVideo.Job job) {
+        return joinAsync(pollVideoAsync(job));
+    }
+
+    @Override
+    public InputStream downloadVideo(GeneratedVideo.Job job) {
+        return joinAsync(HTTP_CLIENT.download(this, ofNullable(job.contentPath()).orElseGet(() -> getGeneratedVideoContentPath(job.id()))));
+    }
+
+    @Override
+    public CompletableFuture<GeneratedVideo.Job> awaitVideoCompletion(GeneratedVideo.Job job, GenerateVideoOptions options) {
+        return awaitVideoCompletion(job, options, this::pollVideoAsync);
+    }
+
+    /**
+     * Polls the given job with the given poller at {@link GenerateVideoOptions#getPollInterval()} until it reaches a terminal status. The polling stops as soon
+     * as the returned future is completed or canceled, so that a job which nobody watches any more costs no further requests, and fails the future once
+     * {@link GenerateVideoOptions#getMaxWait()} has passed with a {@code TimeoutException}, so that a job which the AI provider never finishes cannot block a
+     * caller forever. That deadline is scheduled independently of the polling, so it holds even when the executor which runs the polling stops accepting tasks,
+     * and it is dropped as soon as the job finishes.
+     *
+     * @param job The job to poll.
+     * @param options The video generation options the job was submitted with.
+     * @param poller The poller, performing exactly one request per invocation.
+     * @return A future which completes with the terminal state of the job.
+     */
+    static CompletableFuture<GeneratedVideo.Job> awaitVideoCompletion(
+        GeneratedVideo.Job job, GenerateVideoOptions options, Function<GeneratedVideo.Job, CompletableFuture<GeneratedVideo.Job>> poller
+    )
+    {
+        var completion = new CompletableFuture<GeneratedVideo.Job>();
+        pollVideoUntilTerminal(job, options, poller, completion);
+        return completion.orTimeout(options.getMaxWait().toMillis(), MILLISECONDS);
+    }
+
+    private CompletableFuture<GeneratedVideo.Job> pollVideoAsync(GeneratedVideo.Job job) {
+        var path = ofNullable(job.pollPath()).orElseGet(() -> getGeneratedVideoPath(job.id()));
+        return HTTP_CLIENT.get(this, path).thenApply(responseJson -> retainPollPath(videoHandler.parseGeneratedVideo(responseJson, job.id()), job));
+    }
+
+    /**
+     * Carries the AI provider's own poll path forward, as it is generally stated once in the submit response rather than repeated in every poll response, while
+     * every poll after the first must reach the same target as the first.
+     */
+    static GeneratedVideo.Job retainPollPath(GeneratedVideo.Job polled, GeneratedVideo.Job previous) {
+        if (polled.pollPath() != null || previous.pollPath() == null) {
+            return polled;
+        }
+
+        return new GeneratedVideo.Job(polled.id(), polled.status(), previous.pollPath(), polled.contentPath(), polled.failureReason());
+    }
+
+    private static void pollVideoUntilTerminal(
+        GeneratedVideo.Job job, GenerateVideoOptions options, Function<GeneratedVideo.Job, CompletableFuture<GeneratedVideo.Job>> poller,
+        CompletableFuture<GeneratedVideo.Job> completion
+    )
+    {
+        if (completion.isDone()) {
+            return;
+        }
+
+        if (job.status().isTerminal()) {
+            completion.complete(job);
+            return;
+        }
+
+        delayedExecutor(options.getPollInterval()).execute(() -> {
+            if (completion.isDone()) {
+                return;
+            }
+
+            try {
+                poller.apply(job).whenComplete((polled, throwable) -> {
+                    if (throwable != null) {
+                        completion.completeExceptionally(throwable);
+                    }
+                    else {
+                        pollVideoUntilTerminal(polled, options, poller, completion);
+                    }
+                });
+            }
+            catch (RuntimeException e) {
+                completion.completeExceptionally(e);
+            }
+        });
+    }
+
+    private static <T> T joinAsync(CompletableFuture<T> future) throws AIException {
+        try {
+            return future.join();
+        }
+        catch (CompletionException | CancellationException e) {
+            throw AIException.asyncRequestFailed(e);
+        }
+    }
+
     // HTTP Helper Methods --------------------------------------------------------------------------------------------
 
     private static String ensureTrailingSlash(String uri) {
@@ -829,6 +1020,19 @@ public abstract class BaseAIService implements AIService {
     }
 
     /**
+     * Returns the paths of the model listings which state the input and output modalities per model, consulted by {@link #supportsModality(AIModality)} of
+     * those AI services which look them up rather than guess them from the model name. A provider which does not enumerate every model in one listing states
+     * one path per listing; the listings are merged, and each is fetched and cached on its own.
+     *
+     * @implNote The default implementation returns {@value #DEFAULT_MODELS_PATH}.
+     * @return The paths of the model listings.
+     * @since 1.7
+     */
+    protected List<String> getModelsPaths() {
+        return List.of(DEFAULT_MODELS_PATH);
+    }
+
+    /**
      * Resolve URI of the given path based on endpoint URI.
      *
      * @param path The path to resolve the URI for based on endpoint URI.
@@ -836,6 +1040,28 @@ public abstract class BaseAIService implements AIService {
      */
     protected URI resolveURI(String path) {
         return endpoint.resolve(path);
+    }
+
+    /**
+     * Returns whether the given URI is on the same origin as the configured endpoint, i.e. equal scheme, host and effective port. A URI which is not is one the
+     * AI provider hosts elsewhere, such as a pre-signed one for generated content, and must therefore never carry the API key, in a header nor in a query
+     * string.
+     *
+     * @param uri The URI to check.
+     * @return {@code true} if the URI is on the same origin as the endpoint.
+     * @since 1.7
+     */
+    boolean isSameOrigin(URI uri) {
+        return uri.getScheme() != null && uri.getScheme().equalsIgnoreCase(endpoint.getScheme())
+            && uri.getHost() != null && uri.getHost().equalsIgnoreCase(endpoint.getHost()) && port(uri) == port(endpoint);
+    }
+
+    private static int port(URI uri) {
+        if (uri.getPort() != -1) {
+            return uri.getPort();
+        }
+
+        return "http".equalsIgnoreCase(uri.getScheme()) ? 80 : 443;
     }
 
     /**

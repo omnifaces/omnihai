@@ -20,7 +20,7 @@
  * <li>{@link org.omnifaces.ai.AIConfig} - configuration interface for API keys, endpoints, and models</li>
  * <li>{@link org.omnifaces.ai.AIStrategy} - holder for custom text, image, audio and video handler configuration</li>
  * <li>{@link org.omnifaces.ai.AIService} - unified interface for AI operations (chat, web search, summarization, translation, proofreading, moderation, image
- * analysis/generation, audio transcription/generation, video analysis)</li>
+ * analysis/generation, audio transcription/generation, video analysis/generation)</li>
  * <li>{@link org.omnifaces.ai.AIModality} - capabilities supported by AI providers (text input/output, image input/output, etc.)</li>
  * <li>{@link org.omnifaces.ai.AIModelVersion} - AI model version information extracted from model names in config</li>
  * <li>{@link org.omnifaces.ai.AITextHandler} - customization point for text-based request/response handling</li>

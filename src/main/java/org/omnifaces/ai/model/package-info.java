@@ -28,6 +28,8 @@
  * <li>{@link org.omnifaces.ai.model.GenerateImageOptions} - image generation configuration</li>
  * <li>{@link org.omnifaces.ai.model.GenerateAudioOptions} - audio generation configuration</li>
  * <li>{@link org.omnifaces.ai.model.AnalyzeVideoOptions} - video analysis configuration (frame sampling rate, clip offsets)</li>
+ * <li>{@link org.omnifaces.ai.model.GenerateVideoOptions} - video generation configuration (size, aspect ratio, resolution, duration, poll interval)</li>
+ * <li>{@link org.omnifaces.ai.model.GeneratedVideo} - serializable handle on a submitted video generation job, which is polled until the video is ready</li>
  * <li>{@link org.omnifaces.ai.model.Sse.Event} - SSE event for streaming responses</li>
  * </ul>
  */

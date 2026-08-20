@@ -17,6 +17,7 @@ import static java.util.Arrays.stream;
 import org.omnifaces.ai.cdi.AI;
 import org.omnifaces.ai.modality.AnthropicAITextHandler;
 import org.omnifaces.ai.modality.AzureAITextHandler;
+import org.omnifaces.ai.modality.AzureAIVideoHandler;
 import org.omnifaces.ai.modality.DefaultAIAudioHandler;
 import org.omnifaces.ai.modality.DefaultAIImageHandler;
 import org.omnifaces.ai.modality.DefaultAITextHandler;
@@ -24,6 +25,7 @@ import org.omnifaces.ai.modality.DefaultAIVideoHandler;
 import org.omnifaces.ai.modality.GoogleAIAudioHandler;
 import org.omnifaces.ai.modality.GoogleAIImageHandler;
 import org.omnifaces.ai.modality.GoogleAITextHandler;
+import org.omnifaces.ai.modality.GoogleAIVideoHandler;
 import org.omnifaces.ai.modality.MistralAITextHandler;
 import org.omnifaces.ai.modality.OllamaAITextHandler;
 import org.omnifaces.ai.modality.OpenAIAudioHandler;
@@ -31,7 +33,9 @@ import org.omnifaces.ai.modality.OpenAIImageHandler;
 import org.omnifaces.ai.modality.OpenAITextHandler;
 import org.omnifaces.ai.modality.OpenRouterAIAudioHandler;
 import org.omnifaces.ai.modality.OpenRouterAITextHandler;
+import org.omnifaces.ai.modality.OpenRouterAIVideoHandler;
 import org.omnifaces.ai.modality.XAIImageHandler;
+import org.omnifaces.ai.modality.XAIVideoHandler;
 import org.omnifaces.ai.service.AnthropicAIService;
 import org.omnifaces.ai.service.AzureAIService;
 import org.omnifaces.ai.service.BaseAIService;
@@ -116,12 +120,13 @@ public enum AIProvider {
      * @see GoogleAITextHandler
      * @see GoogleAIImageHandler
      * @see GoogleAIAudioHandler
+     * @see GoogleAIVideoHandler
      * @see <a href="https://aistudio.google.com/app/api-keys">Manage Google AI API Keys</a>
      * @see <a href="https://ai.google.dev/gemini-api/docs/models">Available Google AI Models</a>
      */
     GOOGLE(
         "Google AI", GoogleAIService.class, true, "gemini-3.5-flash", "https://generativelanguage.googleapis.com/v1beta", GoogleAITextHandler.class,
-        GoogleAIImageHandler.class, GoogleAIAudioHandler.class
+        GoogleAIImageHandler.class, GoogleAIAudioHandler.class, GoogleAIVideoHandler.class
     ),
 
     /**
@@ -133,11 +138,13 @@ public enum AIProvider {
      * @see OpenAITextHandler
      * @see XAIImageHandler
      * @see DefaultAIAudioHandler
+     * @see XAIVideoHandler
      * @see <a href="https://console.x.ai/">Manage xAI API Keys</a>
      * @see <a href="https://docs.x.ai/developers/models">Available xAI Models</a>
      */
     XAI(
-        "xAI", XAIService.class, true, "grok-4.5", "https://api.x.ai/v1", OpenAITextHandler.class, XAIImageHandler.class
+        "xAI", XAIService.class, true, "grok-4.5", "https://api.x.ai/v1", OpenAITextHandler.class, XAIImageHandler.class, DefaultAIAudioHandler.class,
+        XAIVideoHandler.class
     ),
 
     /**
@@ -182,12 +189,13 @@ public enum AIProvider {
      * @see AzureAITextHandler
      * @see OpenAIImageHandler
      * @see DefaultAIAudioHandler
+     * @see AzureAIVideoHandler
      * @see <a href="https://portal.azure.com/">Manage Azure OpenAI API Keys</a>
      * @see <a href="https://ai.azure.com/catalog">Available Azure OpenAI Models</a>
      */
     AZURE(
         "Azure OpenAI", AzureAIService.class, true, "gpt-5.5", "https://{org.omnifaces.ai.AZURE_RESOURCE}.openai.azure.com/openai/v1",
-        AzureAITextHandler.class, OpenAIImageHandler.class
+        AzureAITextHandler.class, OpenAIImageHandler.class, DefaultAIAudioHandler.class, AzureAIVideoHandler.class
     ),
 
     /**
@@ -199,12 +207,13 @@ public enum AIProvider {
      * @see OpenRouterAITextHandler
      * @see OpenAIImageHandler
      * @see OpenRouterAIAudioHandler
+     * @see OpenRouterAIVideoHandler
      * @see <a href="https://openrouter.ai/settings/keys/">Manage OpenRouter API Keys</a>
      * @see <a href="https://openrouter.ai/models">Available OpenRouter Models</a>
      */
     OPENROUTER(
         "OpenRouter", OpenRouterAIService.class, true, "deepseek/deepseek-v4-pro", "https://openrouter.ai/api/v1", OpenRouterAITextHandler.class,
-        OpenAIImageHandler.class, OpenRouterAIAudioHandler.class
+        OpenAIImageHandler.class, OpenRouterAIAudioHandler.class, OpenRouterAIVideoHandler.class
     ),
 
     /**

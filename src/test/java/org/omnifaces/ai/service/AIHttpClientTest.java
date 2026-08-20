@@ -12,13 +12,31 @@
  */
 package org.omnifaces.ai.service;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+import static org.omnifaces.ai.AIProvider.OPENAI;
+import static org.omnifaces.ai.service.BaseAIService.HTTP_CLIENT;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.ConnectException;
+import java.net.URI;
+import java.net.http.HttpClient.Redirect;
+import java.net.http.HttpHeaders;
+import java.net.http.HttpRequest;
+import java.net.http.HttpRequest.BodyPublishers;
+import java.net.http.HttpResponse;
+import java.util.Map;
 
 import org.junit.jupiter.api.Test;
+import org.omnifaces.ai.AIConfig;
+import org.omnifaces.ai.exception.AIHttpException;
 
 class AIHttpClientTest {
 
@@ -111,6 +129,87 @@ class AIHttpClientTest {
     @Test
     void isRetryable_nonRetryableMessageInAllCauses_returnsFalse() {
         assertFalse(AIHttpClient.isRetryable(new IOException("outer", new IOException("inner"))));
+    }
+
+    // =================================================================================================================
+    // newRequest - authorization headers
+    // =================================================================================================================
+
+    @Test
+    void newRequest_onEndpointHost_carriesTheAuthorization() {
+        var request = newRequest("videos/video_123/content");
+
+        assertEquals("https://api.openai.com/v1/videos/video_123/content", request.uri().toString());
+        assertTrue(request.headers().firstValue("Authorization").isPresent(), "a request to the AI provider's own endpoint needs the API key");
+    }
+
+    @Test
+    void newRequest_onForeignHost_withholdsTheAuthorization() {
+        var request = newRequest("https://vidgen.x.ai/abc/video.mp4");
+
+        assertEquals("https://vidgen.x.ai/abc/video.mp4", request.uri().toString());
+        assertFalse(request.headers().firstValue("Authorization").isPresent(), "a pre-signed URI hosted elsewhere must not receive the API key");
+    }
+
+    private static HttpRequest newRequest(String path) {
+        var service = (BaseAIService) AIConfig.of(OPENAI, "test-api-key").createService();
+        return HTTP_CLIENT.newRequest(service, path, "GET", null, "*/*", BodyPublishers.noBody());
+    }
+
+    // =================================================================================================================
+    // decompressDownloadIfNeeded - redirects and errors
+    // =================================================================================================================
+
+    @Test
+    void download_ofARedirect_throwsAndClosesTheBody() {
+        var body = new ClosingStream(new byte[0]);
+
+        var exception = assertThrows(AIHttpException.class, () -> AIHttpClient.decompressDownloadIfNeeded(newResponse(302, body)));
+
+        assertEquals(302, exception.getStatusCode(), "a redirect is not content, whatever its body says");
+        assertTrue(body.closed, "the response body of a redirect may not be left open");
+    }
+
+    /** Stream which records that it was closed, as a Mockito spy on one leaves its buffer uninitialized. */
+    private static final class ClosingStream extends ByteArrayInputStream {
+
+        private boolean closed;
+
+        private ClosingStream(byte[] bytes) {
+            super(bytes);
+        }
+
+        @Override
+        public void close() throws IOException {
+            closed = true;
+            super.close();
+        }
+
+    }
+
+    @Test
+    void download_ofASuccess_handsBackTheBody() {
+        var body = new ByteArrayInputStream(new byte[] { 'x' });
+
+        assertSame(body, AIHttpClient.decompressDownloadIfNeeded(newResponse(200, body)));
+    }
+
+    @Test
+    void client_neverFollowsRedirects() {
+        assertEquals(
+            Redirect.NEVER, BaseAIService.HTTP_CLIENT.client.followRedirects(),
+            "the JDK carries the authorization header across hosts when it follows a redirect"
+        );
+    }
+
+    @SuppressWarnings("unchecked")
+    private static HttpResponse<InputStream> newResponse(int statusCode, InputStream body) {
+        HttpResponse<InputStream> response = mock(HttpResponse.class);
+        when(response.statusCode()).thenReturn(statusCode);
+        when(response.body()).thenReturn(body);
+        when(response.headers()).thenReturn(HttpHeaders.of(Map.of(), (name, value) -> true));
+        when(response.uri()).thenReturn(URI.create("https://vidgen.x.ai/abc/video.mp4"));
+        return response;
     }
 
 }

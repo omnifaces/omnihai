@@ -15,6 +15,8 @@ package org.omnifaces.ai.helper;
 import static java.lang.Math.min;
 import static java.nio.file.Files.createTempFile;
 import static java.nio.file.Files.deleteIfExists;
+import static java.nio.file.Files.isDirectory;
+import static java.nio.file.Files.isWritable;
 import static java.nio.file.Files.newByteChannel;
 import static java.nio.file.Files.newInputStream;
 import static java.nio.file.StandardOpenOption.DELETE_ON_CLOSE;
@@ -55,6 +57,35 @@ public final class FileHelper {
      */
     public static boolean tempFilesSupported() {
         return TempFiles.SUPPORTED;
+    }
+
+    /**
+     * Checks that a file can be written at the given path and returns it. Anything which writes through a temporary file beside the target and renames it into
+     * place needs the directory to be writable rather than the target itself, as a rename replaces the target rather than opening it, so that is what this
+     * checks. The check is a best effort: the file system may still refuse the write afterwards.
+     *
+     * @param path The path to check.
+     * @return The given path, guaranteed to name a file in an existing writable directory.
+     * @throws NullPointerException when path is null.
+     * @throws IllegalArgumentException when path names no file, or its directory does not exist or cannot be written to.
+     * @since 1.7
+     */
+    public static Path requireWritableFile(Path path) {
+        if (requireNonNull(path, "path").getFileName() == null || isDirectory(path)) {
+            throw new IllegalArgumentException("Path must denote a file, but was " + path);
+        }
+
+        var directory = path.toAbsolutePath().getParent();
+
+        if (!isDirectory(directory)) {
+            throw new IllegalArgumentException("Directory of path does not exist: " + path);
+        }
+
+        if (!isWritable(directory)) {
+            throw new IllegalArgumentException("Directory of path is not writable: " + path);
+        }
+
+        return path;
     }
 
     /**

@@ -18,18 +18,20 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.logging.Level.WARNING;
 
+import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.logging.Logger;
 
 /**
  * Package-private helper for fire-and-forget async tasks.
- *
- * @author Bauke Scholtz
  * <p>
  * Without CDI the tasks run on a pool which grows on demand and reaps its idle threads, as the ones which occupy a thread the longest, such as consuming a
  * server-sent event stream, spend that time waiting on I/O rather than on a processor: how many are needed follows from how many calls the application has in
  * flight rather than from how many processors it has.
+ *
+ * @author Bauke Scholtz
  * @since 1.1
  */
 final class ExecutorServiceHelper {
@@ -84,6 +86,16 @@ final class ExecutorServiceHelper {
             logger.log(WARNING, "Async task failed", throwable);
             return null;
         });
+    }
+
+    /**
+     * Returns an executor which runs a task after the given delay. The delay itself occupies no thread.
+     *
+     * @param delay The delay to wait before running the task.
+     * @return An executor which runs a task after the given delay.
+     */
+    static Executor delayedExecutor(Duration delay) {
+        return CompletableFuture.delayedExecutor(delay.toMillis(), MILLISECONDS, executorService);
     }
 
     /**

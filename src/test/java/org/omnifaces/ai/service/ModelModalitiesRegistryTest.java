@@ -27,6 +27,10 @@ import static org.omnifaces.ai.AIModality.VIDEO_ANALYSIS;
 import static org.omnifaces.ai.AIModality.VIDEO_GENERATION;
 import static org.omnifaces.ai.helper.JsonHelper.parseJson;
 
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
 import org.junit.jupiter.api.Test;
 import org.omnifaces.ai.AIModality;
 import org.omnifaces.ai.service.ModelModalitiesRegistry.CachedModels;
@@ -110,6 +114,56 @@ class ModelModalitiesRegistryTest {
 
     private static CachedModels newCachedModels(int consecutiveFailures) {
         return new CachedModels(emptyMap(), 0L, consecutiveFailures);
+    }
+
+    // =================================================================================================================
+    // findModelModalities - across several listings
+    // =================================================================================================================
+
+    @Test
+    void findModelModalities_unionsWhatEveryListingStates() {
+        var byName = Map.of("google/veo-3.1", Set.of(IMAGE_ANALYSIS));
+        var byOutput = Map.of("google/veo-3.1", Set.of(VIDEO_GENERATION));
+
+        var modalities = ModelModalitiesRegistry.findModelModalities(List.of(byName, byOutput), "google/veo-3.1");
+
+        assertEquals(Set.of(IMAGE_ANALYSIS, VIDEO_GENERATION), modalities.orElseThrow());
+    }
+
+    @Test
+    void findModelModalities_unionsWithAListingStatingNone() {
+        var withoutModalities = Map.of("google/veo-3.1", Set.<AIModality>of());
+        var withVideo = Map.of("google/veo-3.1", Set.of(VIDEO_GENERATION));
+
+        var modalities = ModelModalitiesRegistry.findModelModalities(List.of(withoutModalities, withVideo), "google/veo-3.1");
+
+        assertEquals(Set.of(VIDEO_GENERATION), modalities.orElseThrow(), "a listing stating no modality may not defeat one which states some");
+    }
+
+    @Test
+    void findModelModalities_takesTheModelFromWhicheverListingKnowsIt() {
+        var byName = Map.of("deepseek/deepseek-v4-pro", Set.of(IMAGE_ANALYSIS));
+        var byOutput = Map.of("google/veo-3.1", Set.of(VIDEO_GENERATION));
+
+        var modalities = ModelModalitiesRegistry.findModelModalities(List.of(byName, byOutput), "google/veo-3.1");
+
+        assertEquals(Set.of(VIDEO_GENERATION), modalities.orElseThrow());
+    }
+
+    @Test
+    void findModelModalities_fallsBackToTheBaseNameOfAVariant() {
+        var listing = Map.of("google/veo-3.1", Set.of(VIDEO_GENERATION));
+
+        var modalities = ModelModalitiesRegistry.findModelModalities(List.of(listing), "google/veo-3.1:free");
+
+        assertEquals(Set.of(VIDEO_GENERATION), modalities.orElseThrow());
+    }
+
+    @Test
+    void findModelModalities_unknownModel_isEmpty() {
+        var listing = Map.of("google/veo-3.1", Set.of(VIDEO_GENERATION));
+
+        assertTrue(ModelModalitiesRegistry.findModelModalities(List.of(listing), "nope/nope").isEmpty());
     }
 
 }

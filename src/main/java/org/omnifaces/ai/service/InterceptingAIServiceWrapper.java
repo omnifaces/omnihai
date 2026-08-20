@@ -34,6 +34,8 @@ import org.omnifaces.ai.model.ChatOptions.Location;
 import org.omnifaces.ai.model.ClassificationResult;
 import org.omnifaces.ai.model.GenerateAudioOptions;
 import org.omnifaces.ai.model.GenerateImageOptions;
+import org.omnifaces.ai.model.GenerateVideoOptions;
+import org.omnifaces.ai.model.GeneratedVideo;
 import org.omnifaces.ai.model.ModerationOptions;
 import org.omnifaces.ai.model.ModerationResult;
 
@@ -627,6 +629,57 @@ public abstract class InterceptingAIServiceWrapper extends AIServiceWrapper {
     @Override
     public CompletableFuture<String> analyzeVideoAsync(Path video, String prompt, AnalyzeVideoOptions options) throws AIException {
         return interceptAsync(service -> service.analyzeVideoAsync(video, prompt, options));
+    }
+
+    @Override
+    public GeneratedVideo generateVideo(String prompt) throws AIException {
+        return intercept(service -> service.generateVideo(prompt));
+    }
+
+    @Override
+    public GeneratedVideo generateVideo(String prompt, GenerateVideoOptions options) throws AIException {
+        return intercept(service -> service.generateVideo(prompt, options));
+    }
+
+    @Override
+    public void generateVideo(String prompt, Path path) throws AIException {
+        intercept(service -> {
+            service.generateVideo(prompt, path);
+            return null;
+        });
+    }
+
+    @Override
+    public void generateVideo(String prompt, Path path, GenerateVideoOptions options) throws AIException {
+        intercept(service -> {
+            service.generateVideo(prompt, path, options);
+            return null;
+        });
+    }
+
+    @Override
+    public CompletableFuture<GeneratedVideo> generateVideoAsync(String prompt) throws AIException {
+        return interceptAsync(service -> service.generateVideoAsync(prompt));
+    }
+
+    @Override
+    public CompletableFuture<GeneratedVideo> generateVideoAsync(String prompt, GenerateVideoOptions options) throws AIException {
+        return interceptAsync(service -> service.generateVideoAsync(prompt, options));
+    }
+
+    @Override
+    public CompletableFuture<Void> generateVideoAsync(String prompt, Path path) throws AIException {
+        return interceptAsync(service -> service.generateVideoAsync(prompt, path));
+    }
+
+    @Override
+    public CompletableFuture<Void> generateVideoAsync(String prompt, Path path, GenerateVideoOptions options) throws AIException {
+        return interceptAsync(service -> service.generateVideoAsync(prompt, path, options));
+    }
+
+    @Override
+    public GeneratedVideo findGeneratedVideo(String jobId) {
+        return intercept(service -> service.findGeneratedVideo(jobId));
     }
 
 }
