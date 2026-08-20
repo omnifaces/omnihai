@@ -641,7 +641,7 @@ Video generation is the only operation which does not fit in one request: the AI
 
 ```java
 // Submit and walk away; returns at once, PENDING
-VideoGeneration video = service.generateVideo("A calico cat walking across a sunlit kitchen floor");
+VideoGeneration video = service.generateVideo("Sunrise over the colorful houses of Willemstad");
 String jobId = video.jobId();
 
 VideoGeneration.Status status = video.status(); // Pure getter, performs no I/O, free to call from a render pass
@@ -657,10 +657,14 @@ if (revived.refresh().status() == VideoGeneration.Status.COMPLETED) {
 
 ```java
 // Or wait for the video; the library polls meanwhile
-service.generateVideo("A calico cat walking across a sunlit kitchen floor", Path.of("cat.mp4"));
+service.generateVideo("Sunrise over the colorful houses of Willemstad", Path.of("curacao.mp4"));
 
 // Or wait without blocking the calling thread
 CompletableFuture<Void> written = service.generateVideoAsync("A calico cat", Path.of("cat.mp4"));
+
+// Or wait for the handle itself, which carries the terminal status next to the video
+CompletableFuture<VideoGeneration> pending = service.generateVideoAsync("A calico cat");
+pending.thenAccept(video -> video.writeTo(Path.of("cat.mp4")));
 
 // With options (allowable options depend on AI provider)
 VideoGeneration video = service.generateVideo("A calico cat",
