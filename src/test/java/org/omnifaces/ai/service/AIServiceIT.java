@@ -33,7 +33,7 @@ import org.omnifaces.ai.AIService;
  * Base class for IT tests on AI service instances. Each instance has its own provider and model.
  */
 @TestInstance(Lifecycle.PER_CLASS)
-@ExtendWith(FailFastOnRateLimitExtension.class)
+@ExtendWith(SkipRemainingOnUnusableProviderExtension.class)
 abstract class AIServiceIT {
 
     private static final Logger logger = Logger.getLogger(AIServiceIT.class.getName());
