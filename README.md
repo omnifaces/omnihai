@@ -26,7 +26,7 @@ That is the only hard requirement. CDI, EL and MP Config are optional and only n
 <dependency>
     <groupId>org.omnifaces</groupId>
     <artifactId>omnihai</artifactId>
-    <version>1.6.1</version>
+    <version>1.7</version>
 </dependency>
 ```
 That's all for Jakarta EE / MicroProfile runtimes. No additional dependencies needed.
@@ -1271,6 +1271,7 @@ Bottom line: If you need a lightweight utility for AI chat/text operations witho
 - [Blog post: OmniHai 1.4: OmniHai counts the cost](https://balusc.omnifaces.org/2026/04/omnihai-counts-cost.html)
 - [Blog post: OmniHai 1.5: OmniHai grows a backbone](https://balusc.omnifaces.org/2026/07/omnihai-grows-backbone.html)
 - [Blog post: OmniHai 1.6: OmniHai gets hands](https://balusc.omnifaces.org/2026/08/omnihai-gets-hands.html)
+- [Blog post: OmniHai 1.7: OmniHai gets motion](https://balusc.omnifaces.org/2026/08/omnihai-gets-motion.html)
 
 ## Credits
 
