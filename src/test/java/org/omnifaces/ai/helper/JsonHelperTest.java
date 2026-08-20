@@ -14,6 +14,7 @@ package org.omnifaces.ai.helper;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -23,6 +24,7 @@ import java.util.Optional;
 import jakarta.json.Json;
 import jakarta.json.JsonObject;
 import jakarta.json.JsonValue;
+import jakarta.json.stream.JsonParsingException;
 
 import org.junit.jupiter.api.Test;
 import org.omnifaces.ai.exception.AIResponseException;
@@ -115,6 +117,28 @@ class JsonHelperTest {
     @Test
     void parseJson_noBraces_throwsException() {
         assertThrows(AIResponseException.class, () -> JsonHelper.parseJson("just text"));
+    }
+
+    @Test
+    void parseJson_plainTextAnswer_statesWhatIsWrongWithIt() {
+        var exception = assertThrows(AIResponseException.class, () -> JsonHelper.parseJson("shipping\n0.95"));
+
+        assertEquals("shipping\n0.95", exception.getResponseBody());
+        assertInstanceOf(JsonParsingException.class, exception.getCause(), "the cause must name the parse problem rather than an index");
+    }
+
+    @Test
+    void parseJson_openingBraceWithoutClosingOne_statesWhatIsWrongWithIt() {
+        var exception = assertThrows(AIResponseException.class, () -> JsonHelper.parseJson("here it is: {\"key\":"));
+
+        assertInstanceOf(JsonParsingException.class, exception.getCause());
+    }
+
+    @Test
+    void parseJson_closingBraceBeforeOpeningOne_statesWhatIsWrongWithIt() {
+        var exception = assertThrows(AIResponseException.class, () -> JsonHelper.parseJson("} then {"));
+
+        assertInstanceOf(JsonParsingException.class, exception.getCause());
     }
 
     // =================================================================================================================

@@ -98,17 +98,22 @@ public final class JsonHelper {
      * @throws AIResponseException If the string cannot be parsed as JSON.
      */
     public static JsonObject parseJson(String json) throws AIResponseException {
-        try {
-            // Some chat APIs stubbornly put JSON in markdown formatting like ```json\n{...}\n``` when asking for JSON-only output.
-            var sanitizedJson = json.substring(json.indexOf('{'), json.lastIndexOf('}') + 1);
-
-            try (var reader = Json.createReader(new StringReader(sanitizedJson))) {
-                return reader.readObject();
-            }
+        try (var reader = Json.createReader(new StringReader(sanitizeJson(json)))) {
+            return reader.readObject();
         }
         catch (Exception e) {
             throw new AIResponseException("Cannot parse json", json, e);
         }
+    }
+
+    /**
+     * Trims whatever surrounds the outermost JSON object, as some chat APIs stubbornly put JSON in markdown formatting like <code>```json\n{...}\n```</code>
+     * when asked for JSON-only output. A string holding no such object is handed over as it is, so that the reader states what is wrong with it.
+     */
+    private static String sanitizeJson(String json) {
+        var start = json.indexOf('{');
+        var end = json.lastIndexOf('}');
+        return start >= 0 && end > start ? json.substring(start, end + 1) : json;
     }
 
     /**
