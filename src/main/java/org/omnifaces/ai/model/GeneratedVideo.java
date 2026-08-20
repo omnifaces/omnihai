@@ -42,10 +42,10 @@ import org.omnifaces.ai.exception.AIException;
  *
  * GeneratedVideo video = service.generateVideo(prompt); // Returns at once, PENDING.
  *
- * video.status(); // Pure getter, performs no I/O.
- * video.refresh(); // Caller-driven poll, exactly one request.
- * video.completion(); // Library-driven poll, completes when the job reaches a terminal status.
- * video.writeTo(path);
+ * Status status = video.status(); // Pure getter, performs no I/O.
+ * GeneratedVideo refreshed = video.refresh(); // Caller-driven poll, exactly one request.
+ * CompletableFuture&lt;GeneratedVideo&gt; completed = video.completion(); // Library-driven poll, completes when the job reaches a terminal status.
+ * video.writeTo(path); // Once it has completed.
  * </pre>
  * <p>
  * The handle is serializable and carries the job id, so that a web application can submit the job in one request and poll it from later ones, possibly after a

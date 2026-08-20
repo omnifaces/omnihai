@@ -644,8 +644,8 @@ Video generation is the only operation which does not fit in one request: the AI
 GeneratedVideo video = service.generateVideo("A calico cat walking across a sunlit kitchen floor");
 String jobId = video.jobId();
 
-video.status();   // Pure getter, performs no I/O, free to call from a render pass
-video.refresh();  // Caller-driven poll, exactly one request
+GeneratedVideo.Status status = video.status(); // Pure getter, performs no I/O, free to call from a render pass
+GeneratedVideo.Status refreshedStatus = video.refresh().status(); // Caller-driven poll, exactly one request
 
 // Revive the job from its id in a later request, possibly after a restart or on another node
 GeneratedVideo revived = service.findGeneratedVideo(jobId);
@@ -709,7 +709,7 @@ byte[] audio = gpt.generateAudio("Hello!",
 
 OpenAI honors the output format and defaults to MP3. Gemini and OpenRouter emit bare PCM which OmniHai prepends a WAV header to, so they answer WAV whichever format was asked for, and a file named `.mp3` would hold a WAV. Use `MimeType.guessMimeType(audio)` to learn what actually came back, as the audio generation IT does.
 
-All methods have async variants returning `CompletableFuture` (e.g., `chatAsync`, `summarizeAsync`, `translateAsync`, `proofreadAsync`, `generateImageAsync`, `analyzeVideoAsync`, `generateVideoAsync`, `transcribeAsync`, `generateAudioAsync`, etc.).
+All methods have async variants returning `CompletableFuture` (e.g., `chatAsync`, `summarizeAsync`, `translateAsync`, `proofreadAsync`, `classifyAsync`, `moderateContentAsync`, `analyzeImageAsync`, `generateImageAsync`, `transcribeAsync`, `generateAudioAsync`, `analyzeVideoAsync`, `generateVideoAsync`, etc.).
 
 ## Custom Providers
 
@@ -1192,8 +1192,8 @@ Jakarta Agentic AI standardizes a layer above this one, so the two compose rathe
 ### Is OmniHai smaller than e.g. LangChain4J?
 
 Yes, significantly:
-- OmniHai JAR: ~275 KB vs LangChain4J: ~5-10 MB (*per* AI provider!) — at least 18x smaller when using only one AI provider
-- 102 source files, ~19,500 lines (\~8,400 actual code, rest is javadoc and blank lines)
+- OmniHai JAR: ~335 KB vs LangChain4J: ~5-10 MB (*per* AI provider!) — at least 15x smaller when using only one AI provider
+- 115 source files, ~24,000 lines (\~10,400 actual code, rest is javadoc and blank lines)
 - Zero external runtime dependencies — uses JDK's native `java.net.http.HttpClient` directly without any SDKs
 - Only one required dependency: Jakarta JSON-P (which Jakarta EE and MicroProfile runtimes already have)
 - Other dependencies are optional: CDI, EL and/or MP Config APIs (which Jakarta EE resp. MicroProfile runtimes already have)
