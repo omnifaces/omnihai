@@ -18,6 +18,7 @@ import static org.omnifaces.ai.mime.AudioVideoMimeTypeDetector.RIFF_MAGIC;
 import static org.omnifaces.ai.mime.AudioVideoMimeTypeDetector.startsWith;
 
 import java.util.Arrays;
+import java.util.Locale;
 import java.util.Optional;
 
 /**
@@ -27,6 +28,12 @@ import java.util.Optional;
  * @since 1.0
  */
 final class ImageMimeTypeDetector {
+
+    /** The number of leading bytes which the SVG markup is looked for in. */
+    private static final int SVG_HEAD_LENGTH = 1024;
+
+    private static final String SVG_TAG = "<svg";
+    private static final String SVG_NAMESPACE = "http://www.w3.org/2000/svg";
 
     private enum ImageMimeType implements MimeType {
 
@@ -136,9 +143,36 @@ final class ImageMimeTypeDetector {
         return Arrays.stream(ImageMimeType.values()).filter(type -> type.value.equals(value)).map(MimeType.class::cast).findFirst();
     }
 
+    /**
+     * Returns whether the content is likely an SVG, which unlike every other image type carries no magic bytes of its own and must therefore be recognized by
+     * its markup. The markup is looked for only when the content opens as XML, as decoding arbitrary bytes as text yields a string in which the tag may occur
+     * by coincidence.
+     */
     private static boolean isLikelySvg(byte[] content) {
-        var head = new String(content, 0, Math.min(1024, content.length), US_ASCII).toLowerCase();
-        return head.contains("<svg") || head.contains("http://www.w3.org/2000/svg");
+        if (!startsAsXml(content)) {
+            return false;
+        }
+
+        var head = new String(content, 0, Math.min(SVG_HEAD_LENGTH, content.length), US_ASCII).toLowerCase(Locale.ROOT);
+        return head.contains(SVG_TAG) || head.contains(SVG_NAMESPACE);
+    }
+
+    /**
+     * Returns whether the content opens as an XML document, i.e. its first byte other than a byte order mark or leading whitespace is {@code <}. Binary content
+     * carrying the bytes of an SVG tag in its head, such as an MP4 whose {@code uuid} box holds an XML manifest, is thereby not mistaken for an SVG.
+     */
+    private static boolean startsAsXml(byte[] content) {
+        var index = ByteOrderMark.length(content);
+
+        while (index < content.length && isXmlWhitespace(content[index])) {
+            index++;
+        }
+
+        return index < content.length && content[index] == '<';
+    }
+
+    private static boolean isXmlWhitespace(byte value) {
+        return value == ' ' || value == '\t' || value == '\r' || value == '\n';
     }
 
 }

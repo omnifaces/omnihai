@@ -349,4 +349,16 @@ class AudioVideoMimeTypeDetectorTest {
         return content;
     }
 
+    // =================================================================================================================
+    // Test guessMimeType - detector precedence
+    // =================================================================================================================
+
+    @Test
+    void guessMimeType_mp4CarryingSvgTagInItsHead_isVideo() {
+        var mimeType = MimeType.guessMimeType(ImageMimeTypeDetectorTest.newMp4WithXmlManifest());
+
+        assertEquals("video/mp4", mimeType.value());
+        assertTrue(mimeType.isVideo(), "images are detected before audio and video, so an image detector may not claim an MP4");
+    }
+
 }

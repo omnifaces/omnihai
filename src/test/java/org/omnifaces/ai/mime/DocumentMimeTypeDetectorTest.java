@@ -374,4 +374,28 @@ class DocumentMimeTypeDetectorTest {
         return baos.toByteArray();
     }
 
+    // =================================================================================================================
+    // Test guessDocumentMimeType - byte order mark
+    // =================================================================================================================
+
+    @Test
+    void guessDocumentMimeType_xml_withByteOrderMark() {
+        assertEquals("application/xml", guessWithByteOrderMark("<?xml version=\"1.0\"?><root/>").value());
+    }
+
+    @Test
+    void guessDocumentMimeType_html_withByteOrderMark() {
+        assertEquals("text/html", guessWithByteOrderMark("<!doctype html><html></html>").value());
+    }
+
+    @Test
+    void guessDocumentMimeType_json_withByteOrderMark() {
+        assertEquals("application/json", guessWithByteOrderMark("{\"key\":\"value\"}").value());
+    }
+
+    private static MimeType guessWithByteOrderMark(String text) {
+        var content = ("\uFEFF" + text).getBytes(UTF_8);
+        return DocumentMimeTypeDetector.guessDocumentMimeType(content);
+    }
+
 }

@@ -20,6 +20,7 @@ import java.io.ByteArrayInputStream;
 import java.nio.ByteBuffer;
 import java.nio.charset.CharacterCodingException;
 import java.util.Arrays;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
@@ -147,7 +148,8 @@ final class DocumentMimeTypeDetector {
     }
 
     /**
-     * Checks if content is likely text (not binary). Validates UTF-8 encoding and rejects control characters.
+     * Checks if content is likely text (not binary). Validates UTF-8 encoding, rejects control characters and strips a leading byte order mark, as every text
+     * type below is recognized by an anchored prefix which the mark would otherwise hide.
      */
     private static Optional<String> findLikelyText(byte[] content) {
         var decoder = UTF_8.newDecoder().onMalformedInput(REPORT).onUnmappableCharacter(REPORT);
@@ -167,7 +169,7 @@ final class DocumentMimeTypeDetector {
                 }
             }
 
-            return Optional.of(text);
+            return Optional.of(ByteOrderMark.strip(text));
         }
         catch (CharacterCodingException ignore) {
             return Optional.empty(); // Invalid UTF-8 - likely binary.
@@ -219,7 +221,7 @@ final class DocumentMimeTypeDetector {
      * Check if xml contains doctype or html/head/body tags.
      */
     private static boolean looksLikeHtml(String xml) {
-        var lower = xml.toLowerCase();
+        var lower = xml.toLowerCase(Locale.ROOT);
         return lower.contains("<!doctype html") || lower.contains("<html") || lower.contains("<head") || lower.contains("<body");
     }
 

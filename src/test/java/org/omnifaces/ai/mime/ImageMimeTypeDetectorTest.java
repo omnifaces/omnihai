@@ -149,6 +149,42 @@ class ImageMimeTypeDetectorTest {
         assertEquals("svg", result.get().extension());
     }
 
+    @Test
+    void guessImageMimeType_svg_withByteOrderMark() {
+        var content = new byte[] { (byte) 0xEF, (byte) 0xBB, (byte) 0xBF };
+        var result = ImageMimeTypeDetector.guessImageMimeType(concat(content, "<svg></svg>".getBytes(UTF_8)));
+        assertTrue(result.isPresent());
+        assertEquals("svg", result.get().extension());
+    }
+
+    @Test
+    void guessImageMimeType_svg_withLeadingWhitespace() {
+        var content = "\n\t <?xml version=\"1.0\"?><svg></svg>".getBytes(UTF_8);
+        var result = ImageMimeTypeDetector.guessImageMimeType(content);
+        assertTrue(result.isPresent());
+        assertEquals("svg", result.get().extension());
+    }
+
+    @Test
+    void guessImageMimeType_binaryCarryingSvgTagInItsHead_shouldReturnEmpty() {
+        var result = ImageMimeTypeDetector.guessImageMimeType(newMp4WithXmlManifest());
+
+        assertFalse(result.isPresent(), "content which does not open as XML is not an SVG, whatever bytes its head happens to carry");
+    }
+
+    /** An MP4 whose {@code uuid} box holds an XML manifest, as generated videos of some AI providers do. */
+    static byte[] newMp4WithXmlManifest() {
+        var header = new byte[] { 0x00, 0x00, 0x00, 0x20, 'f', 't', 'y', 'p', 'i', 's', 'o', 'm', 0x00, 0x00, 0x02, 0x00 };
+        return concat(header, "uuid<svg xmlns=\"http://www.w3.org/2000/svg\"/>".getBytes(UTF_8));
+    }
+
+    private static byte[] concat(byte[] first, byte[] second) {
+        var result = new byte[first.length + second.length];
+        System.arraycopy(first, 0, result, 0, first.length);
+        System.arraycopy(second, 0, result, first.length, second.length);
+        return result;
+    }
+
     // =================================================================================================================
     // Test guessImageMimeType - edge cases
     // =================================================================================================================
