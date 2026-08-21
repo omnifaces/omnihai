@@ -13,6 +13,19 @@ A unified Java AI utility library, with first-class Jakarta EE and MicroProfile 
 
 OmniHai provides a single, consistent API to interact with multiple AI providers. It achieves that by interacting with their REST API endpoints directly.
 
+## Contents
+
+- [Minimum Requirements](#minimum-requirements)
+- [Installation](#installation) — [servlet containers](#servlet-containers), [plain Java SE](#plain-java-se), [CDI on plain Java SE](#cdi-on-plain-java-se)
+- [Supported Providers](#supported-providers)
+- [Quick Start](#quick-start) — [programmatic](#programmatic-configuration), [CDI](#cdi-integration), [multi-provider aggregation](#multi-provider-aggregation)
+- [Features](#features) — [chat](#chat), [token usage](#token-usage-tracking), [cost](#cost-calculation), [reasoning effort](#reasoning-effort), [structured outputs](#structured-outputs), [web search](#web-search), [text analysis](#text-analysis), [classification](#classification), [moderation](#content-moderation), [modality support](#modality-support), [images](#image-analysis-and-generation), [video analysis](#video-analysis), [video generation](#video-generation), [audio](#audio-transcription-and-generation)
+- [Custom Providers](#custom-providers) and [Custom Handlers](#custom-handlers)
+- [Service Wrapper](#service-wrapper) — [resilience](#resilience)
+- [Tool Use](#tool-use) — [declaring programmatically](#declaring-tools-programmatically), [grouping](#grouping-tools), [authorizing](#authorizing-tool-calls), [bounding and observing the loop](#bounding-and-observing-the-loop), [owning the loop](#owning-the-loop)
+- [Where OmniHai Fits](#where-omnihai-fits)
+- [License](#license), [Links](#links), [Credits](#credits)
+
 ## Minimum Requirements
 
 - Java 17
@@ -101,54 +114,19 @@ Weld only discovers beans in archives which carry a `META-INF/beans.xml`, so add
 </beans>
 ```
 
-Then bootstrap the container and inject as usual:
+Then bootstrap the container, and inject with `@AI` exactly as in a container:
 
 ```java
-@ApplicationScoped
-public class Chatbot {
-
-    @Inject
-    @AI(provider = AIProvider.OLLAMA)
-    private AIService ai;
-
-    public void run() {
-        System.out.println(ai.chat("What is Jakarta EE?"));
-    }
-
-    public static void main(String[] args) {
-        try (var container = SeContainerInitializer.newInstance().initialize()) {
-            container.select(Chatbot.class).get().run();
-        }
+public static void main(String[] args) {
+    try (var container = SeContainerInitializer.newInstance().initialize()) {
+        container.select(Chatbot.class).get().run(); // Chatbot being your own bean with an @AI injection point
     }
 }
 ```
 
-`@AITool` methods on CDI beans are discovered and invoked exactly as in a container.
-
-EL expressions in `@AI` attributes additionally need Weld's EL module and an EL implementation, as `weld-se-core` ships neither:
-
-```xml
-<dependency>
-    <groupId>org.jboss.weld.module</groupId>
-    <artifactId>weld-web</artifactId>
-    <version>6.0.4.Final</version>
-</dependency>
-<dependency>
-    <groupId>org.glassfish.expressly</groupId>
-    <artifactId>expressly</artifactId>
-    <version>6.0.0</version>
-</dependency>
-```
-
-MicroProfile Config expressions additionally need an MP Config implementation and a `META-INF/microprofile-config.properties`:
-
-```xml
-<dependency>
-    <groupId>io.smallrye.config</groupId>
-    <artifactId>smallrye-config</artifactId>
-    <version>3.18.1</version>
-</dependency>
-```
+`@AITool` methods on CDI beans are discovered and invoked exactly as in a container as well.
+EL expressions in `@AI` attributes additionally need Weld's EL module `org.jboss.weld.module:weld-web` plus an EL implementation such as `org.glassfish.expressly:expressly`, as `weld-se-core` ships neither.
+MicroProfile Config expressions additionally need `io.smallrye.config:smallrye-config` and a `META-INF/microprofile-config.properties`.
 
 ## Supported Providers
 
@@ -185,25 +163,13 @@ String response = service.chat("What is Jakarta EE?");
 @AI(provider = AIProvider.ANTHROPIC, apiKey = "your-anthropic-api-key")
 private AIService claude;
 
-// Use EL expressions for dynamic configuration
-@Inject
-@AI(provider = AIProvider.OPENAI,
-    apiKey = "#{initParam['com.example.OPENAI_API_KEY']}")
-private AIService gpt;
-
-// With MicroProfile config expressions and custom system prompt
+// EL `#{...}` and MicroProfile Config `${config:...}` expressions both resolve in every attribute
 @Inject
 @AI(provider = AIProvider.GOOGLE,
     apiKey = "${config:google.api-key}",
+    model = "#{configBean.geminiModel}",
     prompt = "You are a helpful assistant specialized in Jakarta EE.")
 private AIService jakartaExpert;
-
-// With different model than default
-@Inject
-@AI(provider = AIProvider.XAI,
-    apiKey = "#{configBean.xaiApiKey}",
-    model = "grok-imagine-image-2.0")
-private AIService imageGenerator;
 ```
 
 ### Multi-Provider Aggregation
@@ -297,52 +263,20 @@ String response2 = service.chat("What is my name?", options); // AI remembers: "
 List<ChatInput.Message> history = options.getHistory();
 ```
 
-History is maintained as a sliding window, defaulting to 20 messages (10 conversational turns). Oldest messages are automatically evicted when the limit is exceeded. You can customize the window size:
-```java
-ChatOptions options = ChatOptions.newBuilder()
-    .withMemory(50) // Keep up to 50 messages (25 turns)
-    .build();
-```
+History is a sliding window, defaulting to 20 messages (10 conversational turns), evicting the oldest when the limit is exceeded; `withMemory(50)` sizes it otherwise.
+Feed `history(...)` an existing `getHistory()` to carry a conversation over to a differently configured `ChatOptions`, e.g. one with another system prompt or temperature.
 
-Since `ChatOptions` is `Serializable`, you can save and restore the entire instance across sessions (e.g., in an HTTP session or database). For portable storage — REST payloads, JSON columns, audit logs, cross-service transport — use the explicit JSON form:
+The instance is `Serializable`, so it can be saved and restored across sessions in an HTTP session or a database.
+For portable storage — REST payloads, JSON columns, audit logs, cross-service transport — use the explicit JSON form:
 
 ```java
 String json = options.toJson();     // serialize: options + history, no lastUsage
 ChatOptions restored = ChatOptions.fromJson(json); // rehydrate: always mutable
 ```
 
-If you need to reuse the same conversation history with different settings (e.g., a different system prompt or temperature), you can seed a new `ChatOptions` with the history from an existing one:
-```java
-List<ChatInput.Message> saved = originalOptions.getHistory();
-
-ChatOptions tweakedOptions = ChatOptions.newBuilder()
-    .systemPrompt("Now respond in Spanish.")
-    .temperature(0.3)
-    .withMemory(originalOptions.getMaxHistory())
-    .history(saved)
-    .build();
-
-String response = service.chat("Continue where we left off", tweakedOptions);
-```
-
-File attachments are automatically tracked in history. When you upload files in a memory-enabled chat, their references are preserved across turns so the AI can continue referencing them:
-```java
-ChatOptions options = ChatOptions.newBuilder()
-    .withMemory()
-    .build();
-
-ChatInput input = ChatInput.newBuilder()
-    .message("Analyze this PDF")
-    .attach(Path.of("report.pdf"))
-    .build();
-
-String analysis = service.chat(input, options);
-String followUp = service.chat("What's on page 2?", options); // AI still has access to the PDF
-```
-
-When messages slide out of the window, their associated file references are evicted as well. Uploaded files on the provider's servers are automatically cleaned up in the background after 2 days, preventing stale file accumulation. Only files uploaded by OmniHai are cleaned up.
-
-Note: file tracking in history requires the AI provider to support a files API. This is currently the case for OpenAI, Anthropic, Google AI, xAI, Mistral, and OpenRouter.
+File attachments are tracked in history too: their references are preserved across turns, so a follow-up question can still reach the PDF uploaded two turns ago, and they are evicted along with the message which slides out of the window.
+Uploaded files on the provider's servers are cleaned up in the background after 2 days, so nothing accumulates; only files uploaded by OmniHai are touched.
+This requires the AI provider to support a files API, which is currently the case for OpenAI, Anthropic, Google AI, xAI, Mistral, and OpenRouter.
 
 ### Token Usage Tracking
 
@@ -350,18 +284,14 @@ Track token consumption for cost monitoring and optimization:
 
 ```java
 ChatOptions options = ChatOptions.DEFAULT.copy(); // Default ones are immutable, so you need a copy.
-String response = service.chat("Explain quantum computing", options);
+service.chat("Explain quantum computing", options);
 
-// Get usage statistics after the call
 ChatUsage usage = options.getLastUsage();
-System.out.println("Input tokens: " + usage.inputTokens());
-System.out.println("Cached input tokens: " + usage.cachedInputTokens()); // Subset of input tokens served from the provider's prompt cache
-System.out.println("Output tokens: " + usage.outputTokens());
-System.out.println("Reasoning tokens: " + usage.reasoningTokens()); // Models with reasoning support; the value is a subset of output tokens
-System.out.println("Total tokens: " + usage.totalTokens()); // input tokens + output tokens
+int total = usage.totalTokens(); // inputTokens() + outputTokens()
 ```
 
-`ChatUsage` is available after each chat call when the provider reports token usage. Values are `-1` if not reported by the provider.
+`cachedInputTokens()` is the subset of the input tokens which the provider's prompt cache served, and `reasoningTokens()` the subset of the output tokens which a reasoning-capable model spent on thinking.
+A `ChatUsage` is available after each chat call which the provider reports usage for; values it leaves out are `-1`.
 
 ### Cost Calculation
 
@@ -381,18 +311,11 @@ ChatOptions options = ChatOptions.newBuilder()
 
 String response = service.chat("Explain quantum computing", options);
 
-ChatCost cost = options.getLastCost();
-System.out.println("Input cost:        " + cost.inputCost());
-System.out.println("Cached input cost: " + cost.cachedInputCost());
-System.out.println("Output cost:       " + cost.outputCost());
-System.out.println("Total cost:        " + cost.totalCost() + " " + cost.currency());
+ChatCost cost = options.getLastCost(); // inputCost(), cachedInputCost(), outputCost(), totalCost(), currency()
 ```
 
-`ChatPricing.of(input, output)` and `ChatPricing.of(input, cached, output)` are convenience factories that skip the currency. When `cachedInputTokenPrice` is `null`, cached tokens are billed at `inputTokenPrice`. You can also compute a cost ad-hoc from any `ChatUsage`:
-
-```java
-ChatCost cost = usage.calculateCost(pricing);
-```
+`ChatPricing.of(input, output)` and `ChatPricing.of(input, cached, output)` are convenience factories which skip the currency, and a `null` `cachedInputTokenPrice` bills cached tokens at `inputTokenPrice`.
+Any `ChatUsage` can be priced ad-hoc with `usage.calculateCost(pricing)`.
 
 Note: `ChatPricing` models a simplified three-tier scheme (base input, cached input, output). Provider-specific billing axes such as Anthropic's 5-minute / 1-hour cache-*write* premium are not modeled and may cause under-counting for heavy explicit-prompt-caching workloads. For strict accuracy, reconcile against the provider's own billing API.
 
@@ -443,16 +366,9 @@ record ProductReview(String sentiment, int rating, List<String> pros, List<Strin
 ProductReview review = service.chat("Analyze this review: " + reviewText, ProductReview.class);
 ```
 
-With options:
-```java
-ChatOptions options = ChatOptions.newBuilder()
-    .systemPrompt("You are a product review analyzer.")
-    .temperature(0.3)
-    .build();
-ProductReview review = service.chat("Analyze this review: " + reviewText, options, ProductReview.class);
-```
+Every typed method has a `ChatOptions` overload, so a system prompt and a temperature apply here as they do to a plain chat.
 
-Under the hood, OmniHai generates a JSON schema from the class, instructs the AI to return conforming JSON, and parses the response back into the typed object. 
+Under the hood, OmniHai generates a JSON schema from the class, instructs the AI to return conforming JSON, and parses the response back into the typed object.
 You can also do this manually if you need more control:
 
 ```java
@@ -502,27 +418,12 @@ StockPrice nvidiaPrice = service.chat("What is the current stock price of Nvidia
 ### Text Analysis
 
 ```java
-// Summarize text
-String summary = service.summarize(longText, 100); // max 100 words
-
-// Extract key points
-List<String> points = service.extractKeyPoints(text, 5); // max 5 points
-```
-
-### Translation and Proofreading
-
-```java
-// Detect language
-String lang = service.detectLanguage(text); // Returns ISO 639-1 code
-
-// Translate with auto-detection
-String translated = service.translate(text, null, "es");
-
-// Translate from specific language
-String translated = service.translate(text, "en", "fr");
-
-// Proofread text (fix grammar and spelling, preserve meaning and style)
-String corrected = service.proofread(text);
+String summary = service.summarize(longText, 100);        // max 100 words
+List<String> points = service.extractKeyPoints(text, 5);  // max 5 points
+String lang = service.detectLanguage(text);               // ISO 639-1 code
+String spanish = service.translate(text, null, "es");     // null source language auto-detects
+String french = service.translate(text, "en", "fr");
+String corrected = service.proofread(text);               // fixes grammar and spelling, preserves meaning and style
 ```
 
 ### Classification
@@ -590,28 +491,18 @@ catch (UnsupportedOperationException | AIException e) {
 }
 ```
 
-### Image Analysis
+### Image Analysis and Generation
 
 ```java
-// Analyze image
+// Analyze, from bytes or straight from a source path
 byte[] imageBytes = Files.readAllBytes(imagePath);
 String description = service.analyzeImage(imageBytes, "Describe the product");
-
-// Or straight from a source path
 String described = service.analyzeImage(Path.of("product.png"), "Describe the product");
-
-// Generate alt text
 String altText = service.generateAltText(imageBytes);
-```
 
-### Image Generation
-
-```java
-// Generate image
+// Generate, optionally with options
 byte[] image = service.generateImage("A sunset over mountains");
-
-// With options
-byte[] image = service.generateImage("A modern office",
+byte[] office = service.generateImage("A modern office",
     GenerateImageOptions.newBuilder()
         .size("1024x1024")
         .build());
@@ -686,24 +577,17 @@ Video generation is offered by Google (Veo), xAI (Grok Imagine) and OpenRouter, 
 
 Generated videos are hosted by the AI provider for about a day and are then deleted, upon which the status becomes `EXPIRED`. Some AI providers host them on a separate host and hand out a pre-signed URL; OmniHai downloads such a URL without the API key.
 
-### Audio Transcription
+### Audio Transcription and Generation
 
 ```java
-// Transcribe audio
 String transcription = service.transcribe(Path.of("audio.mp3"));
-```
 
-### Audio Generation (Text-to-Speech)
-
-```java
-// Generate audio
+// Text-to-speech, to bytes or straight to a file (the file name is yours to pick; the format depends on the AI provider)
 byte[] audio = service.generateAudio("Hello, welcome to OmniHai!");
-
-// Save directly to file (the file name is yours to pick; the format depends on the AI provider)
-gpt.generateAudio("Hello, welcome to OmniHai!", Path.of("greeting.mp3"));
+service.generateAudio("Hello, welcome to OmniHai!", Path.of("greeting.mp3"));
 
 // With options (allowable options depend on AI provider)
-byte[] audio = gpt.generateAudio("Hello!",
+byte[] tuned = service.generateAudio("Hello!",
     GenerateAudioOptions.newBuilder()
         .voice("breeze")
         .speed(1.5)
@@ -758,7 +642,7 @@ AIService service = AIConfig.of(AIProvider.OPENAI, "your-openai-api-key").withSt
 
 ### CDI Integration
 
-```java                                                                                                                                                                                                                                              
+```java
 @Inject
 @AI(provider = OPENAI, apiKey = "#{config.openaiApiKey}", textHandler = TrackingTextHandler.class)
 private AIService trackedService;
@@ -1061,117 +945,7 @@ The same shape lets a cheap model pick the tool and a capable one write the fina
 
 What you give up is everything `@AITool` does for you: the manifest is prose which drifts from the methods it describes, arguments arrive as strings you convert and validate yourself, and the instructions which keep a weaker model from re-calling a tool it already called, or from spending its last turn on another call, are yours to write. Prefer `withTools(...)` unless you need to interrupt the loop.
 
-## OmniHai vs LangChain4J vs Spring AI vs Jakarta Agentic AI
-
-### Philosophy
-
-| Aspect | OmniHai | LangChain4J | Spring AI | Jakarta Agentic |
-|--------|--------|-------------|-----------|-----------------|
-| **Target Runtime** | Any Java (Jakarta EE / MicroProfile integration built in) | Any Java | Spring | Jakarta EE |
-| **Philosophy** | Minimal, focused utility | Comprehensive toolkit | Spring integration | Standard specification for agent workflows |
-| **Dependencies** | JSON-P only (CDI/EL/MP-config optional) | Multiple modules | Spring framework | `jakarta.ai.agent` API plus an implementation |
-| **Learning Curve** | Low | Medium-High | Medium (if Spring-familiar) | Medium (workflow annotations) |
-
-### Feature Comparison
-
-| Feature | OmniHai | LangChain4J | Spring AI |
-|---------|--------|-------------|-----------|
-| **Chat/Completion** | ✅ | ✅ | ✅ |
-| **Streaming** | ✅ | ✅ | ✅ |
-| **Structured Outputs** | ✅ | ✅ | ✅ |
-| **File Attachments** | ✅ | ✅ | ✅ |
-| **Function Calling** | ✅ (schema-based) | ✅ | ✅ |
-| **RAG Support** | ❌ | ✅ (extensive) | ✅ |
-| **Vector Stores** | ❌ | ✅ (many) | ✅ (many) |
-| **Embeddings** | ❌ | ✅ | ✅ |
-| **Image Analysis** | ✅ | ✅ | ✅ |
-| **Image Generation** | ✅ | ✅ | ✅ |
-| **Audio Transcription** | ✅ (native + fallback) | ✅ | ✅ |
-| **Audio Generation (TTS)** | ✅ | ✅ | ✅ |
-| **Video Analysis** | ✅ | ✅ | ✅ |
-| **Video Generation** | ✅ | ❌ | ❌ |
-| **Content Moderation** | ✅ (native + fallback) | ❌ (via chat) | ❌ (via chat) |
-| **Classification** | ✅ | ❌ (via chat) | ❌ (via chat) |
-| **Translation** | ✅ | ❌ (via chat) | ❌ (via chat) |
-| **Proofreading** | ✅ | ❌ (via chat) | ❌ (via chat) |
-| **Summarization** | ✅ | ❌ (via chat) | ❌ (via chat) |
-| **Memory/History** | ✅ | ✅ | ✅ |
-| **Token Usage Tracking** | ✅ | ✅ | ✅ |
-| **Web Search** | ✅ (built-in) | ✅ | ✅ |
-| **Agents** | ➖ (single tool loop, no orchestration) | ✅ | ✅ |
-| **Prompt Templates** | ❌ | ✅ | ✅ |
-
-Jakarta Agentic AI is deliberately absent from that table: it standardizes the workflow around an AI call rather than the call itself, so a feature-by-feature comparison would be comparing different layers. See below.
-
-### Jakarta Agentic AI
-
-Jakarta Agentic AI standardizes the shape of an agent workflow, not the provider call.
-
-An agent is a CDI bean annotated `@Agent` in package `jakarta.ai.agent`. A `@Trigger` method starts the workflow from a CDI event, `@Decision` methods determine how it progresses, `@Action` methods carry out a step, `@Outcome` marks completion, `@HandleException` handles failures, and `@WorkflowScoped` gives one CDI context per execution. The AI itself is reached through an injectable `LargeLanguageModel` facade, described by the specification as deliberately minimal, with parameterized queries in the style of Jakarta Persistence. Version 1.0.0-M1 supports linear workflows; conditional ones are planned. It does not initially seek inclusion in the Jakarta EE Platform or any profile.
-
-That makes it complementary to OmniHai rather than an alternative to it:
-
-| Aspect | OmniHai | Jakarta Agentic AI |
-|--------|---------|--------------------|
-| **Layer** | The provider call | The workflow around it |
-| **Who decides the next step** | The AI, from the tools you registered | You, in `@Decision` and `@Action` methods |
-| **LLM surface** | Ten providers, streaming, attachments, cost, moderation, transcription | Minimal facade by design |
-| **Form** | A library you depend on | A specification you code against, plus an implementation |
-
-An `@Action` method is free to call an injected OmniHai `AIService`, which is probably the most useful way to read the two together: the specification decides which step runs, OmniHai performs the call that step needs.
-
-### Provider Support
-
-| Provider | OmniHai | LangChain4J | Spring AI |
-|----------|--------|-------------|-----------|
-| OpenAI | ✅ | ✅ | ✅ |
-| Anthropic | ✅ | ✅ | ✅ |
-| Google AI | ✅ | ✅ | ✅ |
-| xAI (Grok) | ✅ | ❌ (via OpenAI) | ❌ (via OpenAI) |
-| Mistral | ✅ | ✅ | ✅ |
-| Meta AI | ✅ | ❌ (via OpenAI) | ❌ (via OpenAI) |
-| Azure OpenAI | ✅ | ✅ | ✅ |
-| OpenRouter | ✅ | ❌ (via OpenAI) | ❌ (via OpenAI) |
-| Hugging Face | ✅ | ✅ | ✅ |
-| Ollama | ✅ | ✅ | ✅ |
-| AWS Bedrock | ❌ | ✅ | ✅ |
-
-### CDI Integration
-
-| Aspect | OmniHai | LangChain4J-CDI | Spring AI |
-|--------|--------|-----------------|-----------|
-| **Injection Style** | `@Inject @AI(...)` | `@Inject` + config | `@Autowired` + beans |
-| **Qualifier-based** | ✅ | ❌ | ❌ |
-| **EL Support** | ✅ `#{...}`, `${...}` | ❌ | ❌ (SpEL, different) |
-| **MP Config Support** | ✅ `${config:...}` | ✅ (properties-based) | ❌ (SpEL, different) |
-
-### Where OmniHai Shines
-
-- Ultra-lightweight - No external HTTP library, just [`java.net.http.HttpClient`](https://docs.oracle.com/en/java/javase/21/docs/api/java.net.http/java/net/http/HttpClient.html). Minimal deps. Transparent gzip compression for reduced bandwidth.
-- Built-in text utilities - Summarization, translation, transcription, proofreading, key point extraction, classification, moderation as first-class features (not "build your own prompt")
-- Structured outputs - Get typed Java objects directly from AI responses: `service.chat(message, MyRecord.class)`
-- File attachments - Send documents, images, and other files alongside chat messages with help of `ChatInput`
-- Web search - Access up-to-date internet information via `service.webSearch(query)` or `ChatOptions.newBuilder().webSearch().build()`, with optional location context for localized results
-- Token usage tracking - Track input, cached input, output, and reasoning tokens per call via `ChatOptions.getLastUsage()`
-- Cost calculation - Attach a `ChatPricing` to `ChatOptions` and read the per-call `ChatCost` from `ChatOptions.getLastCost()`
-- Budget cap - Set a cumulative-cost cap alongside pricing; exceeding it aborts the next call with `AIBudgetExceededException`
-- Reasoning effort control - Dial reasoning spend with `ChatOptions.newBuilder().reasoningEffort(...)` across providers that support it
-- Portable JSON serialization - `ChatOptions.toJson()` / `ChatOptions.fromJson(String)` for session stores, databases, or cross-service transport
-- Native CDI with EL - `@AI(apiKey = "#{config.openaiKey}")` with expression resolution
-- MicroProfile Config - `@AI(apiKey = "${config:openai.key}")` with expression resolution
-- 10 providers out of the box - Including Ollama for local/offline
-- Caller-owned conversation memory - History lives in `ChatOptions`, not in the service. No server-side session state, no memory leaks, no lifecycle management. The caller controls it. Sliding window keeps context manageable, and uploaded file references are tracked across turns.
-- Automatic file cleanup - Uploaded files on provider servers are cleaned up after 2 days in a fire-and-forget background task, preventing stale file accumulation.
-- Tool use on every provider - Annotate a method with `@AITool`, hand the object to `ai.withTools(...)`, and the AI can call it. Rides on structured output, so it behaves identically on all ten providers, groups narrow the schema itself, and tools run on your thread inside your transaction.
-- Clean exception hierarchy - Specific exceptions per HTTP status
-
-### Where OmniHai is Intentionally Simpler
-
-No embeddings, RAG, vector stores, or agent orchestration. This isn't a gap - it's a design choice. OmniHai is a utility library, not a framework.
-
-[Tool use](#tool-use) is the one thing on that list which turned out not to be framework territory: it rides on structured output, so it costs no per-provider machinery and works everywhere. Native function calling with per-tool argument schemas, parallel tool calls and forced tool choice remains out.
-
-### Positioning
+## Where OmniHai Fits
 
 | Library | Analogy |
 |---------|---------|
@@ -1180,78 +954,13 @@ No embeddings, RAG, vector stores, or agent orchestration. This isn't a gap - it
 | **Jakarta Agentic AI** | Kitchen building code, for the order of the steps |
 | **OmniHai** | Sharp chef's knife - does a few things very well |
 
-OmniHai fills a different niche. For apps that need:
+OmniHai is a utility library, not a framework.
+It covers the provider call itself - chat, text analysis, web search, images, audio, video, tool use, usage and cost - across ten providers behind one API, with JSON-P as its only hard dependency.
+Embeddings, RAG, vector stores and agent orchestration are out of scope by design; reach for LangChain4J or Spring AI when you need those.
+Jakarta Agentic AI standardizes the layer above this one, so the two compose rather than compete: its `@Action` methods can call an OmniHai `AIService`.
 
-- Multi-provider chat with easy switching
-- Text analysis (summarize, translate, proofread, classify, moderate)
-- Web search with optional location context
-- Image analysis (describe, generate alt text)
-- Audio analysis (transcribe) and generation (text-to-speech)
-- Token usage tracking and cost calculation for budget monitoring
-- Minimal dependencies
-- Pure Jakarta EE / MicroProfile APIs, no framework
+See [OmniHai vs LangChain4J vs Spring AI vs Jakarta Agentic AI](https://github.com/omnifaces/omnihai/blob/main/COMPARISON.md) for the feature-by-feature tables, footprint numbers and a when-to-choose-each guide.
 
-...without needing RAG pipelines, agent frameworks, or vector stores, OmniHai is arguably the better choice. Less to learn, less to break, fewer dependencies.
-
-Jakarta Agentic AI standardizes a layer above this one, so the two compose rather than compete; its `@Action` methods can call an OmniHai `AIService`.
-
-### Is OmniHai smaller than e.g. LangChain4J?
-
-Yes, significantly:
-- OmniHai JAR: ~337 KB vs LangChain4J: ~5-10 MB (*per* AI provider!) — at least 15x smaller when using only one AI provider
-- 115 source files, ~24,000 lines (\~10,400 actual code, \~10,700 javadoc, rest is blank lines)
-- Zero external runtime dependencies — uses JDK's native `java.net.http.HttpClient` directly without any SDKs
-- Only one required dependency: Jakarta JSON-P (which Jakarta EE and MicroProfile runtimes already have)
-- Other dependencies are optional: CDI, EL and/or MP Config APIs (which Jakarta EE resp. MicroProfile runtimes already have)
-- On plain Java SE that one dependency is the entire footprint
-
-### Is it faster?
-
-Likely yes for startup and per-request overhead:
-- No classpath scanning or proxy generation at startup
-- Minimal reflection — only used once during service instantiation, not per-request
-- No abstraction layers around HTTP — direct `java.net.http.HttpClient` usage
-- Simple interface dispatch, no dynamic proxies
-- Services are stateless and cached via `ConcurrentHashMap`
-
-### Does it produce less GC garbage?
-
-The design strongly suggests yes:
-- No intermediate JSON object materialization — uses path extraction directly on `JsonObject`
-- Conservative allocation patterns — no framework overhead creating wrapper objects
-- Native `java.net.http.HttpClient` — has better GC characteristics than third-party HTTP libraries
-- Simple POJOs and builders — no reflection-based bean creation at runtime
-- Stateless services — all state lives in method parameters, no per-request object graphs
-
-### When to Choose Each
-
-**Choose OmniHai when:**
-- You need a lean, focused solution without pulling in a framework
-- Your use case is straightforward chat, translation, summarization, proofreading, classification, or moderation
-- You want minimal dependencies and a small footprint
-- You prefer simplicity over feature completeness
-
-**Choose LangChain4J when:**
-- You're building complex AI agents with tool calling and orchestration
-- You need Retrieval-Augmented Generation (RAG) or vector stores
-- You want the most comprehensive feature set
-- You're not tied to a specific framework
-
-**Choose Spring AI when:**
-- You're already in the Spring ecosystem
-- You need tight Spring Boot integration
-- You want auto-configuration and starters
-- Your team is Spring-proficient
-
-**Choose Jakarta Agentic AI when:**
-- You want the workflow itself standardized, with vendor-neutral portability across implementations
-- Your steps are authored by you rather than chosen by the AI
-- You want a per-execution CDI scope around the whole workflow
-- You can live with a milestone specification and its implementations still settling
-
-As said, OmniHai is "a sharp chef's knife — does a few things very well" rather than being a full framework.
-
-Bottom line: If you need a lightweight utility for AI chat/text operations without framework overhead, OmniHai is dramatically smaller and should be faster with less GC pressure. If you need RAG or agent pipelines, LangChain4J's / Spring AI's larger footprint comes with those capabilities.
 
 ## License
 
