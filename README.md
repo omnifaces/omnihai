@@ -19,7 +19,7 @@ OmniHai provides a single, consistent API to interact with multiple AI providers
 - [Installation](#installation) — [servlet containers](#servlet-containers), [plain Java SE](#plain-java-se), [CDI on plain Java SE](#cdi-on-plain-java-se)
 - [Supported Providers](#supported-providers)
 - [Quick Start](#quick-start) — [programmatic](#programmatic-configuration), [CDI](#cdi-integration), [multi-provider aggregation](#multi-provider-aggregation)
-- [Features](#features) — [chat](#chat), [token usage](#token-usage-tracking), [cost](#cost-calculation), [reasoning effort](#reasoning-effort), [structured outputs](#structured-outputs), [web search](#web-search), [text analysis](#text-analysis), [classification](#classification), [moderation](#content-moderation), [modality support](#modality-support), [images](#image-analysis-and-generation), [video analysis](#video-analysis), [video generation](#video-generation), [audio](#audio-transcription-and-generation)
+- [Features](#features) — [chat](#chat), [token usage](#token-usage-tracking), [cost](#cost-calculation), [reasoning effort](#reasoning-effort), [structured outputs](#structured-outputs), [web search](#web-search), [text analysis](#text-analysis), [classification](#classification), [moderation](#content-moderation), [modality support](#modality-support), [images](#image-analysis-and-generation), [audio](#audio-transcription-and-generation), [video analysis](#video-analysis), [video generation](#video-generation)
 - [Custom Providers](#custom-providers) and [Custom Handlers](#custom-handlers)
 - [Service Wrapper](#service-wrapper) — [resilience](#resilience)
 - [Tool Use](#tool-use) — [declaring programmatically](#declaring-tools-programmatically), [grouping](#grouping-tools), [authorizing](#authorizing-tool-calls), [bounding and observing the loop](#bounding-and-observing-the-loop), [owning the loop](#owning-the-loop)
@@ -508,6 +508,26 @@ byte[] office = service.generateImage("A modern office",
         .build());
 ```
 
+### Audio Transcription and Generation
+
+```java
+String transcription = service.transcribe(Path.of("audio.mp3"));
+
+// Text-to-speech, to bytes or straight to a file (the file name is yours to pick; the format depends on the AI provider)
+byte[] audio = service.generateAudio("Hello, welcome to OmniHai!");
+service.generateAudio("Hello, welcome to OmniHai!", Path.of("greeting.mp3"));
+
+// With options (allowable options depend on AI provider)
+byte[] tuned = service.generateAudio("Hello!",
+    GenerateAudioOptions.newBuilder()
+        .voice("breeze")
+        .speed(1.5)
+        .outputFormat("wav")
+        .build());
+```
+
+OpenAI honors the output format and defaults to MP3. Gemini and OpenRouter emit bare PCM which OmniHai prepends a WAV header to, so they answer WAV whichever format was asked for, and a file named `.mp3` would hold a WAV. Use `MimeType.guessMimeType(audio)` to learn what actually came back, as the audio generation IT does.
+
 ### Video Analysis
 
 ```java
@@ -576,26 +596,6 @@ A job which has not finished within `maxWait`, five minutes by default, fails th
 Video generation is offered by Google (Veo), xAI (Grok Imagine) and OpenRouter, which routes generators of several labs. It is absent on OpenAI and Azure OpenAI, which both retire Sora without a successor to route to, and on Anthropic, Mistral, Meta, Hugging Face and Ollama, where [modality support](#modality-support) reports `VIDEO_GENERATION` as unsupported. Each AI provider states sizing in its own vocabulary, so `aspectRatio` as `16:9`, `size` as `{width}x{height}` and `resolution` as `720p` are reconciled per provider: setting a size recalculates the aspect ratio and setting an aspect ratio resets the size, so the two can never contradict each other. The aspect ratio always reaches the request, defaulting to landscape. A `size`, `resolution` or duration left at its default is omitted, so that the AI provider applies its own.
 
 Generated videos are hosted by the AI provider for about a day and are then deleted, upon which the status becomes `EXPIRED`. Some AI providers host them on a separate host and hand out a pre-signed URL; OmniHai downloads such a URL without the API key.
-
-### Audio Transcription and Generation
-
-```java
-String transcription = service.transcribe(Path.of("audio.mp3"));
-
-// Text-to-speech, to bytes or straight to a file (the file name is yours to pick; the format depends on the AI provider)
-byte[] audio = service.generateAudio("Hello, welcome to OmniHai!");
-service.generateAudio("Hello, welcome to OmniHai!", Path.of("greeting.mp3"));
-
-// With options (allowable options depend on AI provider)
-byte[] tuned = service.generateAudio("Hello!",
-    GenerateAudioOptions.newBuilder()
-        .voice("breeze")
-        .speed(1.5)
-        .outputFormat("wav")
-        .build());
-```
-
-OpenAI honors the output format and defaults to MP3. Gemini and OpenRouter emit bare PCM which OmniHai prepends a WAV header to, so they answer WAV whichever format was asked for, and a file named `.mp3` would hold a WAV. Use `MimeType.guessMimeType(audio)` to learn what actually came back, as the audio generation IT does.
 
 All methods have async variants returning `CompletableFuture` (e.g., `chatAsync`, `summarizeAsync`, `translateAsync`, `proofreadAsync`, `classifyAsync`, `moderateContentAsync`, `analyzeImageAsync`, `generateImageAsync`, `transcribeAsync`, `generateAudioAsync`, `analyzeVideoAsync`, `generateVideoAsync`, etc.).
 
