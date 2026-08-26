@@ -21,6 +21,7 @@ import java.util.Map;
 
 import jakarta.el.ELContext;
 import jakarta.el.ELResolver;
+import jakarta.el.PropertyNotWritableException;
 import jakarta.enterprise.inject.spi.el.ELAwareBeanManager;
 
 import org.junit.jupiter.api.Test;
@@ -299,6 +300,7 @@ class ELExpressionResolverTest {
 
         @Override
         public void setValue(ELContext context, Object base, Object property, Object value) {
+            throw new PropertyNotWritableException();
         }
 
         @Override
