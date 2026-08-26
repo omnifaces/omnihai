@@ -383,7 +383,6 @@ class VideoGenerationTest {
 
     }
 
-    /** Source which answers each poll with the next scripted job, staying on the last one, and each download with fixed content. */
     /** Completes the wait while a poll is in flight, then answers that poll with the status from before the wait completed. */
     private static class StaleSource implements Source {
 
@@ -407,6 +406,7 @@ class VideoGenerationTest {
 
     }
 
+    /** Source which answers each poll with the next scripted job, staying on the last one, and each download with fixed content. */
     private static class RecordingSource implements Source {
 
         private final Deque<Job> scriptedJobs;
