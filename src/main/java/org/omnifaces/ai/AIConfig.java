@@ -90,7 +90,7 @@ public final record AIConfig(String provider, String apiKey, String model, Strin
             : properties.entrySet().stream()
                 .filter(e -> !isBlank(e.getKey()) && !isBlank(e.getValue()))
                 .collect(toUnmodifiableMap(e -> e.getKey().strip(), e -> e.getValue().strip()));
-        strategy = ofNullable(strategy).orElseGet(() -> AIStrategy.empty());
+        strategy = ofNullable(strategy).orElseGet(AIStrategy::empty);
     }
 
     /**

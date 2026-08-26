@@ -456,14 +456,14 @@ public final class JsonSchemaHelper {
     private static Collection<?> parseCollection(JsonArray json, Class<?> rawType, Type genericType) {
         var collection = Set.class.isAssignableFrom(rawType) ? (rawType == TreeSet.class ? new TreeSet<>() : new LinkedHashSet<>()) : new ArrayList<>();
         var itemType = getGenericArgument(genericType, 0);
-        json.stream().forEach(item -> collection.add(parseValue(item, getRawType(itemType), itemType)));
+        json.forEach(item -> collection.add(parseValue(item, getRawType(itemType), itemType)));
         return collection;
     }
 
     private static Map<?, ?> parseMap(JsonObject json, Class<?> rawType, Type genericType) {
         var map = (rawType == TreeMap.class) ? new TreeMap<>() : new LinkedHashMap<>();
         var valueType = getGenericArgument(genericType, 1);
-        json.entrySet().stream().forEach(entry -> map.put(entry.getKey(), parseValue(entry.getValue(), getRawType(valueType), valueType)));
+        json.entrySet().forEach(entry -> map.put(entry.getKey(), parseValue(entry.getValue(), getRawType(valueType), valueType)));
         return map;
     }
 

@@ -256,12 +256,12 @@ public final record AIModelVersion(String modelName, int majorVersion, int minor
             if (Character.isDigit(c)) {
                 digits.append(c);
             }
-            else if (digits.length() > 0) {
+            else if (!digits.isEmpty()) {
                 break;
             }
         }
 
-        return digits.length() > 0 ? Integer.parseInt(digits.toString()) : 0;
+        return !digits.isEmpty() ? Integer.parseInt(digits.toString()) : 0;
     }
 
     /**
@@ -299,7 +299,7 @@ public final record AIModelVersion(String modelName, int majorVersion, int minor
             }
         }
 
-        return digits.length() > 0 ? Integer.parseInt(digits.toString()) : 0;
+        return !digits.isEmpty() ? Integer.parseInt(digits.toString()) : 0;
     }
 
 }

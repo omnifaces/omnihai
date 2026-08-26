@@ -16,7 +16,6 @@ import static java.util.Arrays.stream;
 import static java.util.Comparator.comparing;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.joining;
-import static java.util.stream.Collectors.toUnmodifiableList;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationTargetException;
@@ -70,7 +69,7 @@ final class ToolMethod implements Tool {
         this.method = method;
         this.name = name;
         this.description = method.getAnnotation(AITool.class).value();
-        this.params = stream(method.getParameters()).map(parameter -> toToolParam(method, parameter)).collect(toUnmodifiableList());
+        this.params = stream(method.getParameters()).map(parameter -> toToolParam(method, parameter)).toList();
         this.instance = null;
     }
 
@@ -103,14 +102,14 @@ final class ToolMethod implements Tool {
         return CACHE.get(declaringClass).stream()
             .filter(toolMethod -> group == null || toolMethod.method.isAnnotationPresent(group))
             .map(toolMethod -> (Tool) new ToolMethod(toolMethod, instance))
-            .collect(toUnmodifiableList());
+            .toList();
     }
 
     private static List<ToolMethod> scan(Class<?> type) {
         var toolMethods = stream(type.getMethods()).filter(method -> method.isAnnotationPresent(AITool.class))
             .collect(groupingBy(Method::getName)).values().stream()
             .flatMap(sameNamed -> toToolMethods(type, sameNamed))
-            .sorted(comparing(ToolMethod::getName)).collect(toUnmodifiableList());
+            .sorted(comparing(ToolMethod::getName)).toList();
 
         if (!toolMethods.isEmpty() && !Modifier.isPublic(type.getModifiers())) {
             throw new IllegalArgumentException(

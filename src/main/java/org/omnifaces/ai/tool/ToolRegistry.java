@@ -64,6 +64,11 @@ public final class ToolRegistry {
     /** Naming conventions of the proxy generators used by the common CDI containers. */
     private static final List<String> PROXY_MARKERS = List.of("$$", "$Proxy", "_ClientProxy", "_Subclass");
 
+    /** The instruction closing the manifest, stating how the AI is to use the tools it was offered. */
+    private static final String MANIFEST_INSTRUCTION = """
+        Call exactly one tool per turn, or answer directly once you have enough information. Never invent data a tool did not return. There is nobody to ask \
+        for more information, so when a tool needs a value you do not have, obtain it from another tool first.""";
+
     /** The tool name the AI uses to signal it is done and answering directly. */
     public static final String ANSWER = "ANSWER";
 
@@ -153,11 +158,7 @@ public final class ToolRegistry {
 
     private String buildManifest() {
         return tools.values().stream().map(ToolRegistry::toManifestLine).collect(
-            joining(
-                "\n", "Available tools:\n",
-                "\n\nCall exactly one tool per turn, or answer directly once you have enough information. Never invent data a tool did not return."
-                    + " There is nobody to ask for more information, so when a tool needs a value you do not have, obtain it from another tool first."
-            )
+            joining("\n", "Available tools:\n", "\n\n" + MANIFEST_INSTRUCTION)
         );
     }
 

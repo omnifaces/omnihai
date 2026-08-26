@@ -621,7 +621,7 @@ class AIConfigTest {
             }
 
             var finalConfig = config;
-            var service = assertDoesNotThrow(() -> finalConfig.createService(), "Failed to create service for provider " + provider);
+            var service = assertDoesNotThrow(finalConfig::createService, "Failed to create service for provider " + provider);
             assertNotNull(service, "Service was null for provider " + provider);
             assertInstanceOf(AIService.class, service);
         }
