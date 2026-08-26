@@ -58,10 +58,10 @@ abstract class AIServiceIT {
     @BeforeEach
     void captureTestMethod(TestInfo testInfo) {
         currentTestMethod.set(testInfo.getDisplayName());
+        rateLimit();
     }
 
-    @BeforeEach
-    void rateLimit() {
+    private void rateLimit() {
         try {
             Thread.sleep(1000);
         }
