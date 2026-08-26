@@ -84,6 +84,20 @@ class VideoGenerationTest {
         assertEquals(0, source.polls, "a terminal job cannot change, so polling it again is waste");
     }
 
+    /**
+     * A poll and a wait write the same job field, so the guard which keeps the later terminal state must survive both orders of arrival.
+     */
+    @Test
+    void refresh_whoseWaitCompletedMeanwhile_keepsTheTerminalStatus() {
+        var source = new StaleSource();
+        var video = new VideoGeneration(Job.pending("job-1", null), OPTIONS, source);
+        source.video = video;
+
+        video.refresh();
+
+        assertEquals(Status.COMPLETED, video.status(), "a poll in flight when the wait completed must not move the status back");
+    }
+
     @Test
     void completion_pollsUntilTerminal() throws Exception {
         var source = new RecordingSource(
@@ -370,6 +384,29 @@ class VideoGenerationTest {
     }
 
     /** Source which answers each poll with the next scripted job, staying on the last one, and each download with fixed content. */
+    /** Completes the wait while a poll is in flight, then answers that poll with the status from before the wait completed. */
+    private static class StaleSource implements Source {
+
+        private VideoGeneration video;
+
+        @Override
+        public Job pollVideo(Job job) {
+            video.completion().join();
+            return new Job(job.id(), Status.RUNNING, null, null, null);
+        }
+
+        @Override
+        public CompletableFuture<Job> awaitVideoCompletion(Job job, GenerateVideoOptions options) {
+            return completedFuture(new Job(job.id(), Status.COMPLETED, null, null, null));
+        }
+
+        @Override
+        public InputStream downloadVideo(Job job) {
+            return new ByteArrayInputStream(VIDEO_CONTENT);
+        }
+
+    }
+
     private static class RecordingSource implements Source {
 
         private final Deque<Job> scriptedJobs;

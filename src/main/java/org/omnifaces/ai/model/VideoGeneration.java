@@ -231,6 +231,8 @@ public class VideoGeneration implements Serializable {
 
     /**
      * Polls the AI provider once and updates {@link #status()} accordingly. This performs exactly one request, on the caller's schedule.
+     * <p>
+     * A poll which was already in flight when the job reached a terminal status is discarded, so the status never moves back off a terminal one.
      *
      * @return This handle for chaining.
      * @throws IllegalStateException if this handle is deserialized and the job is not already terminal.
@@ -238,7 +240,13 @@ public class VideoGeneration implements Serializable {
      */
     public VideoGeneration refresh() {
         if (!job.status().isTerminal()) {
-            job = requireSource().pollVideo(job);
+            var polled = requireSource().pollVideo(job);
+
+            synchronized (this) {
+                if (!job.status().isTerminal()) {
+                    job = polled;
+                }
+            }
         }
 
         return this;
@@ -280,7 +288,10 @@ public class VideoGeneration implements Serializable {
     private CompletableFuture<VideoGeneration> startPolling() {
         var polling = requireSource().awaitVideoCompletion(job, options);
         var awaited = polling.thenApply(polled -> {
-            job = polled;
+            synchronized (this) {
+                job = polled;
+            }
+
             return this;
         });
         awaited.whenComplete((video, throwable) -> polling.cancel(true));
