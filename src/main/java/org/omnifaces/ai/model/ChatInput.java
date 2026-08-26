@@ -72,8 +72,8 @@ public class ChatInput implements Serializable {
          * @param uploadedFiles The uploaded files, may not be null.
          */
         public Message {
-            role = requireNonNull(role, "role");
-            content = requireNonBlank(content, "content");
+            requireNonNull(role, "role");
+            requireNonBlank(content, "content");
             uploadedFiles = unmodifiableList(requireNonNull(uploadedFiles, "uploadedFiles"));
         }
 
@@ -111,8 +111,8 @@ public class ChatInput implements Serializable {
          * @since 1.7
          */
         public UploadedFile {
-            id = requireNonBlank(id, "id");
-            mimeType = requireNonNull(mimeType, "mimeType");
+            requireNonBlank(id, "id");
+            requireNonNull(mimeType, "mimeType");
         }
 
         /**

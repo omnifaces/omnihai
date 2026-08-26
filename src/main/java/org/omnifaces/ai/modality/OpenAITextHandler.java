@@ -21,6 +21,7 @@ import static org.omnifaces.ai.model.Sse.Event.Type.EVENT;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -112,11 +113,7 @@ public class OpenAITextHandler extends DefaultAITextHandler {
     protected void buildChatPayloadToolsWithResponsesApi(AIService service, JsonObjectBuilder payload, ChatOptions options) {
         if (options.useWebSearch()) {
             var webSearchTool = Json.createObjectBuilder().add("type", getWebSearchToolName());
-            var userLocation = buildUserLocation(options.getWebSearchLocation());
-
-            if (userLocation != null) {
-                webSearchTool.add("user_location", userLocation);
-            }
+            buildUserLocation(options.getWebSearchLocation()).ifPresent(userLocation -> webSearchTool.add("user_location", userLocation));
 
             if (supportsToolChoiceRequired(service)) {
                 payload.add("tool_choice", "required");
@@ -723,33 +720,33 @@ public class OpenAITextHandler extends DefaultAITextHandler {
     }
 
     /**
-     * Builds an OpenAI-compatible {@code user_location} object from the given {@link Location}. Returns {@code null} if the location is
-     * {@link Location#isGlobal() global}.
+     * Builds an OpenAI-compatible {@code user_location} object from the given {@link Location}, which is empty when the location is {@link Location#isGlobal()
+     * global}.
      *
      * @param location The location to build the user location object from.
-     * @return An OpenAI-compatible {@code user_location} JSON object, or {@code null} if the location is global.
+     * @return An OpenAI-compatible {@code user_location} JSON object, or empty if the location is global.
      * @since 1.3
      */
-    static JsonObject buildUserLocation(Location location) {
-        if (!location.isGlobal()) {
-            var userLocation = Json.createObjectBuilder().add("type", "approximate");
-
-            if (location.country() != null) {
-                userLocation.add("country", location.country());
-            }
-
-            if (location.region() != null) {
-                userLocation.add("region", location.region());
-            }
-
-            if (location.city() != null) {
-                userLocation.add("city", location.city());
-            }
-
-            return userLocation.build();
+    static Optional<JsonObject> buildUserLocation(Location location) {
+        if (location.isGlobal()) {
+            return Optional.empty();
         }
 
-        return null;
+        var userLocation = Json.createObjectBuilder().add("type", "approximate");
+
+        if (location.country() != null) {
+            userLocation.add("country", location.country());
+        }
+
+        if (location.region() != null) {
+            userLocation.add("region", location.region());
+        }
+
+        if (location.city() != null) {
+            userLocation.add("city", location.city());
+        }
+
+        return Optional.of(userLocation.build());
     }
 
 }

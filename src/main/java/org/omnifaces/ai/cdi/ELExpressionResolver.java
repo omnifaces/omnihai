@@ -13,6 +13,7 @@
 package org.omnifaces.ai.cdi;
 
 import static java.util.Optional.ofNullable;
+import static org.omnifaces.ai.cdi.ExpressionResolvers.resolve;
 
 import java.util.regex.Pattern;
 
@@ -27,7 +28,7 @@ import jakarta.enterprise.inject.spi.el.ELAwareBeanManager;
  * @since 1.0
  * @see AIServiceProducer
  */
-class ELExpressionResolver extends BaseExpressionResolver {
+class ELExpressionResolver {
 
     private static final Pattern EL_PATTERN = Pattern.compile("([$#]\\{)([^}]+)(})");
 

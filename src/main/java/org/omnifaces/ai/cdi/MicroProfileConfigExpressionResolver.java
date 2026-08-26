@@ -12,6 +12,8 @@
  */
 package org.omnifaces.ai.cdi;
 
+import static org.omnifaces.ai.cdi.ExpressionResolvers.resolve;
+
 import java.util.regex.Pattern;
 
 import org.eclipse.microprofile.config.ConfigProvider;
@@ -23,7 +25,7 @@ import org.eclipse.microprofile.config.ConfigProvider;
  * @since 1.0
  * @see AIServiceProducer
  */
-class MicroProfileConfigExpressionResolver extends BaseExpressionResolver {
+class MicroProfileConfigExpressionResolver {
 
     private static final Pattern CONFIG_PATTERN = Pattern.compile("(\\$\\{config:)([^}]+)(})");
 

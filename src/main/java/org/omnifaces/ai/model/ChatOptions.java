@@ -344,7 +344,7 @@ public class ChatOptions implements Serializable {
         this.maxTotalCost = builder.maxTotalCost;
 
         var memoryEnabled = builder.maxHistory > 0 || builder.history != null;
-        this.maxHistory = builder.maxHistory > 0 ? builder.maxHistory : (memoryEnabled ? DEFAULT_MAX_HISTORY : 0);
+        this.maxHistory = resolveMaxHistory(builder.maxHistory, memoryEnabled);
         this.history = memoryEnabled ? new ArrayList<>() : null;
 
         if (memoryEnabled && builder.history != null) {
@@ -354,6 +354,17 @@ public class ChatOptions implements Serializable {
                 history.remove(0);
             }
         }
+    }
+
+    /**
+     * Answers the sliding window size: the one built with, else the default when memory is enabled by a prebuilt history alone, else no window at all.
+     */
+    private static int resolveMaxHistory(int maxHistory, boolean memoryEnabled) {
+        if (maxHistory > 0) {
+            return maxHistory;
+        }
+
+        return memoryEnabled ? DEFAULT_MAX_HISTORY : 0;
     }
 
     private ChatOptions(

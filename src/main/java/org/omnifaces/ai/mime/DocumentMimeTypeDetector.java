@@ -157,16 +157,8 @@ final class DocumentMimeTypeDetector {
         try {
             var text = decoder.decode(ByteBuffer.wrap(content, 0, Math.min(content.length, 8192))).toString();
 
-            for (int i = 0; i < text.length(); i++) {
-                int codePoint = text.codePointAt(i);
-
-                if (Character.isSupplementaryCodePoint(codePoint)) {
-                    i++; // Skip low surrogate of surrogate pair.
-                }
-
-                if (Character.isISOControl(codePoint) && !Character.isWhitespace(codePoint)) {
-                    return Optional.empty(); // Reject control characters except whitespace.
-                }
+            if (text.codePoints().anyMatch(codePoint -> Character.isISOControl(codePoint) && !Character.isWhitespace(codePoint))) {
+                return Optional.empty(); // Reject control characters except whitespace.
             }
 
             return Optional.of(ByteOrderMark.strip(text));

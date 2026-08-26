@@ -14,9 +14,9 @@ package org.omnifaces.ai.cdi;
 
 import static java.util.Arrays.stream;
 import static java.util.Collections.emptyMap;
-import static org.omnifaces.ai.cdi.BaseExpressionResolver.looksLikeExpression;
-import static org.omnifaces.ai.cdi.BaseExpressionResolver.looksLikeMicroProfileConfigExpression;
 import static org.omnifaces.ai.cdi.ELExpressionResolver.resolveELExpression;
+import static org.omnifaces.ai.cdi.ExpressionResolvers.looksLikeExpression;
+import static org.omnifaces.ai.cdi.ExpressionResolvers.looksLikeMicroProfileConfigExpression;
 import static org.omnifaces.ai.cdi.MicroProfileConfigExpressionResolver.resolveMicroProfileConfigExpression;
 import static org.omnifaces.ai.helper.TextHelper.stripToNull;
 

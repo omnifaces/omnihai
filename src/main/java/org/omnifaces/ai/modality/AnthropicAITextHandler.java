@@ -102,11 +102,8 @@ public class AnthropicAITextHandler extends DefaultAITextHandler {
             var webSearchTool = Json.createObjectBuilder()
                 .add("type", service.getModelVersion().gte(CLAUDE_4_6) ? "web_search_20260209" : "web_search_20250305")
                 .add("name", "web_search");
-            var userLocation = buildUserLocation(options.getWebSearchLocation());
 
-            if (userLocation != null) {
-                webSearchTool.add("user_location", userLocation);
-            }
+            buildUserLocation(options.getWebSearchLocation()).ifPresent(userLocation -> webSearchTool.add("user_location", userLocation));
 
             payload.add("tools", Json.createArrayBuilder().add(webSearchTool.build()));
         }

@@ -18,7 +18,7 @@ import java.util.function.Function;
 import java.util.regex.Pattern;
 
 /**
- * Base helper class to resolve expressions in the annotation attributes of the {@link AI} qualifier annotation.
+ * Helper class to resolve expressions in the annotation attributes of the {@link AI} qualifier annotation.
  *
  * @author Bauke Scholtz
  * @since 1.0
@@ -26,7 +26,11 @@ import java.util.regex.Pattern;
  * @see ELExpressionResolver
  * @see MicroProfileConfigExpressionResolver
  */
-abstract class BaseExpressionResolver {
+final class ExpressionResolvers {
+
+    private ExpressionResolvers() {
+        throw new AssertionError();
+    }
 
     /**
      * Returns {@code true} if the given string looks like an expression, i.e. it contains <code>${</code> or <code>#{</code>.

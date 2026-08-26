@@ -209,8 +209,7 @@ public final class JsonSchemaHelper {
         }
 
         if (Temporal.class.isAssignableFrom(rawType)) {
-            var dateFormat = rawType == LocalDate.class ? "date" : (rawType == LocalTime.class ? "time" : "date-time");
-            return Json.createObjectBuilder().add("type", "string").add("format", dateFormat);
+            return Json.createObjectBuilder().add("type", "string").add("format", getDateFormat(rawType));
         }
 
         if (rawType.isEnum()) {
@@ -459,8 +458,30 @@ public final class JsonSchemaHelper {
         return array;
     }
 
+    /**
+     * Answers the JSON Schema {@code format} the given temporal type serializes as, which is a full timestamp for anything carrying both halves.
+     */
+    private static String getDateFormat(Class<?> rawType) {
+        if (rawType == LocalDate.class) {
+            return "date";
+        }
+
+        return rawType == LocalTime.class ? "time" : "date-time";
+    }
+
+    /**
+     * Creates the collection backing the given collection type, keeping encounter order for a set which does not sort of its own accord.
+     */
+    private static Collection<Object> createCollection(Class<?> rawType) {
+        if (!Set.class.isAssignableFrom(rawType)) {
+            return new ArrayList<>();
+        }
+
+        return rawType == TreeSet.class ? new TreeSet<>() : new LinkedHashSet<>();
+    }
+
     private static Collection<?> parseCollection(JsonArray json, Class<?> rawType, Type genericType) {
-        var collection = Set.class.isAssignableFrom(rawType) ? (rawType == TreeSet.class ? new TreeSet<>() : new LinkedHashSet<>()) : new ArrayList<>();
+        var collection = createCollection(rawType);
         var itemType = getGenericArgument(genericType, 0);
         json.forEach(item -> collection.add(parseValue(item, getRawType(itemType), itemType)));
         return collection;

@@ -146,10 +146,15 @@ public class GoogleAIService extends BaseAIService {
     protected URI resolveURI(String path) {
         if (path.startsWith(OPERATIONS_PATH_PREFIX) || path.contains("/" + OPERATIONS_PATH_PREFIX) || path.startsWith(ABSOLUTE_URI_PREFIX)) {
             var uri = super.resolveURI(path);
-            return isSameOrigin(uri) ? super.resolveURI(path + (path.contains("?") ? "&" : "?") + format("key=%s", apiKey)) : uri;
+
+            if (!isSameOrigin(uri)) {
+                return uri;
+            }
+
+            return super.resolveURI(path + (path.contains("?") ? "&" : "?") + format("key=%s", apiKey));
         }
         else if (path.equals(getFilesPath())) {
-            return super.resolveURI("../upload/v1beta/" + format(getFilesPath() + "?key=%s", apiKey));
+            return super.resolveURI("../upload/v1beta/" + format("%s?key=%s", getFilesPath(), apiKey));
         }
         else if (path.startsWith(getFilesPath() + "/")) {
             return super.resolveURI(format("%s?key=%s", path, apiKey));
