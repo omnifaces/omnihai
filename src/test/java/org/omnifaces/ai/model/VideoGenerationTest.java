@@ -180,7 +180,7 @@ class VideoGenerationTest {
     }
 
     @Test
-    void writeTo_whenCompleted_writesTheContent() throws Exception {
+    void writeTo_whenCompleted_writesTheContent() {
         var video = new VideoGeneration(new Job("job-1", Status.COMPLETED, null, null, null), OPTIONS, new RecordingSource());
         var output = new ByteArrayOutputStream();
 

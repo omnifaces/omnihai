@@ -373,7 +373,7 @@ public class GoogleAITextHandler extends DefaultAITextHandler {
                     return false;
                 }
 
-                finishReason.filter("MAX_TOKENS"::equals).ifPresent(__ -> {
+                finishReason.filter("MAX_TOKENS"::equals).ifPresent($ -> {
                     throw new AITokenLimitExceededException();
                 });
                 return true;

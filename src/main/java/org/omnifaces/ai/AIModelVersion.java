@@ -17,6 +17,7 @@ import static org.omnifaces.ai.helper.TextHelper.requireNonBlank;
 
 import java.io.Serializable;
 import java.util.Locale;
+import java.util.regex.Pattern;
 
 /**
  * A record that holds AI model version information and provides comparison utilities.
@@ -32,6 +33,12 @@ import java.util.Locale;
  * @see AIService#getModelVersion()
  */
 public final record AIModelVersion(String modelName, int majorVersion, int minorVersion) implements Comparable<AIModelVersion>, Serializable {
+
+    /**
+     * Matches the version a model name carries: a major number, optionally followed by a minor one behind a separator which is neither letter nor digit, so
+     * that the {@code o} of {@code gpt-4o} is read as part of the name rather than as a minor version.
+     */
+    private static final Pattern VERSION_PATTERN = Pattern.compile("(\\d+)(?:[^a-zA-Z0-9](\\d+))?");
 
     /**
      * Validates and normalizes the record components.
@@ -92,7 +99,16 @@ public final record AIModelVersion(String modelName, int majorVersion, int minor
      */
     public static AIModelVersion of(String fullModelName) {
         var normalizedName = stripDateSuffix(fullModelName);
-        return new AIModelVersion(getModelPrefix(normalizedName), getModelMajorVersion(normalizedName), getModelMinorVersion(normalizedName));
+        var version = VERSION_PATTERN.matcher(normalizedName);
+        var majorVersion = 0;
+        var minorVersion = 0;
+
+        if (version.find()) {
+            majorVersion = Integer.parseInt(version.group(1));
+            minorVersion = version.group(2) != null ? Integer.parseInt(version.group(2)) : 0;
+        }
+
+        return new AIModelVersion(getModelPrefix(normalizedName), majorVersion, minorVersion);
     }
 
     /**
@@ -241,65 +257,6 @@ public final record AIModelVersion(String modelName, int majorVersion, int minor
         }
 
         return lastLetterIndex >= 0 ? fullModelName.substring(0, lastLetterIndex + 1) : fullModelName;
-    }
-
-    /**
-     * Extracts the major version from a model name, or {@code 0} if none is found.
-     *
-     * @param fullModelName The full model name.
-     * @return The major version number, or {@code 0} if none is found (e.g., 4 for "model-4.5").
-     */
-    private static int getModelMajorVersion(String fullModelName) {
-        var digits = new StringBuilder();
-
-        for (var c : fullModelName.toCharArray()) {
-            if (Character.isDigit(c)) {
-                digits.append(c);
-            }
-            else if (!digits.isEmpty()) {
-                break;
-            }
-        }
-
-        return !digits.isEmpty() ? Integer.parseInt(digits.toString()) : 0;
-    }
-
-    /**
-     * Extracts the minor version from a model name, or {@code 0} if none is found.
-     *
-     * @param fullModelName The full model name.
-     * @return The minor version number, or {@code 0} if none is found (e.g., 5 for "model-4.5").
-     */
-    private static int getModelMinorVersion(String fullModelName) {
-        var foundMajor = false;
-        var foundSeparator = false;
-        var digits = new StringBuilder();
-
-        for (var c : fullModelName.toCharArray()) {
-            var isDigit = Character.isDigit(c);
-
-            if (!foundMajor) {
-                foundMajor = isDigit;
-            }
-            else if (!foundSeparator) {
-                if (!isDigit) {
-                    if (!Character.isLetterOrDigit(c)) {
-                        foundSeparator = true;
-                    }
-                    else {
-                        break;
-                    }
-                }
-            }
-            else if (isDigit) {
-                digits.append(c);
-            }
-            else {
-                break;
-            }
-        }
-
-        return !digits.isEmpty() ? Integer.parseInt(digits.toString()) : 0;
     }
 
 }

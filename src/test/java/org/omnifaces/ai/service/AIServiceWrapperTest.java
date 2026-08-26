@@ -47,7 +47,7 @@ class AIServiceWrapperTest {
      * When new non-default methods are added to AIService, this test will fail until AIServiceWrapper is updated to implement them.
      */
     @Test
-    public void testImplementsAllNonDefaultAIServiceMethods() {
+    void testImplementsAllNonDefaultAIServiceMethods() {
         var wrapperMethods = getNonPrivateMethodSignatures(AIServiceWrapper.class);
         var requiredMethods = getNonDefaultInterfaceMethodSignatures(AIService.class);
         var missingMethods = new HashSet<>(requiredMethods);
@@ -72,7 +72,7 @@ class AIServiceWrapperTest {
      * other method on the wrapped service is invoked.
      */
     @Test
-    public void testAllDelegateMethodsCallGetWrappedAndInvokeSameName() {
+    void testAllDelegateMethodsCallGetWrappedAndInvokeSameName() throws IllegalAccessException {
         var wrapperMethods = getNonPrivateMethods(AIServiceWrapper.class);
         var failures = new ArrayList<String>();
 
@@ -108,9 +108,6 @@ class AIServiceWrapperTest {
             catch (InvocationTargetException e) {
                 failures.add(wrapperMethodSignature + ": threw unexpectedly: " + e.getCause());
                 continue;
-            }
-            catch (IllegalAccessException e) {
-                fail("Could not invoke " + wrapperMethodSignature + ": " + e);
             }
 
             var actualSignatures = calledOnWrapped.stream().map(AIServiceWrapperTest::toSignature).toList();

@@ -53,7 +53,7 @@ class InterceptingAIServiceWrapperTest {
     );
 
     @Test
-    void everyOperationIsOverriddenAndFunnelsThroughHookInvokingSameOverload() {
+    void everyOperationIsOverriddenAndFunnelsThroughHookInvokingSameOverload() throws IllegalAccessException {
         var overriddenSignatures = getInterceptedMethodSignatures();
         var failures = new ArrayList<String>();
 
@@ -102,9 +102,6 @@ class InterceptingAIServiceWrapperTest {
             catch (InvocationTargetException e) {
                 failures.add(signature + ": threw unexpectedly: " + e.getCause());
                 continue;
-            }
-            catch (IllegalAccessException e) {
-                fail("Could not invoke " + signature + ": " + e);
             }
 
             var expectAsync = CompletableFuture.class.isAssignableFrom(method.getReturnType());

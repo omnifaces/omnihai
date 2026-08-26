@@ -14,7 +14,7 @@ package org.omnifaces.ai.cdi;
 
 import static java.util.regex.Matcher.quoteReplacement;
 
-import java.util.function.Function;
+import java.util.function.UnaryOperator;
 import java.util.regex.Pattern;
 
 /**
@@ -70,7 +70,7 @@ final class ExpressionResolvers {
      * @param evaluator The function to evaluate the extracted expression body and return its replacement value.
      * @return The value with all matching expressions resolved using the given evaluator.
      */
-    static String resolve(Pattern pattern, String value, Function<String, String> evaluator) {
+    static String resolve(Pattern pattern, String value, UnaryOperator<String> evaluator) {
         var matcher = pattern.matcher(value);
         var stringBuilder = new StringBuilder();
 

@@ -667,7 +667,7 @@ public class OpenAITextHandler extends DefaultAITextHandler {
                 return tryParseEventDataJson(event.value(), json -> {
                     if ("chat.completion.chunk".equals(json.getString("object", null))) {
                         findFirstByPath(json, "choices[0].delta.content").ifPresent(onToken);
-                        findFirstByPath(json, "choices[0].finish_reason").filter("length"::equals).ifPresent(__ -> {
+                        findFirstByPath(json, "choices[0].finish_reason").filter("length"::equals).ifPresent($ -> {
                             throw new AITokenLimitExceededException();
                         });
 
