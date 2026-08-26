@@ -227,7 +227,7 @@ public class ChatOptions implements Serializable {
         private ChatUsage lastUsage;
         private BigDecimal totalCost = BigDecimal.ZERO;
 
-        private synchronized void record(ChatUsage usage, ChatPricing pricing) {
+        private synchronized void recordUsage(ChatUsage usage, ChatPricing pricing) {
             lastUsage = usage;
 
             if (pricing != null && usage != null) {
@@ -962,7 +962,7 @@ public class ChatOptions implements Serializable {
             );
         }
 
-        accounting.record(usage, pricing);
+        accounting.recordUsage(usage, pricing);
     }
 
     /**

@@ -232,20 +232,6 @@ public class RetryingAIService extends InterceptingAIServiceWrapper {
         }
     }
 
-    private static boolean hasCause(Throwable throwable, Class<? extends Throwable> type) {
-        for (var current = throwable; current != null; current = current.getCause()) {
-            if (type.isInstance(current)) {
-                return true;
-            }
-
-            if (current == current.getCause()) {
-                break;
-            }
-        }
-
-        return false;
-    }
-
     /**
      * The {@link #DEFAULT_RETRY_ON} predicate, as a named {@link Serializable} class so that a {@link RetryingAIService} configured with the default policy
      * serializes cleanly.
@@ -260,6 +246,20 @@ public class RetryingAIService extends InterceptingAIServiceWrapper {
             return cause instanceof AIRateLimitExceededException
                 || cause instanceof AIServiceUnavailableException
                 || hasCause(cause, IOException.class);
+        }
+
+        private static boolean hasCause(Throwable throwable, Class<? extends Throwable> type) {
+            for (var current = throwable; current != null; current = current.getCause()) {
+                if (type.isInstance(current)) {
+                    return true;
+                }
+
+                if (current == current.getCause()) {
+                    break;
+                }
+            }
+
+            return false;
         }
 
     }

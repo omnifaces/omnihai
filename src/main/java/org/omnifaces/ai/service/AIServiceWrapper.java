@@ -60,7 +60,7 @@ public abstract class AIServiceWrapper implements AIService {
      * @param wrapped the AIService to wrap, must not be {@code null}.
      * @throws NullPointerException if wrapped is {@code null}.
      */
-    public AIServiceWrapper(AIService wrapped) {
+    protected AIServiceWrapper(AIService wrapped) {
         Objects.requireNonNull(wrapped, "wrapped");
         this.wrapped = wrapped;
     }

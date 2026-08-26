@@ -86,10 +86,10 @@ public class FailoverAIService extends InterceptingAIServiceWrapper {
 
     private FailoverAIService(Builder builder) {
         super(builder.primary);
-        var services = new ArrayList<AIService>(builder.fallbacks.size() + 1);
-        services.add(builder.primary);
-        services.addAll(builder.fallbacks);
-        this.services = List.copyOf(services);
+        var chain = new ArrayList<AIService>(builder.fallbacks.size() + 1);
+        chain.add(builder.primary);
+        chain.addAll(builder.fallbacks);
+        this.services = List.copyOf(chain);
         this.failoverOn = builder.failoverOn;
     }
 
