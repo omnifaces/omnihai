@@ -112,6 +112,16 @@ public class ChatOptions implements Serializable {
     private static final String MAX_HISTORY_KEY = "maxHistory";
     private static final String HISTORY_KEY = "history";
     private static final String UPLOADED_FILES_KEY = "uploadedFiles";
+    private static final String COUNTRY_KEY = "country";
+    private static final String REGION_KEY = "region";
+    private static final String CITY_KEY = "city";
+    private static final String INPUT_TOKEN_PRICE_KEY = "inputTokenPrice";
+    private static final String OUTPUT_TOKEN_PRICE_KEY = "outputTokenPrice";
+    private static final String CURRENCY_KEY = "currency";
+    private static final String ROLE_KEY = "role";
+    private static final String CONTENT_KEY = "content";
+    private static final String ID_KEY = "id";
+    private static final String MIME_TYPE_KEY = "mimeType";
 
     static {
         DEFAULT.immutable = true;
@@ -551,16 +561,20 @@ public class ChatOptions implements Serializable {
      */
     public ChatOptions withPricing(ChatPricing pricing, BigDecimal maxTotalCost) {
         requireNonNull(pricing, "pricing");
-        requireNonNull(maxTotalCost, "maxTotalCost");
-
-        if (maxTotalCost.signum() <= 0) {
-            throw new IllegalArgumentException("Max total cost must be strictly positive");
-        }
+        requireValidMaxTotalCost(maxTotalCost);
 
         return new ChatOptions(
             systemPrompt, jsonSchema, temperature, maxTokens, reasoningEffort, topP, webSearchLocation, pricing, maxTotalCost, history, maxHistory,
             new Accounting()
         );
+    }
+
+    private static BigDecimal requireValidMaxTotalCost(BigDecimal maxTotalCost) {
+        if (requireNonNull(maxTotalCost, "maxTotalCost").signum() <= 0) {
+            throw new IllegalArgumentException("Max total cost must be strictly positive");
+        }
+
+        return maxTotalCost;
     }
 
     /**
@@ -1018,9 +1032,9 @@ public class ChatOptions implements Serializable {
         }
 
         var locationBuilder = Json.createObjectBuilder();
-        addIfNotNull(locationBuilder, "country", webSearchLocation.country());
-        addIfNotNull(locationBuilder, "region", webSearchLocation.region());
-        addIfNotNull(locationBuilder, "city", webSearchLocation.city());
+        addIfNotNull(locationBuilder, COUNTRY_KEY, webSearchLocation.country());
+        addIfNotNull(locationBuilder, REGION_KEY, webSearchLocation.region());
+        addIfNotNull(locationBuilder, CITY_KEY, webSearchLocation.city());
         builder.add(WEB_SEARCH_LOCATION_KEY, locationBuilder);
     }
 
@@ -1030,14 +1044,14 @@ public class ChatOptions implements Serializable {
         }
 
         var pricingBuilder = Json.createObjectBuilder()
-            .add("inputTokenPrice", pricing.inputTokenPrice())
-            .add("outputTokenPrice", pricing.outputTokenPrice());
+            .add(INPUT_TOKEN_PRICE_KEY, pricing.inputTokenPrice())
+            .add(OUTPUT_TOKEN_PRICE_KEY, pricing.outputTokenPrice());
 
         if (pricing.cachedInputTokenPrice() != null) {
             pricingBuilder.add(CACHED_INPUT_TOKEN_PRICE_KEY, pricing.cachedInputTokenPrice());
         }
         if (pricing.currency() != null) {
-            pricingBuilder.add("currency", pricing.currency().getCurrencyCode());
+            pricingBuilder.add(CURRENCY_KEY, pricing.currency().getCurrencyCode());
         }
 
         builder.add(PRICING_KEY, pricingBuilder);
@@ -1053,8 +1067,8 @@ public class ChatOptions implements Serializable {
 
         for (var message : history) {
             var messageBuilder = Json.createObjectBuilder()
-                .add("role", message.role().name())
-                .add("content", message.content());
+                .add(ROLE_KEY, message.role().name())
+                .add(CONTENT_KEY, message.content());
 
             if (!message.uploadedFiles().isEmpty()) {
                 messageBuilder.add(UPLOADED_FILES_KEY, toJson(message.uploadedFiles()));
@@ -1071,8 +1085,8 @@ public class ChatOptions implements Serializable {
 
         for (var uploadedFile : uploadedFiles) {
             var fileBuilder = Json.createObjectBuilder()
-                .add("id", uploadedFile.id())
-                .add("mimeType", uploadedFile.mimeType().value());
+                .add(ID_KEY, uploadedFile.id())
+                .add(MIME_TYPE_KEY, uploadedFile.mimeType().value());
 
             toJson(uploadedFile.videoOptions()).ifPresent(videoOptions -> fileBuilder.add(VIDEO_OPTIONS_KEY, videoOptions));
             filesBuilder.add(fileBuilder);
@@ -1139,9 +1153,9 @@ public class ChatOptions implements Serializable {
         var location = parsed.getJsonObject(WEB_SEARCH_LOCATION_KEY);
         builder.webSearch(
             new Location(
-                location.getString("country", null),
-                location.getString("region", null),
-                location.getString("city", null)
+                location.getString(COUNTRY_KEY, null),
+                location.getString(REGION_KEY, null),
+                location.getString(CITY_KEY, null)
             )
         );
     }
@@ -1155,11 +1169,11 @@ public class ChatOptions implements Serializable {
         var cachedInputTokenPrice = pricingObject.containsKey(CACHED_INPUT_TOKEN_PRICE_KEY)
             ? pricingObject.getJsonNumber(CACHED_INPUT_TOKEN_PRICE_KEY).bigDecimalValue()
             : null;
-        var currencyCode = pricingObject.getString("currency", null);
+        var currencyCode = pricingObject.getString(CURRENCY_KEY, null);
         var restoredPricing = new ChatPricing(
-            pricingObject.getJsonNumber("inputTokenPrice").bigDecimalValue(),
+            pricingObject.getJsonNumber(INPUT_TOKEN_PRICE_KEY).bigDecimalValue(),
             cachedInputTokenPrice,
-            pricingObject.getJsonNumber("outputTokenPrice").bigDecimalValue(),
+            pricingObject.getJsonNumber(OUTPUT_TOKEN_PRICE_KEY).bigDecimalValue(),
             currencyCode != null ? Currency.getInstance(currencyCode) : null
         );
 
@@ -1186,7 +1200,7 @@ public class ChatOptions implements Serializable {
 
         for (var value : parsed.getJsonArray(HISTORY_KEY)) {
             var message = value.asJsonObject();
-            restored.add(new Message(Role.valueOf(message.getString("role")), message.getString("content"), toUploadedFiles(message)));
+            restored.add(new Message(Role.valueOf(message.getString(ROLE_KEY)), message.getString(CONTENT_KEY), toUploadedFiles(message)));
         }
 
         builder.history(restored);
@@ -1198,7 +1212,7 @@ public class ChatOptions implements Serializable {
         if (message.containsKey(UPLOADED_FILES_KEY)) {
             for (var fileValue : message.getJsonArray(UPLOADED_FILES_KEY)) {
                 var file = fileValue.asJsonObject();
-                files.add(new UploadedFile(file.getString("id"), MimeType.of(file.getString("mimeType")), toVideoOptions(file)));
+                files.add(new UploadedFile(file.getString(ID_KEY), MimeType.of(file.getString(MIME_TYPE_KEY)), toVideoOptions(file)));
             }
         }
 
@@ -1452,13 +1466,7 @@ public class ChatOptions implements Serializable {
          */
         public Builder pricing(ChatPricing pricing, BigDecimal maxTotalCost) {
             this.pricing = requireNonNull(pricing, "pricing");
-            requireNonNull(maxTotalCost, "maxTotalCost");
-
-            if (maxTotalCost.signum() <= 0) {
-                throw new IllegalArgumentException("Max total cost must be strictly positive");
-            }
-
-            this.maxTotalCost = maxTotalCost;
+            this.maxTotalCost = requireValidMaxTotalCost(maxTotalCost);
             return this;
         }
 
