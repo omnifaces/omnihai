@@ -32,6 +32,7 @@ import java.util.Optional;
 import java.util.stream.Stream;
 
 import jakarta.json.Json;
+import jakarta.json.JsonArrayBuilder;
 import jakarta.json.JsonObject;
 import jakarta.json.JsonObjectBuilder;
 
@@ -999,64 +1000,85 @@ public class ChatOptions implements Serializable {
         builder.add(REASONING_EFFORT_KEY, reasoningEffort.name());
         builder.add(TOP_P_KEY, topP);
 
-        if (webSearchLocation != null) {
-            var locationBuilder = Json.createObjectBuilder();
-            addIfNotNull(locationBuilder, "country", webSearchLocation.country());
-            addIfNotNull(locationBuilder, "region", webSearchLocation.region());
-            addIfNotNull(locationBuilder, "city", webSearchLocation.city());
-            builder.add(WEB_SEARCH_LOCATION_KEY, locationBuilder);
-        }
-
-        if (pricing != null) {
-            var pricingBuilder = Json.createObjectBuilder()
-                .add("inputTokenPrice", pricing.inputTokenPrice())
-                .add("outputTokenPrice", pricing.outputTokenPrice());
-
-            if (pricing.cachedInputTokenPrice() != null) {
-                pricingBuilder.add(CACHED_INPUT_TOKEN_PRICE_KEY, pricing.cachedInputTokenPrice());
-            }
-            if (pricing.currency() != null) {
-                pricingBuilder.add("currency", pricing.currency().getCurrencyCode());
-            }
-
-            builder.add(PRICING_KEY, pricingBuilder);
-        }
+        addWebSearchLocation(builder);
+        addPricing(builder);
 
         if (maxTotalCost != null) {
             builder.add(MAX_TOTAL_COST_KEY, maxTotalCost);
         }
 
-        if (history != null) {
-            builder.add(MAX_HISTORY_KEY, maxHistory);
-            var historyBuilder = Json.createArrayBuilder();
-
-            for (var message : history) {
-                var messageBuilder = Json.createObjectBuilder()
-                    .add("role", message.role().name())
-                    .add("content", message.content());
-
-                if (!message.uploadedFiles().isEmpty()) {
-                    var filesBuilder = Json.createArrayBuilder();
-
-                    for (var uploadedFile : message.uploadedFiles()) {
-                        var fileBuilder = Json.createObjectBuilder()
-                            .add("id", uploadedFile.id())
-                            .add("mimeType", uploadedFile.mimeType().value());
-
-                        toJson(uploadedFile.videoOptions()).ifPresent(videoOptions -> fileBuilder.add(VIDEO_OPTIONS_KEY, videoOptions));
-                        filesBuilder.add(fileBuilder);
-                    }
-
-                    messageBuilder.add(UPLOADED_FILES_KEY, filesBuilder);
-                }
-
-                historyBuilder.add(messageBuilder);
-            }
-
-            builder.add(HISTORY_KEY, historyBuilder);
-        }
+        addHistory(builder);
 
         return builder.build().toString();
+    }
+
+    private void addWebSearchLocation(JsonObjectBuilder builder) {
+        if (webSearchLocation == null) {
+            return;
+        }
+
+        var locationBuilder = Json.createObjectBuilder();
+        addIfNotNull(locationBuilder, "country", webSearchLocation.country());
+        addIfNotNull(locationBuilder, "region", webSearchLocation.region());
+        addIfNotNull(locationBuilder, "city", webSearchLocation.city());
+        builder.add(WEB_SEARCH_LOCATION_KEY, locationBuilder);
+    }
+
+    private void addPricing(JsonObjectBuilder builder) {
+        if (pricing == null) {
+            return;
+        }
+
+        var pricingBuilder = Json.createObjectBuilder()
+            .add("inputTokenPrice", pricing.inputTokenPrice())
+            .add("outputTokenPrice", pricing.outputTokenPrice());
+
+        if (pricing.cachedInputTokenPrice() != null) {
+            pricingBuilder.add(CACHED_INPUT_TOKEN_PRICE_KEY, pricing.cachedInputTokenPrice());
+        }
+        if (pricing.currency() != null) {
+            pricingBuilder.add("currency", pricing.currency().getCurrencyCode());
+        }
+
+        builder.add(PRICING_KEY, pricingBuilder);
+    }
+
+    private void addHistory(JsonObjectBuilder builder) {
+        if (history == null) {
+            return;
+        }
+
+        builder.add(MAX_HISTORY_KEY, maxHistory);
+        var historyBuilder = Json.createArrayBuilder();
+
+        for (var message : history) {
+            var messageBuilder = Json.createObjectBuilder()
+                .add("role", message.role().name())
+                .add("content", message.content());
+
+            if (!message.uploadedFiles().isEmpty()) {
+                messageBuilder.add(UPLOADED_FILES_KEY, toJson(message.uploadedFiles()));
+            }
+
+            historyBuilder.add(messageBuilder);
+        }
+
+        builder.add(HISTORY_KEY, historyBuilder);
+    }
+
+    private static JsonArrayBuilder toJson(List<UploadedFile> uploadedFiles) {
+        var filesBuilder = Json.createArrayBuilder();
+
+        for (var uploadedFile : uploadedFiles) {
+            var fileBuilder = Json.createObjectBuilder()
+                .add("id", uploadedFile.id())
+                .add("mimeType", uploadedFile.mimeType().value());
+
+            toJson(uploadedFile.videoOptions()).ifPresent(videoOptions -> fileBuilder.add(VIDEO_OPTIONS_KEY, videoOptions));
+            filesBuilder.add(fileBuilder);
+        }
+
+        return filesBuilder;
     }
 
     private static void addIfNotNull(JsonObjectBuilder builder, String name, String value) {
@@ -1101,63 +1123,86 @@ public class ChatOptions implements Serializable {
         if (parsed.containsKey(TOP_P_KEY)) {
             builder.topP(parsed.getJsonNumber(TOP_P_KEY).doubleValue());
         }
-        if (parsed.containsKey(WEB_SEARCH_LOCATION_KEY)) {
-            var location = parsed.getJsonObject(WEB_SEARCH_LOCATION_KEY);
-            builder.webSearch(
-                new Location(
-                    location.getString("country", null),
-                    location.getString("region", null),
-                    location.getString("city", null)
-                )
-            );
-        }
 
-        if (parsed.containsKey(PRICING_KEY)) {
-            var pricingObject = parsed.getJsonObject(PRICING_KEY);
-            var cachedInputTokenPrice = pricingObject.containsKey(CACHED_INPUT_TOKEN_PRICE_KEY)
-                ? pricingObject.getJsonNumber(CACHED_INPUT_TOKEN_PRICE_KEY).bigDecimalValue()
-                : null;
-            var currencyCode = pricingObject.getString("currency", null);
-            var restoredPricing = new ChatPricing(
-                pricingObject.getJsonNumber("inputTokenPrice").bigDecimalValue(),
-                cachedInputTokenPrice,
-                pricingObject.getJsonNumber("outputTokenPrice").bigDecimalValue(),
-                currencyCode != null ? Currency.getInstance(currencyCode) : null
-            );
-
-            if (parsed.containsKey(MAX_TOTAL_COST_KEY)) {
-                builder.pricing(restoredPricing, parsed.getJsonNumber(MAX_TOTAL_COST_KEY).bigDecimalValue());
-            }
-            else {
-                builder.pricing(restoredPricing);
-            }
-        }
-
-        if (parsed.containsKey(HISTORY_KEY) || parsed.containsKey(MAX_HISTORY_KEY)) {
-            builder.withMemory(parsed.getInt(MAX_HISTORY_KEY, DEFAULT_MAX_HISTORY));
-
-            if (parsed.containsKey(HISTORY_KEY)) {
-                var restored = new ArrayList<Message>();
-
-                for (var value : parsed.getJsonArray(HISTORY_KEY)) {
-                    var message = value.asJsonObject();
-                    var files = new ArrayList<UploadedFile>();
-
-                    if (message.containsKey(UPLOADED_FILES_KEY)) {
-                        for (var fileValue : message.getJsonArray(UPLOADED_FILES_KEY)) {
-                            var file = fileValue.asJsonObject();
-                            files.add(new UploadedFile(file.getString("id"), MimeType.of(file.getString("mimeType")), toVideoOptions(file)));
-                        }
-                    }
-
-                    restored.add(new Message(Role.valueOf(message.getString("role")), message.getString("content"), files));
-                }
-
-                builder.history(restored);
-            }
-        }
+        restoreWebSearchLocation(builder, parsed);
+        restorePricing(builder, parsed);
+        restoreHistory(builder, parsed);
 
         return builder.build();
+    }
+
+    private static void restoreWebSearchLocation(Builder builder, JsonObject parsed) {
+        if (!parsed.containsKey(WEB_SEARCH_LOCATION_KEY)) {
+            return;
+        }
+
+        var location = parsed.getJsonObject(WEB_SEARCH_LOCATION_KEY);
+        builder.webSearch(
+            new Location(
+                location.getString("country", null),
+                location.getString("region", null),
+                location.getString("city", null)
+            )
+        );
+    }
+
+    private static void restorePricing(Builder builder, JsonObject parsed) {
+        if (!parsed.containsKey(PRICING_KEY)) {
+            return;
+        }
+
+        var pricingObject = parsed.getJsonObject(PRICING_KEY);
+        var cachedInputTokenPrice = pricingObject.containsKey(CACHED_INPUT_TOKEN_PRICE_KEY)
+            ? pricingObject.getJsonNumber(CACHED_INPUT_TOKEN_PRICE_KEY).bigDecimalValue()
+            : null;
+        var currencyCode = pricingObject.getString("currency", null);
+        var restoredPricing = new ChatPricing(
+            pricingObject.getJsonNumber("inputTokenPrice").bigDecimalValue(),
+            cachedInputTokenPrice,
+            pricingObject.getJsonNumber("outputTokenPrice").bigDecimalValue(),
+            currencyCode != null ? Currency.getInstance(currencyCode) : null
+        );
+
+        if (parsed.containsKey(MAX_TOTAL_COST_KEY)) {
+            builder.pricing(restoredPricing, parsed.getJsonNumber(MAX_TOTAL_COST_KEY).bigDecimalValue());
+        }
+        else {
+            builder.pricing(restoredPricing);
+        }
+    }
+
+    private static void restoreHistory(Builder builder, JsonObject parsed) {
+        if (!parsed.containsKey(HISTORY_KEY) && !parsed.containsKey(MAX_HISTORY_KEY)) {
+            return;
+        }
+
+        builder.withMemory(parsed.getInt(MAX_HISTORY_KEY, DEFAULT_MAX_HISTORY));
+
+        if (!parsed.containsKey(HISTORY_KEY)) {
+            return;
+        }
+
+        var restored = new ArrayList<Message>();
+
+        for (var value : parsed.getJsonArray(HISTORY_KEY)) {
+            var message = value.asJsonObject();
+            restored.add(new Message(Role.valueOf(message.getString("role")), message.getString("content"), toUploadedFiles(message)));
+        }
+
+        builder.history(restored);
+    }
+
+    private static List<UploadedFile> toUploadedFiles(JsonObject message) {
+        var files = new ArrayList<UploadedFile>();
+
+        if (message.containsKey(UPLOADED_FILES_KEY)) {
+            for (var fileValue : message.getJsonArray(UPLOADED_FILES_KEY)) {
+                var file = fileValue.asJsonObject();
+                files.add(new UploadedFile(file.getString("id"), MimeType.of(file.getString("mimeType")), toVideoOptions(file)));
+            }
+        }
+
+        return files;
     }
 
     /**

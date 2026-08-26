@@ -416,50 +416,71 @@ public class AnthropicAITextHandler extends DefaultAITextHandler {
     @Override
     public boolean processChatStreamEvent(AIService service, ChatOptions options, Event event, Consumer<String> onToken) {
         if (event.type() == EVENT) {
-            if ("max_tokens".equals(event.value())) {
-                throw new AITokenLimitExceededException();
-            }
-
-            return !"message_stop".equals(event.value()) && !"content_block_stop".equals(event.value());
+            return processEventName(event);
         }
-        else if (event.type() == DATA) {
-            return tryParseEventDataJson(event.value(), json -> {
-                var type = json.getString("type", null);
 
-                if ("content_block_delta".equals(type)) {
-                    var token = json.getJsonObject("delta").getString("text", "");
-
-                    if (!token.isEmpty()) { // Do not use isBlank! Whitespace can be a valid token.
-                        onToken.accept(token);
-                    }
-                }
-                else if (!options.isDefault()) {
-                    if ("message_start".equals(type)) {
-                        options.recordUsage(parseChatUsage(json.getJsonObject("message")));
-                    }
-                    else if ("message_delta".equals(type)) {
-                        findFirstByPath(json, getChatUsageOutputTokensPaths().get(0)).ifPresent(outputTokens -> {
-                            var prior = options.getLastUsage();
-                            options.recordUsage(
-                                new ChatUsage(
-                                    prior != null ? prior.inputTokens() : -1,
-                                    Integer.parseInt(outputTokens),
-                                    -1,
-                                    prior != null ? prior.cachedInputTokens() : -1
-                                )
-                            );
-                        });
-                    }
-                }
-                else if ("error".equals(type)) {
-                    throw new AIResponseException("Error event returned", event.value());
-                }
-
-                return true;
-            });
+        if (event.type() == DATA) {
+            return tryParseEventDataJson(event.value(), json -> processEventData(options, event, json, onToken));
         }
 
         return true;
+    }
+
+    /**
+     * Answers whether the stream continues after the given named event, throwing when it reports the token limit.
+     */
+    private static boolean processEventName(Event event) {
+        if ("max_tokens".equals(event.value())) {
+            throw new AITokenLimitExceededException();
+        }
+
+        return !"message_stop".equals(event.value()) && !"content_block_stop".equals(event.value());
+    }
+
+    /**
+     * Emits the token carried by the given data event, or records the usage it carries, answering whether the stream continues.
+     */
+    private boolean processEventData(ChatOptions options, Event event, JsonObject json, Consumer<String> onToken) {
+        var type = json.getString("type", null);
+
+        if ("content_block_delta".equals(type)) {
+            var token = json.getJsonObject("delta").getString("text", "");
+
+            if (!token.isEmpty()) { // Do not use isBlank! Whitespace can be a valid token.
+                onToken.accept(token);
+            }
+        }
+        else if (!options.isDefault()) {
+            recordUsage(options, type, json);
+        }
+        else if ("error".equals(type)) {
+            throw new AIResponseException("Error event returned", event.value());
+        }
+
+        return true;
+    }
+
+    /**
+     * Records the usage carried by a message start or message delta event, the latter of which reports output tokens alone and therefore carries the input
+     * counts of the prior record forward.
+     */
+    private void recordUsage(ChatOptions options, String type, JsonObject json) {
+        if ("message_start".equals(type)) {
+            options.recordUsage(parseChatUsage(json.getJsonObject("message")));
+        }
+        else if ("message_delta".equals(type)) {
+            findFirstByPath(json, getChatUsageOutputTokensPaths().get(0)).ifPresent(outputTokens -> {
+                var prior = options.getLastUsage();
+                options.recordUsage(
+                    new ChatUsage(
+                        prior != null ? prior.inputTokens() : -1,
+                        Integer.parseInt(outputTokens),
+                        -1,
+                        prior != null ? prior.cachedInputTokens() : -1
+                    )
+                );
+            });
+        }
     }
 
 }

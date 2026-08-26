@@ -36,6 +36,7 @@ import org.omnifaces.ai.exception.AIResponseException;
 import org.omnifaces.ai.exception.AITokenLimitExceededException;
 import org.omnifaces.ai.model.ChatInput;
 import org.omnifaces.ai.model.ChatInput.Attachment;
+import org.omnifaces.ai.model.ChatInput.Message;
 import org.omnifaces.ai.model.ChatInput.Message.Role;
 import org.omnifaces.ai.model.ChatOptions;
 import org.omnifaces.ai.model.ChatOptions.Location;
@@ -183,30 +184,51 @@ public class OpenAITextHandler extends DefaultAITextHandler {
 
     private void addHistoryMessages(AIService service, JsonArrayBuilder messages, ChatInput input, boolean supportsResponsesApi) {
         for (var historyMessage : input.getHistory()) {
+            var role = historyMessage.role() == Role.USER ? "user" : "assistant";
+
             if (supportsFilesApi(service)) {
-                var content = Json.createArrayBuilder();
-                for (var uploadedFile : historyMessage.uploadedFiles()) {
-                    addUploadedFileContent(service, content, uploadedFile.id(), supportsResponsesApi);
-                }
-                content.add(
-                    Json.createObjectBuilder()
-                        .add("type", supportsResponsesApi ? (historyMessage.role() == Role.USER) ? "input_text" : "output_text" : "text")
-                        .add("text", historyMessage.content())
-                );
                 messages.add(
                     Json.createObjectBuilder()
-                        .add("role", historyMessage.role() == Role.USER ? "user" : "assistant")
-                        .add("content", content)
+                        .add("role", role)
+                        .add("content", buildHistoryMessageContent(service, historyMessage, supportsResponsesApi))
                 );
             }
             else {
                 messages.add(
                     Json.createObjectBuilder()
-                        .add("role", historyMessage.role() == Role.USER ? "user" : "assistant")
+                        .add("role", role)
                         .add("content", historyMessage.content())
                 );
             }
         }
+    }
+
+    /**
+     * Builds the content array of a history message, listing the files it carries ahead of its text.
+     */
+    private JsonArrayBuilder buildHistoryMessageContent(AIService service, Message historyMessage, boolean supportsResponsesApi) {
+        var content = Json.createArrayBuilder();
+
+        for (var uploadedFile : historyMessage.uploadedFiles()) {
+            addUploadedFileContent(service, content, uploadedFile.id(), supportsResponsesApi);
+        }
+
+        return content.add(
+            Json.createObjectBuilder()
+                .add("type", getTextContentType(supportsResponsesApi, historyMessage.role()))
+                .add("text", historyMessage.content())
+        );
+    }
+
+    /**
+     * Answers the content block type of a text part, which the Responses API names after the side of the conversation it came from.
+     */
+    private static String getTextContentType(boolean supportsResponsesApi, Role role) {
+        if (!supportsResponsesApi) {
+            return "text";
+        }
+
+        return role == Role.USER ? "input_text" : "output_text";
     }
 
     /**
@@ -289,47 +311,10 @@ public class OpenAITextHandler extends DefaultAITextHandler {
         boolean supportsResponsesApi
     )
     {
-        var audioFiles = input.getFiles().stream().filter(attachment -> attachment.mimeType().isAudio()).toList();
-        var remainingFiles = input.getFiles().stream().filter(attachment -> !attachment.mimeType().isAudio()).toList();
         var content = Json.createArrayBuilder();
-
-        for (var image : input.getImages()) {
-            var img = Json.createObjectBuilder().add("type", supportsResponsesApi ? "input_image" : "image_url");
-
-            if (supportsResponsesApi) {
-                img.add("image_url", image.toDataUri());
-            }
-            else {
-                img.add("image_url", Json.createObjectBuilder().add("url", image.toDataUri()));
-            }
-
-            content.add(img);
-        }
-
-        for (var audioFile : audioFiles) {
-            content.add(
-                Json.createObjectBuilder().add("type", "input_audio")
-                    .add(
-                        "input_audio", Json.createObjectBuilder()
-                            .add(supportsResponsesApi ? "audio_base64" : "data", audioFile.toBase64())
-                            .add("format", audioFile.mimeType().extension())
-                    )
-            );
-        }
-
-        if (!remainingFiles.isEmpty()) {
-            checkSupportsFileAttachments(service);
-
-            for (var file : remainingFiles) {
-                if (supportsFilesApi(service)) {
-                    var fileId = service.upload(file.withMetadata(getFileUploadMetadata.apply(file)), options);
-                    addUploadedFileContent(service, content, fileId, supportsResponsesApi);
-                }
-                else {
-                    addInlineFileContent(service, content, file, supportsResponsesApi);
-                }
-            }
-        }
+        addImageContent(content, input, supportsResponsesApi);
+        addAudioContent(content, input, supportsResponsesApi);
+        addAttachedFileContent(service, content, input, options, getFileUploadMetadata, supportsResponsesApi);
 
         content.add(
             Json.createObjectBuilder()
@@ -342,6 +327,69 @@ public class OpenAITextHandler extends DefaultAITextHandler {
                 .add("role", "user")
                 .add("content", content)
         );
+    }
+
+    /**
+     * Adds a content block per input image, inlined as a data URI.
+     */
+    private static void addImageContent(JsonArrayBuilder content, ChatInput input, boolean supportsResponsesApi) {
+        for (var image : input.getImages()) {
+            var img = Json.createObjectBuilder().add("type", supportsResponsesApi ? "input_image" : "image_url");
+
+            if (supportsResponsesApi) {
+                img.add("image_url", image.toDataUri());
+            }
+            else {
+                img.add("image_url", Json.createObjectBuilder().add("url", image.toDataUri()));
+            }
+
+            content.add(img);
+        }
+    }
+
+    /**
+     * Adds a content block per input audio file, which takes a base64 payload of its own rather than the file block the other types take.
+     */
+    private static void addAudioContent(JsonArrayBuilder content, ChatInput input, boolean supportsResponsesApi) {
+        for (var audioFile : input.getFiles()) {
+            if (audioFile.mimeType().isAudio()) {
+                content.add(
+                    Json.createObjectBuilder().add("type", "input_audio")
+                        .add(
+                            "input_audio", Json.createObjectBuilder()
+                                .add(supportsResponsesApi ? "audio_base64" : "data", audioFile.toBase64())
+                                .add("format", audioFile.mimeType().extension())
+                        )
+                );
+            }
+        }
+    }
+
+    /**
+     * Adds a content block per input file other than audio, uploading it first when the service offers a files API.
+     */
+    private void addAttachedFileContent(
+        AIService service, JsonArrayBuilder content, ChatInput input, ChatOptions options,
+        Function<Attachment, Map<String, String>> getFileUploadMetadata, boolean supportsResponsesApi
+    )
+    {
+        var remainingFiles = input.getFiles().stream().filter(attachment -> !attachment.mimeType().isAudio()).toList();
+
+        if (remainingFiles.isEmpty()) {
+            return;
+        }
+
+        checkSupportsFileAttachments(service);
+
+        for (var file : remainingFiles) {
+            if (supportsFilesApi(service)) {
+                var fileId = service.upload(file.withMetadata(getFileUploadMetadata.apply(file)), options);
+                addUploadedFileContent(service, content, fileId, supportsResponsesApi);
+            }
+            else {
+                addInlineFileContent(service, content, file, supportsResponsesApi);
+            }
+        }
     }
 
     /**
@@ -377,15 +425,7 @@ public class OpenAITextHandler extends DefaultAITextHandler {
         AIService service, JsonObjectBuilder payload, ChatOptions options, boolean streaming, boolean supportsResponsesApi
     )
     {
-        if (options.getMaxTokens() != null) {
-            if (supportsResponsesApi) {
-                payload.add("max_output_tokens", options.getMaxTokens());
-            }
-            else {
-                var maxTokensField = service.getModelVersion().gte(GPT_5) ? "max_completion_tokens" : "max_tokens";
-                payload.add(maxTokensField, options.getMaxTokens());
-            }
-        }
+        addMaxTokens(service, payload, options, supportsResponsesApi);
 
         if (streaming) {
             checkSupportsStreaming(service);
@@ -410,31 +450,58 @@ public class OpenAITextHandler extends DefaultAITextHandler {
             payload.add("top_p", options.getTopP());
         }
 
-        if (options.getJsonSchema() != null) {
-            checkSupportsStructuredOutput(service);
+        addResponseFormat(service, payload, options, supportsResponsesApi);
+    }
 
-            if (supportsResponsesApi) {
-                var strictSchema = Json.createObjectBuilder()
-                    .add("name", "response_schema")
-                    .add("strict", true)
-                    .add("schema", addStrictAdditionalProperties(options.getJsonSchema()));
+    /**
+     * Adds the token cap under the name the active API and model expect, as the Chat Completions API renamed the field at {@link AIModelVersion#GPT_5}.
+     */
+    private static void addMaxTokens(AIService service, JsonObjectBuilder payload, ChatOptions options, boolean supportsResponsesApi) {
+        if (options.getMaxTokens() == null) {
+            return;
+        }
 
-                var format = Json.createObjectBuilder().add("type", "json_schema");
-                strictSchema.build().forEach(format::add);
-                payload.add("text", Json.createObjectBuilder().add("format", format));
-            }
-            else {
-                payload.add(
-                    "response_format", Json.createObjectBuilder()
-                        .add("type", "json_schema")
-                        .add(
-                            "json_schema", Json.createObjectBuilder()
-                                .add("name", "response_schema")
-                                .add("strict", true)
-                                .add("schema", addStrictAdditionalProperties(options.getJsonSchema()))
-                        )
-                );
-            }
+        if (supportsResponsesApi) {
+            payload.add("max_output_tokens", options.getMaxTokens());
+        }
+        else {
+            var maxTokensField = service.getModelVersion().gte(GPT_5) ? "max_completion_tokens" : "max_tokens";
+            payload.add(maxTokensField, options.getMaxTokens());
+        }
+    }
+
+    /**
+     * Adds the structured output schema, which the Responses API takes flattened into a text format block and the Chat Completions API takes nested in a
+     * response format block.
+     */
+    private void addResponseFormat(AIService service, JsonObjectBuilder payload, ChatOptions options, boolean supportsResponsesApi) {
+        if (options.getJsonSchema() == null) {
+            return;
+        }
+
+        checkSupportsStructuredOutput(service);
+
+        if (supportsResponsesApi) {
+            var strictSchema = Json.createObjectBuilder()
+                .add("name", "response_schema")
+                .add("strict", true)
+                .add("schema", addStrictAdditionalProperties(options.getJsonSchema()));
+
+            var format = Json.createObjectBuilder().add("type", "json_schema");
+            strictSchema.build().forEach(format::add);
+            payload.add("text", Json.createObjectBuilder().add("format", format));
+        }
+        else {
+            payload.add(
+                "response_format", Json.createObjectBuilder()
+                    .add("type", "json_schema")
+                    .add(
+                        "json_schema", Json.createObjectBuilder()
+                            .add("name", "response_schema")
+                            .add("strict", true)
+                            .add("schema", addStrictAdditionalProperties(options.getJsonSchema()))
+                    )
+            );
         }
     }
 
@@ -545,38 +612,42 @@ public class OpenAITextHandler extends DefaultAITextHandler {
      * @return {@code true} to continue processing the stream, or {@code false} when end of stream is reached.
      */
     protected boolean processChatStreamEventWithResponsesApi(ChatOptions options, Event event, Consumer<String> onToken) {
-        if (event.type() == EVENT) {
-            if ("response.completed".equals(event.value())) {
-                return true;
-            }
+        if (event.type() == EVENT && "response.incomplete".equals(event.value())) {
+            throw new AITokenLimitExceededException();
+        }
 
-            if ("response.incomplete".equals(event.value())) {
-                throw new AITokenLimitExceededException();
+        if (event.type() == DATA && isRelevantResponsesApiEventData(event.value())) {
+            return tryParseEventDataJson(event.value(), json -> processChatStreamEventDataWithResponsesApi(options, event, json, onToken));
+        }
+
+        return true;
+    }
+
+    /**
+     * Answers whether the given event data is worth parsing. OpenAI returns pretty a lot of events, so this pre-filter runs on the raw text ahead of the parse.
+     */
+    private static boolean isRelevantResponsesApiEventData(String eventData) {
+        return eventData.contains("response.output_text.delta") || eventData.contains("response.failed") || eventData.contains("response.completed");
+    }
+
+    /**
+     * Emits the token carried by the given data event, or records the usage it carries, answering whether the stream continues.
+     */
+    private boolean processChatStreamEventDataWithResponsesApi(ChatOptions options, Event event, JsonObject json, Consumer<String> onToken) {
+        var type = json.getString("type", null);
+
+        if ("response.output_text.delta".equals(type)) {
+            var token = json.getString("delta", "");
+
+            if (!token.isEmpty()) { // Do not use isBlank! Whitespace can be a valid token.
+                onToken.accept(token);
             }
         }
-        else if (
-            event.type() == DATA && (event.value().contains("response.output_text.delta") || event.value().contains("response.failed")
-                || event.value().contains("response.completed"))
-        ) { // Cheap pre-filter before expensive parse because OpenAI returns pretty a lot of events.
-            return tryParseEventDataJson(event.value(), json -> {
-                var type = json.getString("type", null);
-
-                if ("response.output_text.delta".equals(type)) {
-                    var token = json.getString("delta", "");
-
-                    if (!token.isEmpty()) { // Do not use isBlank! Whitespace can be a valid token.
-                        onToken.accept(token);
-                    }
-                }
-                else if (!options.isDefault() && "response.completed".equals(type)) {
-                    options.recordUsage(parseChatUsage(json.getJsonObject("response")));
-                }
-                else if ("response.failed".equals(type)) {
-                    throw new AIResponseException("Error event returned", event.value());
-                }
-
-                return true;
-            });
+        else if (!options.isDefault() && "response.completed".equals(type)) {
+            options.recordUsage(parseChatUsage(json.getJsonObject("response")));
+        }
+        else if ("response.failed".equals(type)) {
+            throw new AIResponseException("Error event returned", event.value());
         }
 
         return true;

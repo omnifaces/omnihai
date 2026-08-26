@@ -536,17 +536,9 @@ public final class JsonHelper {
         var isWildcard = targetIndex == WILDCARD_INDEX;
         var currentIndex = -1;
 
-        while (parser.hasNext()) {
-            var event = parser.next();
+        Event event;
 
-            if (event == END_ARRAY) {
-                return null;
-            }
-
-            if (event != START_OBJECT && event != START_ARRAY) {
-                continue;
-            }
-
+        while ((event = nextElement(parser)) != null) {
             currentIndex++;
 
             if (!isWildcard && currentIndex != targetIndex) {
@@ -562,6 +554,25 @@ public final class JsonHelper {
 
             if (result != null || !isWildcard) {
                 return result;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Advances to the start of the next element of the array at the current position, answering its start event, or {@code null} when the array ends.
+     */
+    private static Event nextElement(JsonParser parser) {
+        while (parser.hasNext()) {
+            var event = parser.next();
+
+            if (event == END_ARRAY) {
+                return null;
+            }
+
+            if (event == START_OBJECT || event == START_ARRAY) {
+                return event;
             }
         }
 

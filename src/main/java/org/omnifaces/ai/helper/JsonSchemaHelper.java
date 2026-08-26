@@ -316,25 +316,7 @@ public final class JsonSchemaHelper {
         }
 
         if (Temporal.class.isAssignableFrom(rawType)) {
-            var text = ((JsonString) value).getString();
-
-            if (rawType == Instant.class) {
-                return (T) Instant.parse(text);
-            }
-
-            if (rawType == LocalDate.class) {
-                return (T) LocalDate.parse(text);
-            }
-
-            if (rawType == LocalTime.class) {
-                return (T) LocalTime.parse(text);
-            }
-
-            if (rawType == LocalDateTime.class) {
-                return (T) LocalDateTime.parse(text);
-            }
-
-            return (T) ZonedDateTime.parse(text);
+            return (T) parseTemporal(rawType, ((JsonString) value).getString());
         }
 
         if (rawType.isArray()) {
@@ -350,6 +332,30 @@ public final class JsonSchemaHelper {
         }
 
         return (T) parseObject((JsonObject) value, rawType);
+    }
+
+    /**
+     * Parses the ISO-8601 text into the given temporal type, falling back to a {@link ZonedDateTime} for any type other than the four the JDK offers a zoneless
+     * parser for.
+     */
+    private static Temporal parseTemporal(Class<?> rawType, String text) {
+        if (rawType == Instant.class) {
+            return Instant.parse(text);
+        }
+
+        if (rawType == LocalDate.class) {
+            return LocalDate.parse(text);
+        }
+
+        if (rawType == LocalTime.class) {
+            return LocalTime.parse(text);
+        }
+
+        if (rawType == LocalDateTime.class) {
+            return LocalDateTime.parse(text);
+        }
+
+        return ZonedDateTime.parse(text);
     }
 
     private static Object parseObject(JsonObject json, Class<?> rawType) {

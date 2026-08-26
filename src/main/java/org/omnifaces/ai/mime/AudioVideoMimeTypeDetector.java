@@ -116,36 +116,62 @@ final class AudioVideoMimeTypeDetector {
             return Optional.empty();
         }
 
-        // Special case: AAC ADTS frame (12-bit syncword 0xFFF, layer bits = 00)
-        if (content[0] == (byte) 0xFF && (content[1] & 0xF6) == 0xF0) {
-            return Optional.of(AudioVideoMimeType.AAC);
-        }
+        var frameHeaderType = guessByFrameHeader(content);
 
-        // Special case: MP3 without ID3 tag (11-bit syncword 0xFFE, layer bits != 00)
-        if (content[0] == (byte) 0xFF && (content[1] & 0xE0) == 0xE0) {
-            return Optional.of(AudioVideoMimeType.MP3);
+        if (frameHeaderType.isPresent()) {
+            return frameHeaderType;
         }
 
         for (var type : AudioVideoMimeType.values()) {
             if (type.matches(content)) {
-
-                // Special case: WEBM submagic can appear "anywhere" in the beginning.
-                if (type.magic == MKV_MAGIC && new String(content, 0, Math.min(128, content.length), US_ASCII).contains("webm")) {
-                    return Optional.of(AudioVideoMimeType.WEBM);
-                }
-
-                // Special case: MP4 magic has multiple possible submagics as "brands".
-                if (type == AudioVideoMimeType.MP4 && content.length >= 12) {
-                    var brand = new String(content, 8, 4, US_ASCII);
-
-                    return isVideoBrand(brand) ? Optional.of(AudioVideoMimeType.MP4) : Optional.empty();
-                }
-
-                return Optional.of(type);
+                return resolveMagicMatch(type, content);
             }
         }
 
         return Optional.empty();
+    }
+
+    /**
+     * Guesses the MIME type of a raw audio frame, which opens on a sync word rather than on a magic prefix and therefore matches no entry of
+     * {@link AudioVideoMimeType}.
+     */
+    private static Optional<MimeType> guessByFrameHeader(byte[] content) {
+        if (content[0] != (byte) 0xFF) {
+            return Optional.empty();
+        }
+
+        // Special case: AAC ADTS frame (12-bit syncword 0xFFF, layer bits = 00)
+        if ((content[1] & 0xF6) == 0xF0) {
+            return Optional.of(AudioVideoMimeType.AAC);
+        }
+
+        // Special case: MP3 without ID3 tag (11-bit syncword 0xFFE, layer bits != 00)
+        if ((content[1] & 0xE0) == 0xE0) {
+            return Optional.of(AudioVideoMimeType.MP3);
+        }
+
+        return Optional.empty();
+    }
+
+    /**
+     * Answers the MIME type of content whose magic bytes matched the given type, which for a container magic shared by several types depends on a submagic
+     * further into the content.
+     */
+    private static Optional<MimeType> resolveMagicMatch(AudioVideoMimeType type, byte[] content) {
+
+        // Special case: WEBM submagic can appear "anywhere" in the beginning.
+        if (type.magic == MKV_MAGIC && new String(content, 0, Math.min(128, content.length), US_ASCII).contains("webm")) {
+            return Optional.of(AudioVideoMimeType.WEBM);
+        }
+
+        // Special case: MP4 magic has multiple possible submagics as "brands".
+        if (type == AudioVideoMimeType.MP4 && content.length >= 12) {
+            var brand = new String(content, 8, 4, US_ASCII);
+
+            return isVideoBrand(brand) ? Optional.of(AudioVideoMimeType.MP4) : Optional.empty();
+        }
+
+        return Optional.of(type);
     }
 
     private static boolean isVideoBrand(String brand) {

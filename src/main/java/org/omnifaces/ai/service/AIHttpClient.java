@@ -360,35 +360,7 @@ final class AIHttpClient {
             String line;
 
             while ((line = reader.readLine()) != null) {
-
-                if (line.isBlank()) {
-                    if (!processDataEvent(requestId, dataBuffer, eventProcessor)) {
-                        break;
-                    }
-
-                    continue;
-                }
-
-                line = line.strip();
-
-                if (line.startsWith(":")) {
-                    continue;
-                }
-
-                var event = createEvent(line, requestId);
-
-                if (event == null) {
-                    continue;
-                }
-
-                if (event.type() == Type.DATA) {
-                    if (!dataBuffer.isEmpty()) {
-                        dataBuffer.append('\n');
-                    }
-
-                    dataBuffer.append(line.substring(5).strip());
-                }
-                else if (!processDataEvent(requestId, dataBuffer, eventProcessor) || !eventProcessor.test(event)) {
+                if (!processEventLine(requestId, line.strip(), dataBuffer, eventProcessor)) {
                     break;
                 }
             }
@@ -399,6 +371,37 @@ final class AIHttpClient {
         catch (Exception e) {
             future.completeExceptionally(e);
         }
+    }
+
+    /**
+     * Buffers or dispatches one line of the event stream, answering whether the stream continues. A data line accumulates, as one event may span several of
+     * them, and the buffer is flushed by the blank line closing the event or by the next named event.
+     */
+    private static boolean processEventLine(int requestId, String line, StringBuilder dataBuffer, Predicate<Event> eventProcessor) {
+        if (line.isEmpty()) {
+            return processDataEvent(requestId, dataBuffer, eventProcessor);
+        }
+
+        if (line.startsWith(":")) {
+            return true;
+        }
+
+        var event = createEvent(line, requestId);
+
+        if (event == null) {
+            return true;
+        }
+
+        if (event.type() != Type.DATA) {
+            return processDataEvent(requestId, dataBuffer, eventProcessor) && eventProcessor.test(event);
+        }
+
+        if (!dataBuffer.isEmpty()) {
+            dataBuffer.append('\n');
+        }
+
+        dataBuffer.append(line.substring(5).strip());
+        return true;
     }
 
     private static Event createEvent(String line, int requestId) {
