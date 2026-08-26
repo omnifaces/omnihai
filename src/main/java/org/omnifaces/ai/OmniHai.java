@@ -54,7 +54,7 @@ public final class OmniHai {
         version = properties.getProperty("project.version", "DEV-SNAPSHOT");
         url = properties.getProperty("project.url", "https://omnihai.org");
         userAgent = String.format("%s %s (%s)", name, version, url);
-        logger.info("Using " + userAgent);
+        logger.info(() -> "Using " + userAgent);
     }
 
     /**

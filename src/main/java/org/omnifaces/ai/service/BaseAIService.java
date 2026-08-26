@@ -454,7 +454,7 @@ public abstract class BaseAIService implements AIService, Source {
             }
         }
         catch (Exception e) {
-            logger.log(WARNING, "Failed to cleanup file: " + file, e);
+            logger.log(WARNING, e, () -> "Failed to cleanup file: " + file);
         }
     }
 

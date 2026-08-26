@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.regex.Pattern;
 
 /**
  * Options for AI content moderation.
@@ -34,6 +35,9 @@ import java.util.TreeSet;
 public class ModerationOptions implements Serializable {
 
     private static final long serialVersionUID = 1L;
+
+    /** The characters a category may consist of. */
+    private static final Pattern CATEGORY = Pattern.compile("[a-zA-Z-]+");
 
     /**
      * Standard categories for content moderation.
@@ -220,7 +224,7 @@ public class ModerationOptions implements Serializable {
             for (var category : requireNonNull(categories, "categories")) {
                 requireNonNull(category, "category");
 
-                if (!category.matches("[a-zA-Z-]+")) {
+                if (!CATEGORY.matcher(category).matches()) {
                     throw new IllegalArgumentException(category + " may only contain alphabetic characters or hyphens");
                 }
 

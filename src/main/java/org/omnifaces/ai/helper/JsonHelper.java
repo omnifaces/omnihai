@@ -48,6 +48,7 @@ import jakarta.json.JsonObjectBuilder;
 import jakarta.json.JsonString;
 import jakarta.json.JsonValue;
 import jakarta.json.stream.JsonParser;
+import jakarta.json.stream.JsonParser.Event;
 
 import org.omnifaces.ai.exception.AIResponseException;
 
@@ -60,6 +61,9 @@ import org.omnifaces.ai.exception.AIResponseException;
 public final class JsonHelper {
 
     private static final int FILE_PROBE_MAX_BUFFER_LENGTH = 1024;
+
+    /** The index standing for every element of an array, as a path segment of {@code *}. */
+    private static final int WILDCARD_INDEX = -1;
 
     private JsonHelper() {
         throw new AssertionError();
@@ -512,52 +516,84 @@ public final class JsonHelper {
         }
 
         var segment = segments.poll();
-        var isWildcard = "*".equals(segment);
-        var isNumeric = !isWildcard && segment.matches("\\d+");
-        int targetIndex = isNumeric ? Integer.parseInt(segment) : -1;
-        int currentIndex = -1;
+
+        if ("*".equals(segment)) {
+            return findFirstByIndex(parser, WILDCARD_INDEX, segments, processor);
+        }
+
+        if (segment.matches("\\d+")) {
+            return findFirstByIndex(parser, Integer.parseInt(segment), segments, processor);
+        }
+
+        return findFirstByKey(parser, segment, segments, processor);
+    }
+
+    /**
+     * Descends into the element at the given index of the array at the current position, or into each element in turn when the index is
+     * {@link #WILDCARD_INDEX}, answering the first non-null result.
+     */
+    private static <R> R findFirstByIndex(JsonParser parser, int targetIndex, Queue<String> segments, Function<JsonParser, R> processor) {
+        var isWildcard = targetIndex == WILDCARD_INDEX;
+        var currentIndex = -1;
 
         while (parser.hasNext()) {
             var event = parser.next();
-            if (isNumeric || isWildcard) {
-                if (event == START_OBJECT || event == START_ARRAY) {
-                    currentIndex++;
 
-                    if (isWildcard || currentIndex == targetIndex) {
-                        if (segments.isEmpty()) {
-                            throw new IllegalArgumentException("Path must point to a value, not to an object or array.");
-                        }
-
-                        var result = findFirstByPath(parser, isWildcard ? new LinkedList<>(segments) : segments, processor);
-
-                        if (result != null || !isWildcard) {
-                            return result;
-                        }
-                    }
-                    else if (event == START_OBJECT) {
-                        parser.skipObject();
-                    }
-                    else {
-                        parser.skipArray();
-                    }
-                }
-                else if (event == END_ARRAY) {
-                    return null;
-                }
-            }
-            else if (event == KEY_NAME && segment.equals(parser.getString())) {
-                if (segments.isEmpty()) {
-                    return processor.apply(parser);
-                }
-
-                return findFirstByPath(parser, segments, processor);
-            }
-            else if (event == END_OBJECT) {
+            if (event == END_ARRAY) {
                 return null;
+            }
+
+            if (event != START_OBJECT && event != START_ARRAY) {
+                continue;
+            }
+
+            currentIndex++;
+
+            if (!isWildcard && currentIndex != targetIndex) {
+                skip(parser, event);
+                continue;
+            }
+
+            if (segments.isEmpty()) {
+                throw new IllegalArgumentException("Path must point to a value, not to an object or array.");
+            }
+
+            var result = findFirstByPath(parser, isWildcard ? new LinkedList<>(segments) : segments, processor);
+
+            if (result != null || !isWildcard) {
+                return result;
             }
         }
 
         return null;
+    }
+
+    /**
+     * Descends into the value of the given key of the object at the current position, answering what the processor makes of it once the path is exhausted.
+     */
+    private static <R> R findFirstByKey(JsonParser parser, String key, Queue<String> segments, Function<JsonParser, R> processor) {
+        while (parser.hasNext()) {
+            var event = parser.next();
+
+            if (event == END_OBJECT) {
+                return null;
+            }
+
+            if (event == KEY_NAME && key.equals(parser.getString())) {
+                return segments.isEmpty() ? processor.apply(parser) : findFirstByPath(parser, segments, processor);
+            }
+        }
+
+        return null;
+    }
+
+    private static void skip(JsonParser parser, Event event) {
+        if (event == START_OBJECT) {
+            parser.skipObject();
+        }
+        else {
+            parser.skipArray();
+        }
     }
 
 }

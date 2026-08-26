@@ -92,6 +92,26 @@ public class ChatOptions implements Serializable {
     /** Deterministic chat with zero temperature. */
     public static final ChatOptions DETERMINISTIC = ChatOptions.newBuilder().temperature(DETERMINISTIC_TEMPERATURE).build();
 
+    // --- JSON keys, shared by toJson() and fromJson() so that a rename cannot break the round trip ---
+
+    private static final String FPS_KEY = "fps";
+    private static final String START_OFFSET_KEY = "startOffset";
+    private static final String END_OFFSET_KEY = "endOffset";
+    private static final String VIDEO_OPTIONS_KEY = "videoOptions";
+    private static final String SYSTEM_PROMPT_KEY = "systemPrompt";
+    private static final String JSON_SCHEMA_KEY = "jsonSchema";
+    private static final String TEMPERATURE_KEY = "temperature";
+    private static final String MAX_TOKENS_KEY = "maxTokens";
+    private static final String REASONING_EFFORT_KEY = "reasoningEffort";
+    private static final String TOP_P_KEY = "topP";
+    private static final String WEB_SEARCH_LOCATION_KEY = "webSearchLocation";
+    private static final String CACHED_INPUT_TOKEN_PRICE_KEY = "cachedInputTokenPrice";
+    private static final String PRICING_KEY = "pricing";
+    private static final String MAX_TOTAL_COST_KEY = "maxTotalCost";
+    private static final String MAX_HISTORY_KEY = "maxHistory";
+    private static final String HISTORY_KEY = "history";
+    private static final String UPLOADED_FILES_KEY = "uploadedFiles";
+
     static {
         DEFAULT.immutable = true;
         CREATIVE.immutable = true;
@@ -248,15 +268,15 @@ public class ChatOptions implements Serializable {
         var builder = Json.createObjectBuilder();
 
         if (videoOptions.getFps() != AnalyzeVideoOptions.DEFAULT_FPS) {
-            builder.add("fps", videoOptions.getFps());
+            builder.add(FPS_KEY, videoOptions.getFps());
         }
 
         if (videoOptions.getStartOffset() != null) {
-            builder.add("startOffset", videoOptions.getStartOffset().toMillis());
+            builder.add(START_OFFSET_KEY, videoOptions.getStartOffset().toMillis());
         }
 
         if (videoOptions.getEndOffset() != null) {
-            builder.add("endOffset", videoOptions.getEndOffset().toMillis());
+            builder.add(END_OFFSET_KEY, videoOptions.getEndOffset().toMillis());
         }
 
         return Optional.of(builder);
@@ -269,23 +289,23 @@ public class ChatOptions implements Serializable {
      * @return The video analysis options, or {@code null}.
      */
     private static AnalyzeVideoOptions toVideoOptions(JsonObject uploadedFileJson) {
-        if (!uploadedFileJson.containsKey("videoOptions")) {
+        if (!uploadedFileJson.containsKey(VIDEO_OPTIONS_KEY)) {
             return null;
         }
 
-        var json = uploadedFileJson.getJsonObject("videoOptions");
+        var json = uploadedFileJson.getJsonObject(VIDEO_OPTIONS_KEY);
         var builder = AnalyzeVideoOptions.newBuilder();
 
-        if (json.containsKey("fps")) {
-            builder.fps(json.getJsonNumber("fps").doubleValue());
+        if (json.containsKey(FPS_KEY)) {
+            builder.fps(json.getJsonNumber(FPS_KEY).doubleValue());
         }
 
-        if (json.containsKey("startOffset")) {
-            builder.startOffset(Duration.ofMillis(json.getJsonNumber("startOffset").longValue()));
+        if (json.containsKey(START_OFFSET_KEY)) {
+            builder.startOffset(Duration.ofMillis(json.getJsonNumber(START_OFFSET_KEY).longValue()));
         }
 
-        if (json.containsKey("endOffset")) {
-            builder.endOffset(Duration.ofMillis(json.getJsonNumber("endOffset").longValue()));
+        if (json.containsKey(END_OFFSET_KEY)) {
+            builder.endOffset(Duration.ofMillis(json.getJsonNumber(END_OFFSET_KEY).longValue()));
         }
 
         return builder.build();
@@ -964,27 +984,27 @@ public class ChatOptions implements Serializable {
         var builder = Json.createObjectBuilder();
 
         if (systemPrompt != null) {
-            builder.add("systemPrompt", systemPrompt);
+            builder.add(SYSTEM_PROMPT_KEY, systemPrompt);
         }
         if (jsonSchema != null) {
-            builder.add("jsonSchema", jsonSchema);
+            builder.add(JSON_SCHEMA_KEY, jsonSchema);
         }
 
-        builder.add("temperature", temperature);
+        builder.add(TEMPERATURE_KEY, temperature);
 
         if (maxTokens != null) {
-            builder.add("maxTokens", maxTokens);
+            builder.add(MAX_TOKENS_KEY, maxTokens);
         }
 
-        builder.add("reasoningEffort", reasoningEffort.name());
-        builder.add("topP", topP);
+        builder.add(REASONING_EFFORT_KEY, reasoningEffort.name());
+        builder.add(TOP_P_KEY, topP);
 
         if (webSearchLocation != null) {
             var locationBuilder = Json.createObjectBuilder();
             addIfNotNull(locationBuilder, "country", webSearchLocation.country());
             addIfNotNull(locationBuilder, "region", webSearchLocation.region());
             addIfNotNull(locationBuilder, "city", webSearchLocation.city());
-            builder.add("webSearchLocation", locationBuilder);
+            builder.add(WEB_SEARCH_LOCATION_KEY, locationBuilder);
         }
 
         if (pricing != null) {
@@ -993,21 +1013,21 @@ public class ChatOptions implements Serializable {
                 .add("outputTokenPrice", pricing.outputTokenPrice());
 
             if (pricing.cachedInputTokenPrice() != null) {
-                pricingBuilder.add("cachedInputTokenPrice", pricing.cachedInputTokenPrice());
+                pricingBuilder.add(CACHED_INPUT_TOKEN_PRICE_KEY, pricing.cachedInputTokenPrice());
             }
             if (pricing.currency() != null) {
                 pricingBuilder.add("currency", pricing.currency().getCurrencyCode());
             }
 
-            builder.add("pricing", pricingBuilder);
+            builder.add(PRICING_KEY, pricingBuilder);
         }
 
         if (maxTotalCost != null) {
-            builder.add("maxTotalCost", maxTotalCost);
+            builder.add(MAX_TOTAL_COST_KEY, maxTotalCost);
         }
 
         if (history != null) {
-            builder.add("maxHistory", maxHistory);
+            builder.add(MAX_HISTORY_KEY, maxHistory);
             var historyBuilder = Json.createArrayBuilder();
 
             for (var message : history) {
@@ -1023,17 +1043,17 @@ public class ChatOptions implements Serializable {
                             .add("id", uploadedFile.id())
                             .add("mimeType", uploadedFile.mimeType().value());
 
-                        toJson(uploadedFile.videoOptions()).ifPresent(videoOptions -> fileBuilder.add("videoOptions", videoOptions));
+                        toJson(uploadedFile.videoOptions()).ifPresent(videoOptions -> fileBuilder.add(VIDEO_OPTIONS_KEY, videoOptions));
                         filesBuilder.add(fileBuilder);
                     }
 
-                    messageBuilder.add("uploadedFiles", filesBuilder);
+                    messageBuilder.add(UPLOADED_FILES_KEY, filesBuilder);
                 }
 
                 historyBuilder.add(messageBuilder);
             }
 
-            builder.add("history", historyBuilder);
+            builder.add(HISTORY_KEY, historyBuilder);
         }
 
         return builder.build().toString();
@@ -1063,26 +1083,26 @@ public class ChatOptions implements Serializable {
         var parsed = parseJson(requireNonNull(json, "json"));
         var builder = newBuilder();
 
-        if (parsed.containsKey("systemPrompt")) {
-            builder.systemPrompt(parsed.getString("systemPrompt"));
+        if (parsed.containsKey(SYSTEM_PROMPT_KEY)) {
+            builder.systemPrompt(parsed.getString(SYSTEM_PROMPT_KEY));
         }
-        if (parsed.containsKey("jsonSchema")) {
-            builder.jsonSchema(parsed.getJsonObject("jsonSchema"));
+        if (parsed.containsKey(JSON_SCHEMA_KEY)) {
+            builder.jsonSchema(parsed.getJsonObject(JSON_SCHEMA_KEY));
         }
-        if (parsed.containsKey("temperature")) {
-            builder.temperature(parsed.getJsonNumber("temperature").doubleValue());
+        if (parsed.containsKey(TEMPERATURE_KEY)) {
+            builder.temperature(parsed.getJsonNumber(TEMPERATURE_KEY).doubleValue());
         }
-        if (parsed.containsKey("maxTokens") && !parsed.isNull("maxTokens")) {
-            builder.maxTokens(parsed.getInt("maxTokens"));
+        if (parsed.containsKey(MAX_TOKENS_KEY) && !parsed.isNull(MAX_TOKENS_KEY)) {
+            builder.maxTokens(parsed.getInt(MAX_TOKENS_KEY));
         }
-        if (parsed.containsKey("reasoningEffort")) {
-            builder.reasoningEffort(ReasoningEffort.valueOf(parsed.getString("reasoningEffort")));
+        if (parsed.containsKey(REASONING_EFFORT_KEY)) {
+            builder.reasoningEffort(ReasoningEffort.valueOf(parsed.getString(REASONING_EFFORT_KEY)));
         }
-        if (parsed.containsKey("topP")) {
-            builder.topP(parsed.getJsonNumber("topP").doubleValue());
+        if (parsed.containsKey(TOP_P_KEY)) {
+            builder.topP(parsed.getJsonNumber(TOP_P_KEY).doubleValue());
         }
-        if (parsed.containsKey("webSearchLocation")) {
-            var location = parsed.getJsonObject("webSearchLocation");
+        if (parsed.containsKey(WEB_SEARCH_LOCATION_KEY)) {
+            var location = parsed.getJsonObject(WEB_SEARCH_LOCATION_KEY);
             builder.webSearch(
                 new Location(
                     location.getString("country", null),
@@ -1092,10 +1112,10 @@ public class ChatOptions implements Serializable {
             );
         }
 
-        if (parsed.containsKey("pricing")) {
-            var pricingObject = parsed.getJsonObject("pricing");
-            var cachedInputTokenPrice = pricingObject.containsKey("cachedInputTokenPrice")
-                ? pricingObject.getJsonNumber("cachedInputTokenPrice").bigDecimalValue()
+        if (parsed.containsKey(PRICING_KEY)) {
+            var pricingObject = parsed.getJsonObject(PRICING_KEY);
+            var cachedInputTokenPrice = pricingObject.containsKey(CACHED_INPUT_TOKEN_PRICE_KEY)
+                ? pricingObject.getJsonNumber(CACHED_INPUT_TOKEN_PRICE_KEY).bigDecimalValue()
                 : null;
             var currencyCode = pricingObject.getString("currency", null);
             var restoredPricing = new ChatPricing(
@@ -1105,26 +1125,26 @@ public class ChatOptions implements Serializable {
                 currencyCode != null ? Currency.getInstance(currencyCode) : null
             );
 
-            if (parsed.containsKey("maxTotalCost")) {
-                builder.pricing(restoredPricing, parsed.getJsonNumber("maxTotalCost").bigDecimalValue());
+            if (parsed.containsKey(MAX_TOTAL_COST_KEY)) {
+                builder.pricing(restoredPricing, parsed.getJsonNumber(MAX_TOTAL_COST_KEY).bigDecimalValue());
             }
             else {
                 builder.pricing(restoredPricing);
             }
         }
 
-        if (parsed.containsKey("history") || parsed.containsKey("maxHistory")) {
-            builder.withMemory(parsed.getInt("maxHistory", DEFAULT_MAX_HISTORY));
+        if (parsed.containsKey(HISTORY_KEY) || parsed.containsKey(MAX_HISTORY_KEY)) {
+            builder.withMemory(parsed.getInt(MAX_HISTORY_KEY, DEFAULT_MAX_HISTORY));
 
-            if (parsed.containsKey("history")) {
+            if (parsed.containsKey(HISTORY_KEY)) {
                 var restored = new ArrayList<Message>();
 
-                for (var value : parsed.getJsonArray("history")) {
+                for (var value : parsed.getJsonArray(HISTORY_KEY)) {
                     var message = value.asJsonObject();
                     var files = new ArrayList<UploadedFile>();
 
-                    if (message.containsKey("uploadedFiles")) {
-                        for (var fileValue : message.getJsonArray("uploadedFiles")) {
+                    if (message.containsKey(UPLOADED_FILES_KEY)) {
+                        for (var fileValue : message.getJsonArray(UPLOADED_FILES_KEY)) {
                             var file = fileValue.asJsonObject();
                             files.add(new UploadedFile(file.getString("id"), MimeType.of(file.getString("mimeType")), toVideoOptions(file)));
                         }
