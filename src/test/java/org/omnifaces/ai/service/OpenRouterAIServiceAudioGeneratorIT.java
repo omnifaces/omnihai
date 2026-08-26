@@ -35,4 +35,9 @@ class OpenRouterAIServiceAudioGeneratorIT extends BaseAIServiceAudioGeneratorIT 
         return "openai/gpt-audio-mini";
     }
 
+    @Override
+    protected String getTranscriptionModel() {
+        return OpenRouterAIServiceAudioHandlerIT.MODEL_NAME;
+    }
+
 }

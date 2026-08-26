@@ -12,6 +12,7 @@
  */
 package org.omnifaces.ai.service;
 
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.file.Files;
@@ -28,6 +29,16 @@ import org.omnifaces.ai.mime.MimeType;
  */
 abstract class BaseAIServiceAudioGeneratorIT extends AIServiceIT {
 
+    /**
+     * The model which reads the generated audio back. A text to speech model cannot transcribe, so this is a second model next to {@link #getModel()}. Defaults
+     * to the provider's own default model, which every provider offering speech generation also transcribes with.
+     *
+     * @return The model which transcribes the generated audio.
+     */
+    protected String getTranscriptionModel() {
+        return getProvider().getDefaultModel();
+    }
+
     @Test
     void generateAudio() throws Exception {
         var response = service.generateAudio("Dayana, feliz dia del amor, te amo");
@@ -40,7 +51,17 @@ abstract class BaseAIServiceAudioGeneratorIT extends AIServiceIT {
         log("saved in " + tempFilePath.toString());
 
         assertTrue(mimeType.isAudio(), "Mime type is audio");
-        // TODO: how to assert content .. ?? :P
+
+        var transcription = createService(getTranscriptionModel()).transcribe(response).toLowerCase();
+        log("transcribed as " + transcription);
+        assertAll(
+            () -> assertTrue(transcription.contains("dayana"), "the generated audio must contain 'Dayana', case insensitive: " + transcription),
+            () -> assertTrue(
+                transcription.contains("feliz día del amor"),
+                "the generated audio must contain 'Feliz día del amor', case insensitive: " + transcription
+            ),
+            () -> assertTrue(transcription.contains("te amo"), "the generated audio must contain 'Te amo', case insensitive: " + transcription)
+        );
     }
 
 }

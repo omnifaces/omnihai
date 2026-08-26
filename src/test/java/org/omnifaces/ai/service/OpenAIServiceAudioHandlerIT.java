@@ -19,6 +19,7 @@ import org.omnifaces.ai.AIProvider;
 class OpenAIServiceAudioHandlerIT extends BaseAIServiceAudioHandlerIT {
 
     protected static final String API_KEY_ENV_NAME = "OPENAI_API_KEY";
+    protected static final String MODEL_NAME = "gpt-4o-transcribe";
 
     @Override
     protected AIProvider getProvider() {
@@ -32,7 +33,7 @@ class OpenAIServiceAudioHandlerIT extends BaseAIServiceAudioHandlerIT {
 
     @Override
     protected String getModel() {
-        return "gpt-4o-transcribe";
+        return MODEL_NAME;
     }
 
 }

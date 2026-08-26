@@ -22,6 +22,7 @@ import org.omnifaces.ai.AIProvider;
 class MistralAIServiceOpenAIAudioHandlerIT extends BaseAIServiceAudioHandlerIT {
 
     protected static final String API_KEY_ENV_NAME = "MISTRAL_API_KEY";
+    protected static final String MODEL_NAME = "voxtral-mini-2602";
 
     @Override
     protected AIProvider getProvider() {
@@ -35,7 +36,7 @@ class MistralAIServiceOpenAIAudioHandlerIT extends BaseAIServiceAudioHandlerIT {
 
     @Override
     protected String getModel() {
-        return "voxtral-mini-2602";
+        return MODEL_NAME;
     }
 
 }

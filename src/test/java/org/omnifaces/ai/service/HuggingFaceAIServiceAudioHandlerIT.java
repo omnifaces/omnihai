@@ -19,6 +19,7 @@ import org.omnifaces.ai.AIProvider;
 class HuggingFaceAIServiceAudioHandlerIT extends BaseAIServiceAudioHandlerIT {
 
     protected static final String API_KEY_ENV_NAME = "HUGGINGFACE_API_KEY";
+    protected static final String MODEL_NAME = "openai/whisper-large-v3";
 
     @Override
     protected AIProvider getProvider() {
@@ -32,7 +33,7 @@ class HuggingFaceAIServiceAudioHandlerIT extends BaseAIServiceAudioHandlerIT {
 
     @Override
     protected String getModel() {
-        return "openai/whisper-large-v3";
+        return MODEL_NAME;
     }
 
 }

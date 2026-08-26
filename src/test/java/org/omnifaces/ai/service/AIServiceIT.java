@@ -52,7 +52,17 @@ abstract class AIServiceIT {
 
     @BeforeAll
     void setup() {
-        service = AIConfig.of(getProvider(), System.getenv(getApiKeyEnvName())).withModel(getModel()).createService();
+        service = createService(getModel());
+    }
+
+    /**
+     * Creates a service on this test's provider and key, but on the given model, for a test which needs a second model next to {@link #getModel()}.
+     *
+     * @param model The model to create the service on.
+     * @return A service on this test's provider and key, on the given model.
+     */
+    protected AIService createService(String model) {
+        return AIConfig.of(getProvider(), System.getenv(getApiKeyEnvName())).withModel(model).createService();
     }
 
     @BeforeEach

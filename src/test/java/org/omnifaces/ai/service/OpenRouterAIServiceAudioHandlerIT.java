@@ -19,6 +19,7 @@ import org.omnifaces.ai.AIProvider;
 class OpenRouterAIServiceAudioHandlerIT extends BaseAIServiceAudioHandlerIT {
 
     protected static final String API_KEY_ENV_NAME = "OPENROUTER_API_KEY";
+    protected static final String MODEL_NAME = "google/gemini-3.5-flash-lite";
 
     @Override
     protected AIProvider getProvider() {
@@ -32,7 +33,7 @@ class OpenRouterAIServiceAudioHandlerIT extends BaseAIServiceAudioHandlerIT {
 
     @Override
     protected String getModel() {
-        return "google/gemini-3.5-flash-lite";
+        return MODEL_NAME;
     }
 
 }
