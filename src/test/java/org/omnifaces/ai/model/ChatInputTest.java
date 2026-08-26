@@ -129,9 +129,11 @@ class ChatInputTest {
 
     @Test
     void builder_message_blank_throwsException() {
-        assertThrows(IllegalArgumentException.class, () -> ChatInput.newBuilder().message("").build());
-        assertThrows(IllegalArgumentException.class, () -> ChatInput.newBuilder().message("   ").build());
-        assertThrows(IllegalArgumentException.class, () -> ChatInput.newBuilder().message("\t\n").build());
+        for (var blank : List.of("", "   ", "\t\n")) {
+            var builder = ChatInput.newBuilder().message(blank);
+
+            assertThrows(IllegalArgumentException.class, builder::build);
+        }
     }
 
     // =================================================================================================================
@@ -224,10 +226,10 @@ class ChatInputTest {
             .attach(PNG_BYTES)
             .build();
 
-        assertThrows(
-            UnsupportedOperationException.class,
-            () -> input.getImages().add(new Attachment(new byte[0], TEST_PNG, "test.png", emptyMap()))
-        );
+        var images = input.getImages();
+        var image = new Attachment(new byte[0], TEST_PNG, "test.png", emptyMap());
+
+        assertThrows(UnsupportedOperationException.class, () -> images.add(image));
     }
 
     @Test
@@ -237,10 +239,10 @@ class ChatInputTest {
             .attach(PDF_BYTES)
             .build();
 
-        assertThrows(
-            UnsupportedOperationException.class,
-            () -> input.getFiles().add(new Attachment(new byte[0], TEST_PDF, "test.pdf", emptyMap()))
-        );
+        var files = input.getFiles();
+        var file = new Attachment(new byte[0], TEST_PDF, "test.pdf", emptyMap());
+
+        assertThrows(UnsupportedOperationException.class, () -> files.add(file));
     }
 
     // =================================================================================================================

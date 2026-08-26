@@ -120,23 +120,26 @@ class AnalyzeVideoOptionsTest {
     @Test
     void builder_startOffset_negative_throwsException() {
         var builder = AnalyzeVideoOptions.newBuilder();
+        var negative = ofSeconds(-1);
 
-        var exception = assertThrows(IllegalArgumentException.class, () -> builder.startOffset(ofSeconds(-1)));
+        var exception = assertThrows(IllegalArgumentException.class, () -> builder.startOffset(negative));
         assertEquals("startOffset must not be negative", exception.getMessage());
     }
 
     @Test
     void builder_endOffset_negative_throwsException() {
         var builder = AnalyzeVideoOptions.newBuilder();
+        var negative = ofSeconds(-1);
 
-        assertThrows(IllegalArgumentException.class, () -> builder.endOffset(ofSeconds(-1)));
+        assertThrows(IllegalArgumentException.class, () -> builder.endOffset(negative));
     }
 
     @Test
     void builder_endOffset_zero_throwsException() {
         var builder = AnalyzeVideoOptions.newBuilder();
+        var zero = ofSeconds(0);
 
-        var exception = assertThrows(IllegalArgumentException.class, () -> builder.endOffset(ofSeconds(0)));
+        var exception = assertThrows(IllegalArgumentException.class, () -> builder.endOffset(zero));
         assertEquals("endOffset must be positive", exception.getMessage());
     }
 

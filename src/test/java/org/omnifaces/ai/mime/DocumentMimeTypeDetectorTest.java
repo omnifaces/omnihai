@@ -14,12 +14,17 @@ package org.omnifaces.ai.mime;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 import java.io.ByteArrayOutputStream;
+import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 class DocumentMimeTypeDetectorTest {
 
@@ -34,11 +39,49 @@ class DocumentMimeTypeDetectorTest {
         assertEquals("pdf", result.extension());
     }
 
-    @Test
-    void guessDocumentMimeType_pdf_withContent() {
-        var content = "%PDF-1.7\n1 0 obj\n<<\n>>\nendobj".getBytes(UTF_8);
-        var result = DocumentMimeTypeDetector.guessDocumentMimeType(content);
-        assertEquals("pdf", result.extension());
+    /**
+     * The text based types are recognized by their content alone, so one table states every shape which must map to a type.
+     */
+    @ParameterizedTest(name = "{0} -> {1}")
+    @MethodSource
+    void guessDocumentMimeType_ofTextContent(String description, String extension, String content) {
+        var result = DocumentMimeTypeDetector.guessDocumentMimeType(content.getBytes(UTF_8));
+        assertEquals(extension, result.extension());
+    }
+
+    static Stream<Arguments> guessDocumentMimeType_ofTextContent() {
+        return Stream.of(
+            arguments("pdf_withContent", "pdf", "%PDF-1.7\n1 0 obj\n<<\n>>\nendobj"),
+            arguments("json_object", "json", "{\"key\": \"value\"}"),
+            arguments("json_array", "json", "[1, 2, 3]"),
+            arguments("json_nested", "json", "{\"nested\": {\"array\": [1, 2, 3]}}"),
+            arguments("json_emptyObject", "json", "{}"),
+            arguments("json_emptyArray", "json", "[]"),
+            arguments("xml", "xml", "<root><child/></root>"),
+            arguments("xml_withDeclaration", "xml", "<?xml version=\"1.0\"?><root/>"),
+            arguments("xml_withNamespaces", "xml", "<root xmlns=\"http://example.com\"><child/></root>"),
+            arguments("html_withDoctype", "html", "<!DOCTYPE html><html><body></body></html>"),
+            arguments("html_withHtmlTag", "html", "<html><head></head><body></body></html>"),
+            arguments("html_withHeadTag", "html", "<head><title>Test</title></head>"),
+            arguments("html_withBodyTag", "html", "<body><p>Content</p></body>"),
+            arguments("html_caseInsensitive", "html", "<!DOCTYPE HTML><HTML><BODY></BODY></HTML>"),
+            arguments("csv_commaDelimited", "csv", "name,age,city\nJohn,30,NYC\nJane,25,LA\n"),
+            arguments("csv_semicolonDelimited", "csv", "name;age;city\nJohn;30;NYC\nJane;25;LA\n"),
+            arguments("csv_manyColumns", "csv", "a,b,c,d,e,f\n1,2,3,4,5,6\n7,8,9,10,11,12\n"),
+            arguments("notCsv_singleLine", "txt", "name,age,city"),
+            arguments("notCsv_inconsistentDelimiters", "txt", "a,b,c\na,b\na,b,c,d\n"),
+            arguments("notCsv_noDelimiters", "txt", "line1\nline2\nline3\n"),
+            arguments("markdown_h1", "md", "# Heading 1\nSome content"),
+            arguments("markdown_h2", "md", "## Heading 2\nSome content"),
+            arguments("markdown_h3", "md", "### Heading 3\nSome content"),
+            arguments("markdown_headingInMiddle", "md", "Some intro\n\n# Main Heading\n\nContent"),
+            arguments("markdown_link", "md", "Check out [this link](https://example.com) for more info."),
+            arguments("markdown_codeBlock", "md", "Here is some code:\n```java\npublic class Test {}\n```"),
+            arguments("plainText", "txt", "This is just plain text without any special formatting."),
+            arguments("plainText_multiline", "txt", "Line 1\nLine 2\nLine 3"),
+            arguments("plainText_withUnicode", "txt", "Hello 世界! Привет мир! مرحبا بالعالم"),
+            arguments("textWithWhitespace_shouldNotBeBinary", "txt", "Line1\t\tTabbed\r\nLine2\nLine3")
+        );
     }
 
     // =================================================================================================================
@@ -71,226 +114,6 @@ class DocumentMimeTypeDetectorTest {
         var content = createZipWithEntry("ppt/presentation.xml", "<presentation/>".getBytes(UTF_8));
         var result = DocumentMimeTypeDetector.guessDocumentMimeType(content);
         assertEquals("pptx", result.extension());
-    }
-
-    // =================================================================================================================
-    // Test guessDocumentMimeType - JSON detection
-    // =================================================================================================================
-
-    @Test
-    void guessDocumentMimeType_json_object() {
-        var content = "{\"key\": \"value\"}".getBytes(UTF_8);
-        var result = DocumentMimeTypeDetector.guessDocumentMimeType(content);
-        assertEquals("json", result.extension());
-    }
-
-    @Test
-    void guessDocumentMimeType_json_array() {
-        var content = "[1, 2, 3]".getBytes(UTF_8);
-        var result = DocumentMimeTypeDetector.guessDocumentMimeType(content);
-        assertEquals("json", result.extension());
-    }
-
-    @Test
-    void guessDocumentMimeType_json_nested() {
-        var content = "{\"nested\": {\"array\": [1, 2, 3]}}".getBytes(UTF_8);
-        var result = DocumentMimeTypeDetector.guessDocumentMimeType(content);
-        assertEquals("json", result.extension());
-    }
-
-    @Test
-    void guessDocumentMimeType_json_emptyObject() {
-        var content = "{}".getBytes(UTF_8);
-        var result = DocumentMimeTypeDetector.guessDocumentMimeType(content);
-        assertEquals("json", result.extension());
-    }
-
-    @Test
-    void guessDocumentMimeType_json_emptyArray() {
-        var content = "[]".getBytes(UTF_8);
-        var result = DocumentMimeTypeDetector.guessDocumentMimeType(content);
-        assertEquals("json", result.extension());
-    }
-
-    // =================================================================================================================
-    // Test guessDocumentMimeType - XML detection
-    // =================================================================================================================
-
-    @Test
-    void guessDocumentMimeType_xml() {
-        var content = "<root><child/></root>".getBytes(UTF_8);
-        var result = DocumentMimeTypeDetector.guessDocumentMimeType(content);
-        assertEquals("xml", result.extension());
-    }
-
-    @Test
-    void guessDocumentMimeType_xml_withDeclaration() {
-        var content = "<?xml version=\"1.0\"?><root/>".getBytes(UTF_8);
-        var result = DocumentMimeTypeDetector.guessDocumentMimeType(content);
-        assertEquals("xml", result.extension());
-    }
-
-    @Test
-    void guessDocumentMimeType_xml_withNamespaces() {
-        var content = "<root xmlns=\"http://example.com\"><child/></root>".getBytes(UTF_8);
-        var result = DocumentMimeTypeDetector.guessDocumentMimeType(content);
-        assertEquals("xml", result.extension());
-    }
-
-    // =================================================================================================================
-    // Test guessDocumentMimeType - HTML detection
-    // =================================================================================================================
-
-    @Test
-    void guessDocumentMimeType_html_withDoctype() {
-        var content = "<!DOCTYPE html><html><body></body></html>".getBytes(UTF_8);
-        var result = DocumentMimeTypeDetector.guessDocumentMimeType(content);
-        assertEquals("html", result.extension());
-    }
-
-    @Test
-    void guessDocumentMimeType_html_withHtmlTag() {
-        var content = "<html><head></head><body></body></html>".getBytes(UTF_8);
-        var result = DocumentMimeTypeDetector.guessDocumentMimeType(content);
-        assertEquals("html", result.extension());
-    }
-
-    @Test
-    void guessDocumentMimeType_html_withHeadTag() {
-        var content = "<head><title>Test</title></head>".getBytes(UTF_8);
-        var result = DocumentMimeTypeDetector.guessDocumentMimeType(content);
-        assertEquals("html", result.extension());
-    }
-
-    @Test
-    void guessDocumentMimeType_html_withBodyTag() {
-        var content = "<body><p>Content</p></body>".getBytes(UTF_8);
-        var result = DocumentMimeTypeDetector.guessDocumentMimeType(content);
-        assertEquals("html", result.extension());
-    }
-
-    @Test
-    void guessDocumentMimeType_html_caseInsensitive() {
-        var content = "<!DOCTYPE HTML><HTML><BODY></BODY></HTML>".getBytes(UTF_8);
-        var result = DocumentMimeTypeDetector.guessDocumentMimeType(content);
-        assertEquals("html", result.extension());
-    }
-
-    // =================================================================================================================
-    // Test guessDocumentMimeType - CSV detection
-    // =================================================================================================================
-
-    @Test
-    void guessDocumentMimeType_csv_commaDelimited() {
-        var content = "name,age,city\nJohn,30,NYC\nJane,25,LA\n".getBytes(UTF_8);
-        var result = DocumentMimeTypeDetector.guessDocumentMimeType(content);
-        assertEquals("csv", result.extension());
-    }
-
-    @Test
-    void guessDocumentMimeType_csv_semicolonDelimited() {
-        var content = "name;age;city\nJohn;30;NYC\nJane;25;LA\n".getBytes(UTF_8);
-        var result = DocumentMimeTypeDetector.guessDocumentMimeType(content);
-        assertEquals("csv", result.extension());
-    }
-
-    @Test
-    void guessDocumentMimeType_csv_manyColumns() {
-        var content = "a,b,c,d,e,f\n1,2,3,4,5,6\n7,8,9,10,11,12\n".getBytes(UTF_8);
-        var result = DocumentMimeTypeDetector.guessDocumentMimeType(content);
-        assertEquals("csv", result.extension());
-    }
-
-    @Test
-    void guessDocumentMimeType_notCsv_singleLine() {
-        var content = "name,age,city".getBytes(UTF_8);
-        var result = DocumentMimeTypeDetector.guessDocumentMimeType(content);
-        assertEquals("txt", result.extension());
-    }
-
-    @Test
-    void guessDocumentMimeType_notCsv_inconsistentDelimiters() {
-        var content = "a,b,c\na,b\na,b,c,d\n".getBytes(UTF_8);
-        var result = DocumentMimeTypeDetector.guessDocumentMimeType(content);
-        assertEquals("txt", result.extension());
-    }
-
-    @Test
-    void guessDocumentMimeType_notCsv_noDelimiters() {
-        var content = "line1\nline2\nline3\n".getBytes(UTF_8);
-        var result = DocumentMimeTypeDetector.guessDocumentMimeType(content);
-        assertEquals("txt", result.extension());
-    }
-
-    // =================================================================================================================
-    // Test guessDocumentMimeType - Markdown detection
-    // =================================================================================================================
-
-    @Test
-    void guessDocumentMimeType_markdown_h1() {
-        var content = "# Heading 1\nSome content".getBytes(UTF_8);
-        var result = DocumentMimeTypeDetector.guessDocumentMimeType(content);
-        assertEquals("md", result.extension());
-    }
-
-    @Test
-    void guessDocumentMimeType_markdown_h2() {
-        var content = "## Heading 2\nSome content".getBytes(UTF_8);
-        var result = DocumentMimeTypeDetector.guessDocumentMimeType(content);
-        assertEquals("md", result.extension());
-    }
-
-    @Test
-    void guessDocumentMimeType_markdown_h3() {
-        var content = "### Heading 3\nSome content".getBytes(UTF_8);
-        var result = DocumentMimeTypeDetector.guessDocumentMimeType(content);
-        assertEquals("md", result.extension());
-    }
-
-    @Test
-    void guessDocumentMimeType_markdown_headingInMiddle() {
-        var content = "Some intro\n\n# Main Heading\n\nContent".getBytes(UTF_8);
-        var result = DocumentMimeTypeDetector.guessDocumentMimeType(content);
-        assertEquals("md", result.extension());
-    }
-
-    @Test
-    void guessDocumentMimeType_markdown_link() {
-        var content = "Check out [this link](https://example.com) for more info.".getBytes(UTF_8);
-        var result = DocumentMimeTypeDetector.guessDocumentMimeType(content);
-        assertEquals("md", result.extension());
-    }
-
-    @Test
-    void guessDocumentMimeType_markdown_codeBlock() {
-        var content = "Here is some code:\n```java\npublic class Test {}\n```".getBytes(UTF_8);
-        var result = DocumentMimeTypeDetector.guessDocumentMimeType(content);
-        assertEquals("md", result.extension());
-    }
-
-    // =================================================================================================================
-    // Test guessDocumentMimeType - plain text fallback
-    // =================================================================================================================
-
-    @Test
-    void guessDocumentMimeType_plainText() {
-        var content = "This is just plain text without any special formatting.".getBytes(UTF_8);
-        var result = DocumentMimeTypeDetector.guessDocumentMimeType(content);
-        assertEquals("txt", result.extension());
-    }
-
-    @Test
-    void guessDocumentMimeType_plainText_multiline() {
-        var content = "Line 1\nLine 2\nLine 3".getBytes(UTF_8);
-        var result = DocumentMimeTypeDetector.guessDocumentMimeType(content);
-        assertEquals("txt", result.extension());
-    }
-
-    @Test
-    void guessDocumentMimeType_plainText_withUnicode() {
-        var content = "Hello 世界! Привет мир! مرحبا بالعالم".getBytes(UTF_8);
-        var result = DocumentMimeTypeDetector.guessDocumentMimeType(content);
-        assertEquals("txt", result.extension());
     }
 
     // =================================================================================================================
@@ -351,13 +174,6 @@ class DocumentMimeTypeDetectorTest {
         };
         var result = DocumentMimeTypeDetector.guessDocumentMimeType(content);
         assertEquals("bin", result.extension());
-    }
-
-    @Test
-    void guessDocumentMimeType_textWithWhitespace_shouldNotBeBinary() {
-        var content = "Line1\t\tTabbed\r\nLine2\nLine3".getBytes(UTF_8);
-        var result = DocumentMimeTypeDetector.guessDocumentMimeType(content);
-        assertEquals("txt", result.extension());
     }
 
     // =================================================================================================================

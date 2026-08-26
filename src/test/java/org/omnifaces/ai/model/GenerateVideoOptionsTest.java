@@ -98,29 +98,39 @@ class GenerateVideoOptionsTest {
 
     @Test
     void seconds_mustBePositive() {
-        assertThrows(IllegalArgumentException.class, () -> GenerateVideoOptions.newBuilder().seconds(0));
-        assertThrows(IllegalArgumentException.class, () -> GenerateVideoOptions.newBuilder().seconds(-1));
+        var builder = GenerateVideoOptions.newBuilder();
+
+        assertThrows(IllegalArgumentException.class, () -> builder.seconds(0));
+        assertThrows(IllegalArgumentException.class, () -> builder.seconds(-1));
     }
 
     @Test
     void maxWait_mustBePositive() {
-        assertThrows(IllegalArgumentException.class, () -> GenerateVideoOptions.newBuilder().maxWait(Duration.ZERO));
-        assertThrows(IllegalArgumentException.class, () -> GenerateVideoOptions.newBuilder().maxWait(Duration.ofSeconds(-1)));
-        assertThrows(NullPointerException.class, () -> GenerateVideoOptions.newBuilder().maxWait(null));
+        var builder = GenerateVideoOptions.newBuilder();
+        var negative = Duration.ofSeconds(-1);
+
+        assertThrows(IllegalArgumentException.class, () -> builder.maxWait(Duration.ZERO));
+        assertThrows(IllegalArgumentException.class, () -> builder.maxWait(negative));
+        assertThrows(NullPointerException.class, () -> builder.maxWait(null));
     }
 
     @Test
     void pollInterval_mustBePositive() {
-        assertThrows(IllegalArgumentException.class, () -> GenerateVideoOptions.newBuilder().pollInterval(Duration.ZERO));
-        assertThrows(IllegalArgumentException.class, () -> GenerateVideoOptions.newBuilder().pollInterval(Duration.ofSeconds(-1)));
-        assertThrows(NullPointerException.class, () -> GenerateVideoOptions.newBuilder().pollInterval(null));
+        var builder = GenerateVideoOptions.newBuilder();
+        var negative = Duration.ofSeconds(-1);
+
+        assertThrows(IllegalArgumentException.class, () -> builder.pollInterval(Duration.ZERO));
+        assertThrows(IllegalArgumentException.class, () -> builder.pollInterval(negative));
+        assertThrows(NullPointerException.class, () -> builder.pollInterval(null));
     }
 
     @Test
     void nullValues_areRejected() {
-        assertThrows(NullPointerException.class, () -> GenerateVideoOptions.newBuilder().size(null));
-        assertThrows(NullPointerException.class, () -> GenerateVideoOptions.newBuilder().aspectRatio(null));
-        assertThrows(IllegalArgumentException.class, () -> GenerateVideoOptions.newBuilder().resolution(null));
+        var builder = GenerateVideoOptions.newBuilder();
+
+        assertThrows(NullPointerException.class, () -> builder.size(null));
+        assertThrows(NullPointerException.class, () -> builder.aspectRatio(null));
+        assertThrows(IllegalArgumentException.class, () -> builder.resolution(null));
     }
 
     @Test

@@ -288,10 +288,9 @@ class ModerationOptionsTest {
             .categories(Category.HATE)
             .build();
 
-        assertThrows(
-            UnsupportedOperationException.class,
-            () -> options.getCategories().add("new-category")
-        );
+        var categories = options.getCategories();
+
+        assertThrows(UnsupportedOperationException.class, () -> categories.add("new-category"));
     }
 
     @Test
@@ -329,8 +328,9 @@ class ModerationOptionsTest {
     @Test
     void addCategories_listWithIllegalCharacters_throwsException() {
         var builder = ModerationOptions.newBuilder();
+        var invalid = List.of("not valid");
 
-        assertThrows(IllegalArgumentException.class, () -> builder.addCategories(List.of("not valid")));
+        assertThrows(IllegalArgumentException.class, () -> builder.addCategories(invalid));
     }
 
 }

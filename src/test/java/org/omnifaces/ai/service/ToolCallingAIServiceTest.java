@@ -566,7 +566,9 @@ class ToolCallingAIServiceTest {
         var wrapped = scripted(toolCall("OrderTools_findOrder", "orderId", "42"), toolCall("OrderTools_findOrder", "orderId", "42"));
         var agent = new ToolCallingAIService(wrapped, ToolRegistry.of(new OrderTools()), 1, null);
 
-        var exception = assertThrows(CompletionException.class, () -> agent.chatAsync("Where is order 42?").join());
+        var pending = agent.chatAsync("Where is order 42?");
+
+        var exception = assertThrows(CompletionException.class, pending::join);
 
         assertInstanceOf(AIToolIterationException.class, exception.getCause());
     }
@@ -582,10 +584,12 @@ class ToolCallingAIServiceTest {
             //
         };
 
+        var input = ChatInput.newBuilder().message("x").build();
+
         assertThrows(UnsupportedOperationException.class, () -> agent.chatStream("Where is order 42?", onToken));
-        assertThrows(UnsupportedOperationException.class, () -> agent.chatStream(ChatInput.newBuilder().message("x").build(), onToken));
+        assertThrows(UnsupportedOperationException.class, () -> agent.chatStream(input, onToken));
         assertThrows(UnsupportedOperationException.class, () -> agent.chatStream("Where is order 42?", ChatOptions.DEFAULT, onToken));
-        assertThrows(UnsupportedOperationException.class, () -> agent.chatStream(ChatInput.newBuilder().message("x").build(), ChatOptions.DEFAULT, onToken));
+        assertThrows(UnsupportedOperationException.class, () -> agent.chatStream(input, ChatOptions.DEFAULT, onToken));
     }
 
     /**
@@ -597,8 +601,11 @@ class ToolCallingAIServiceTest {
             throw new StackOverflowError("simulated");
         }).build();
 
-        assertThrows(StackOverflowError.class, () -> new ToolCallingAIService(scripted(toolCall("BOOM")), lambda).chat("Boom please"));
-        assertThrows(StackOverflowError.class, () -> withTools(scripted(toolCall("OrderTools_collapse"))).chat("Collapse please"));
+        var lambdaAgent = new ToolCallingAIService(scripted(toolCall("BOOM")), lambda);
+        var declaredAgent = withTools(scripted(toolCall("OrderTools_collapse")));
+
+        assertThrows(StackOverflowError.class, () -> lambdaAgent.chat("Boom please"));
+        assertThrows(StackOverflowError.class, () -> declaredAgent.chat("Collapse please"));
     }
 
     /**

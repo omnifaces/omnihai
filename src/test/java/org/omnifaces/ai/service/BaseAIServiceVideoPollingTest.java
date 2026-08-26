@@ -14,13 +14,16 @@ package org.omnifaces.ai.service;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.concurrent.CompletableFuture.failedFuture;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -117,18 +120,21 @@ class BaseAIServiceVideoPollingTest {
     @Test
     void canceledCompletion_stopsPolling() throws Exception {
         var polls = new AtomicInteger();
+        var secondPoll = new CountDownLatch(2);
         var holder = new AtomicReference<CompletableFuture<Job>>();
 
         holder.set(BaseAIService.awaitVideoCompletion(Job.pending(JOB_ID, null), OPTIONS, polled -> {
             polls.incrementAndGet();
+            secondPoll.countDown();
             holder.get().cancel(true);
             return completedFuture(new Job(JOB_ID, Status.RUNNING, null, null, null));
         }));
 
-        Thread.sleep(OPTIONS.getPollInterval().toMillis() * 20);
+        var polledAgain = secondPoll.await(OPTIONS.getPollInterval().toMillis() * 20, MILLISECONDS);
 
+        assertFalse(polledAgain, "a canceled completion must not schedule another poll");
         assertTrue(holder.get().isCancelled());
-        assertEquals(1, polls.get(), "a canceled completion must not schedule another poll");
+        assertEquals(1, polls.get());
     }
 
 }

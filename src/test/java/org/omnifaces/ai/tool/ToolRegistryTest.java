@@ -279,12 +279,16 @@ class ToolRegistryTest {
      */
     @Test
     void of_withUndeclaredGroup_throws() {
-        assertThrows(IllegalArgumentException.class, () -> ToolRegistry.of(NotAGroup.class, new OrderTools()));
+        var tools = new OrderTools();
+
+        assertThrows(IllegalArgumentException.class, () -> ToolRegistry.of(NotAGroup.class, tools));
     }
 
     @Test
     void of_withoutAnyToolMethod_throws() {
-        assertThrows(IllegalArgumentException.class, () -> ToolRegistry.of(new WithoutTools()));
+        var tools = new WithoutTools();
+
+        assertThrows(IllegalArgumentException.class, () -> ToolRegistry.of(tools));
     }
 
     /**
@@ -292,7 +296,10 @@ class ToolRegistryTest {
      */
     @Test
     void of_withDuplicateToolName_throws() {
-        assertThrows(IllegalArgumentException.class, () -> ToolRegistry.of(new OrderTools(), new OrderTools()));
+        var tools = new OrderTools();
+        var duplicate = new OrderTools();
+
+        assertThrows(IllegalArgumentException.class, () -> ToolRegistry.of(tools, duplicate));
     }
 
     /**
@@ -301,7 +308,10 @@ class ToolRegistryTest {
      */
     @Test
     void of_withToolsOfEquallyNamedClasses_throws() {
-        assertThrows(IllegalArgumentException.class, () -> ToolRegistry.of(new OrderTools(), new Elsewhere.OrderTools()));
+        var tools = new OrderTools();
+        var equallyNamed = new Elsewhere.OrderTools();
+
+        assertThrows(IllegalArgumentException.class, () -> ToolRegistry.of(tools, equallyNamed));
     }
 
     /**
@@ -369,17 +379,24 @@ class ToolRegistryTest {
      */
     @Test
     void invoke_withUnconvertibleArgument_throws() {
-        assertThrows(IllegalArgumentException.class, () -> ToolRegistry.of(new OrderTools()).invoke("OrderTools_findOrder", Map.of("orderId", "yesterday")));
+        var registry = ToolRegistry.of(new OrderTools());
+        var arguments = Map.of("orderId", "yesterday");
+
+        assertThrows(IllegalArgumentException.class, () -> registry.invoke("OrderTools_findOrder", arguments));
     }
 
     @Test
     void invoke_withMissingArgument_throws() {
-        assertThrows(IllegalArgumentException.class, () -> ToolRegistry.of(new OrderTools()).invoke("OrderTools_findOrder", Map.of()));
+        var registry = ToolRegistry.of(new OrderTools());
+
+        assertThrows(IllegalArgumentException.class, () -> registry.invoke("OrderTools_findOrder", Map.of()));
     }
 
     @Test
     void invoke_withUnknownTool_throws() {
-        assertThrows(IllegalArgumentException.class, () -> ToolRegistry.of(new OrderTools()).invoke("OrderTools_noSuchTool", Map.of()));
+        var registry = ToolRegistry.of(new OrderTools());
+
+        assertThrows(IllegalArgumentException.class, () -> registry.invoke("OrderTools_noSuchTool", Map.of()));
     }
 
     /**
@@ -387,7 +404,9 @@ class ToolRegistryTest {
      */
     @Test
     void invoke_whenToolThrows_wrapsInToolInvocationException() {
-        var exception = assertThrows(ToolInvocationException.class, () -> ToolRegistry.of(new OrderTools()).invoke("OrderTools_explode", Map.of()));
+        var registry = ToolRegistry.of(new OrderTools());
+
+        var exception = assertThrows(ToolInvocationException.class, () -> registry.invoke("OrderTools_explode", Map.of()));
 
         assertEquals("OrderTools_explode", exception.getToolName());
         assertInstanceOf(IllegalStateException.class, exception.getCause());

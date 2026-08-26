@@ -192,7 +192,9 @@ class AIConfigTest {
     void constructor_propertiesMapIsUnmodifiable() {
         var props = Map.of("key", "value");
         var config = new AIConfig("OPENAI", null, null, null, null, null, props);
-        assertThrows(UnsupportedOperationException.class, () -> config.properties().put("new", "entry"));
+        var properties = config.properties();
+
+        assertThrows(UnsupportedOperationException.class, () -> properties.put("new", "entry"));
     }
 
     // =================================================================================================================

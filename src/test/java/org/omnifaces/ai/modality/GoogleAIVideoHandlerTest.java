@@ -62,7 +62,9 @@ class GoogleAIVideoHandlerTest {
 
     @Test
     void parseSubmittedVideo_withoutName_throwsException() {
-        assertThrows(AIResponseException.class, () -> handler.parseSubmittedVideo(parseJson("{\"id\":\"nope\"}")));
+        var responseJson = parseJson("{\"id\":\"nope\"}");
+
+        assertThrows(AIResponseException.class, () -> handler.parseSubmittedVideo(responseJson));
     }
 
     @Test
@@ -83,7 +85,9 @@ class GoogleAIVideoHandlerTest {
 
     @Test
     void parseVideoGeneration_whenDoneWithoutUri_throwsException() {
-        assertThrows(AIResponseException.class, () -> handler.parseVideoGeneration(parseJson("{\"done\":true,\"response\":{}}"), OPERATION_NAME));
+        var responseJson = parseJson("{\"done\":true,\"response\":{}}");
+
+        assertThrows(AIResponseException.class, () -> handler.parseVideoGeneration(responseJson, OPERATION_NAME));
     }
 
     @Test

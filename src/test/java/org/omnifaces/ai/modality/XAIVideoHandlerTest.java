@@ -61,7 +61,9 @@ class XAIVideoHandlerTest {
 
     @Test
     void parseSubmittedVideo_withoutRequestId_throwsException() {
-        assertThrows(AIResponseException.class, () -> handler.parseSubmittedVideo(parseJson("{\"id\":\"nope\"}")));
+        var responseJson = parseJson("{\"id\":\"nope\"}");
+
+        assertThrows(AIResponseException.class, () -> handler.parseSubmittedVideo(responseJson));
     }
 
     @Test

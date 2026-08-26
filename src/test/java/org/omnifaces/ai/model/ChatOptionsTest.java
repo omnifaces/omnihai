@@ -211,7 +211,9 @@ class ChatOptionsTest {
         var options = ChatOptions.newBuilder().withMemory().build();
         options.recordMessage(Role.USER, "test");
 
-        assertThrows(UnsupportedOperationException.class, () -> options.getHistory().clear());
+        var history = options.getHistory();
+
+        assertThrows(UnsupportedOperationException.class, history::clear);
     }
 
     @Test
@@ -725,15 +727,17 @@ class ChatOptionsTest {
     @Test
     void recordUploadedFile_noUserMessage_throwsException() {
         var options = ChatOptions.newBuilder().withMemory().build();
+        var uploadedFile = new UploadedFile("file-123", TEST_PDF);
 
-        assertThrows(IllegalStateException.class, () -> options.recordUploadedFile(new UploadedFile("file-123", TEST_PDF)));
+        assertThrows(IllegalStateException.class, () -> options.recordUploadedFile(uploadedFile));
     }
 
     @Test
     void recordUploadedFile_nonMemory_throwsException() {
         var options = ChatOptions.newBuilder().build();
+        var uploadedFile = new UploadedFile("file-123", TEST_PDF);
 
-        assertThrows(IllegalStateException.class, () -> options.recordUploadedFile(new UploadedFile("file-123", TEST_PDF)));
+        assertThrows(IllegalStateException.class, () -> options.recordUploadedFile(uploadedFile));
     }
 
     @Test
@@ -880,7 +884,9 @@ class ChatOptionsTest {
 
     @Test
     void recordUsage_onDefault_throwsISE() {
-        assertThrows(IllegalStateException.class, () -> ChatOptions.DEFAULT.recordUsage(new ChatUsage(1, 1, -1, -1)));
+        var usage = new ChatUsage(1, 1, -1, -1);
+
+        assertThrows(IllegalStateException.class, () -> ChatOptions.DEFAULT.recordUsage(usage));
     }
 
     @Test
@@ -1010,7 +1016,9 @@ class ChatOptionsTest {
 
     @Test
     void webSearch_builderWithNullLocation_throwsNPE() {
-        assertThrows(NullPointerException.class, () -> ChatOptions.newBuilder().webSearch(null));
+        var builder = ChatOptions.newBuilder();
+
+        assertThrows(NullPointerException.class, () -> builder.webSearch(null));
     }
 
     @Test
@@ -1608,22 +1616,34 @@ class ChatOptionsTest {
 
     @Test
     void pricing_twoArg_nullPricing_throwsNPE() {
-        assertThrows(NullPointerException.class, () -> ChatOptions.newBuilder().pricing(null, BigDecimal.ONE));
+        var builder = ChatOptions.newBuilder();
+
+        assertThrows(NullPointerException.class, () -> builder.pricing(null, BigDecimal.ONE));
     }
 
     @Test
     void pricing_twoArg_nullCap_throwsNPE() {
-        assertThrows(NullPointerException.class, () -> ChatOptions.newBuilder().pricing(flatPricing(), null));
+        var builder = ChatOptions.newBuilder();
+        var pricing = flatPricing();
+
+        assertThrows(NullPointerException.class, () -> builder.pricing(pricing, null));
     }
 
     @Test
     void pricing_twoArg_zeroCap_throwsIAE() {
-        assertThrows(IllegalArgumentException.class, () -> ChatOptions.newBuilder().pricing(flatPricing(), BigDecimal.ZERO));
+        var builder = ChatOptions.newBuilder();
+        var pricing = flatPricing();
+
+        assertThrows(IllegalArgumentException.class, () -> builder.pricing(pricing, BigDecimal.ZERO));
     }
 
     @Test
     void pricing_twoArg_negativeCap_throwsIAE() {
-        assertThrows(IllegalArgumentException.class, () -> ChatOptions.newBuilder().pricing(flatPricing(), new BigDecimal("-1")));
+        var builder = ChatOptions.newBuilder();
+        var pricing = flatPricing();
+        var negativeCap = new BigDecimal("-1");
+
+        assertThrows(IllegalArgumentException.class, () -> builder.pricing(pricing, negativeCap));
     }
 
     @Test
@@ -1661,17 +1681,25 @@ class ChatOptionsTest {
 
     @Test
     void withPricing_twoArg_nullPricing_throwsNPE() {
-        assertThrows(NullPointerException.class, () -> ChatOptions.newBuilder().build().withPricing(null, BigDecimal.ONE));
+        var options = ChatOptions.newBuilder().build();
+
+        assertThrows(NullPointerException.class, () -> options.withPricing(null, BigDecimal.ONE));
     }
 
     @Test
     void withPricing_twoArg_nullCap_throwsNPE() {
-        assertThrows(NullPointerException.class, () -> ChatOptions.newBuilder().build().withPricing(flatPricing(), null));
+        var options = ChatOptions.newBuilder().build();
+        var pricing = flatPricing();
+
+        assertThrows(NullPointerException.class, () -> options.withPricing(pricing, null));
     }
 
     @Test
     void withPricing_twoArg_nonPositiveCap_throwsIAE() {
-        assertThrows(IllegalArgumentException.class, () -> ChatOptions.newBuilder().build().withPricing(flatPricing(), BigDecimal.ZERO));
+        var options = ChatOptions.newBuilder().build();
+        var pricing = flatPricing();
+
+        assertThrows(IllegalArgumentException.class, () -> options.withPricing(pricing, BigDecimal.ZERO));
     }
 
     @Test

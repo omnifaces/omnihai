@@ -56,7 +56,9 @@ class OpenRouterAIVideoHandlerTest {
 
     @Test
     void parseSubmittedVideo_withoutStatus_throwsException() {
-        assertThrows(AIResponseException.class, () -> handler.parseSubmittedVideo(parseJson("{\"id\":\"abc123\"}")));
+        var responseJson = parseJson("{\"id\":\"abc123\"}");
+
+        assertThrows(AIResponseException.class, () -> handler.parseSubmittedVideo(responseJson));
     }
 
     @Test
@@ -87,7 +89,9 @@ class OpenRouterAIVideoHandlerTest {
 
     @Test
     void parseVideoGeneration_withUnknownStatus_throwsException() {
-        assertThrows(AIResponseException.class, () -> handler.parseVideoGeneration(parseJson("{\"status\":\"levitating\"}"), "abc123"));
+        var responseJson = parseJson("{\"status\":\"levitating\"}");
+
+        assertThrows(AIResponseException.class, () -> handler.parseVideoGeneration(responseJson, "abc123"));
     }
 
     private static AIService newService() {

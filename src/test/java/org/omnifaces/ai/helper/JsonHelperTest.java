@@ -343,11 +343,9 @@ class JsonHelperTest {
     @Test
     void checkErrors_errorAtFirstPath_throwsException() {
         var responseJson = JsonHelper.parseJson("{\"error\":{\"message\":\"Something went wrong\"}}");
+        var paths = List.of("error.message", "error");
 
-        var exception = assertThrows(
-            AIResponseException.class,
-            () -> JsonHelper.checkErrors(responseJson, List.of("error.message", "error"))
-        );
+        var exception = assertThrows(AIResponseException.class, () -> JsonHelper.checkErrors(responseJson, paths));
 
         assertTrue(exception.getMessage().contains("Something went wrong"));
     }
@@ -355,11 +353,9 @@ class JsonHelperTest {
     @Test
     void checkErrors_errorAtSecondPath_throwsException() {
         var responseJson = Json.createObjectBuilder().add("error", "Simple error").build();
+        var paths = List.of("error.message", "error");
 
-        var exception = assertThrows(
-            AIResponseException.class,
-            () -> JsonHelper.checkErrors(responseJson, List.of("error.message", "error"))
-        );
+        var exception = assertThrows(AIResponseException.class, () -> JsonHelper.checkErrors(responseJson, paths));
 
         assertTrue(exception.getMessage().contains("Simple error"));
     }

@@ -157,23 +157,26 @@ class VideoGenerationTest {
     @Test
     void writeTo_whileUnfinished_throwsIllegalState() {
         var video = new VideoGeneration(Job.pending("job-1", null), OPTIONS, new RecordingSource());
+        var output = new ByteArrayOutputStream();
 
-        assertThrows(IllegalStateException.class, () -> video.writeTo(new ByteArrayOutputStream()));
+        assertThrows(IllegalStateException.class, () -> video.writeTo(output));
     }
 
     @Test
     void writeTo_whenFailed_throwsAIExceptionStatingTheReason() {
         var video = new VideoGeneration(new Job("job-1", Status.FAILED, null, null, "moderation blocked"), OPTIONS, new RecordingSource());
+        var output = new ByteArrayOutputStream();
 
-        var exception = assertThrows(AIException.class, () -> video.writeTo(new ByteArrayOutputStream()));
+        var exception = assertThrows(AIException.class, () -> video.writeTo(output));
         assertTrue(exception.getMessage().contains("moderation blocked"), "the provider's reason must survive: " + exception.getMessage());
     }
 
     @Test
     void writeTo_whenExpired_throwsAIException() {
         var video = new VideoGeneration(new Job("job-1", Status.EXPIRED, null, null, null), OPTIONS, new RecordingSource());
+        var output = new ByteArrayOutputStream();
 
-        assertThrows(AIException.class, () -> video.writeTo(new ByteArrayOutputStream()));
+        assertThrows(AIException.class, () -> video.writeTo(output));
     }
 
     @Test
@@ -199,8 +202,9 @@ class VideoGenerationTest {
     @Test
     void writeTo_toAFileSystemRoot_isRejected() {
         var video = new VideoGeneration(new Job("job-1", Status.COMPLETED, null, null, null), OPTIONS, new RecordingSource());
+        var root = Path.of("/");
 
-        assertThrows(IllegalArgumentException.class, () -> video.writeTo(Path.of("/")));
+        assertThrows(IllegalArgumentException.class, () -> video.writeTo(root));
     }
 
     @Test

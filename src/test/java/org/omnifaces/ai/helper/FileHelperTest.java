@@ -69,7 +69,9 @@ class FileHelperTest {
 
     @Test
     void requireWritableFile_aFileSystemRoot_isRejected() {
-        assertThrows(IllegalArgumentException.class, () -> FileHelper.requireWritableFile(Path.of("/")));
+        var root = Path.of("/");
+
+        assertThrows(IllegalArgumentException.class, () -> FileHelper.requireWritableFile(root));
     }
 
     @Test

@@ -163,8 +163,9 @@ class AIHttpClientTest {
     @Test
     void download_ofARedirect_throwsAndClosesTheBody() {
         var body = new ClosingStream(new byte[0]);
+        var response = newResponse(302, body);
 
-        var exception = assertThrows(AIHttpException.class, () -> AIHttpClient.decompressDownloadIfNeeded(newResponse(302, body)));
+        var exception = assertThrows(AIHttpException.class, () -> AIHttpClient.decompressDownloadIfNeeded(response));
 
         assertEquals(302, exception.getStatusCode(), "a redirect is not content, whatever its body says");
         assertTrue(body.closed, "the response body of a redirect may not be left open");

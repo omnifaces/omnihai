@@ -63,36 +63,41 @@ class ChatPricingTest {
 
     @Test
     void new_nullInputTokenPrice_throwsNPE() {
-        assertThrows(NullPointerException.class, () -> new ChatPricing(null, null, new BigDecimal("15.00"), null));
+        var outputTokenPrice = new BigDecimal("15.00");
+
+        assertThrows(NullPointerException.class, () -> new ChatPricing(null, null, outputTokenPrice, null));
     }
 
     @Test
     void new_nullOutputTokenPrice_throwsNPE() {
-        assertThrows(NullPointerException.class, () -> new ChatPricing(new BigDecimal("3.00"), null, null, null));
+        var inputTokenPrice = new BigDecimal("3.00");
+
+        assertThrows(NullPointerException.class, () -> new ChatPricing(inputTokenPrice, null, null, null));
     }
 
     @Test
     void new_negativeInputTokenPrice_throwsIAE() {
-        assertThrows(
-            IllegalArgumentException.class,
-            () -> new ChatPricing(new BigDecimal("-1"), null, new BigDecimal("15.00"), null)
-        );
+        var inputTokenPrice = new BigDecimal("-1");
+        var outputTokenPrice = new BigDecimal("15.00");
+
+        assertThrows(IllegalArgumentException.class, () -> new ChatPricing(inputTokenPrice, null, outputTokenPrice, null));
     }
 
     @Test
     void new_negativeCachedInputTokenPrice_throwsIAE() {
-        assertThrows(
-            IllegalArgumentException.class,
-            () -> new ChatPricing(new BigDecimal("3.00"), new BigDecimal("-0.1"), new BigDecimal("15.00"), null)
-        );
+        var inputTokenPrice = new BigDecimal("3.00");
+        var cachedInputTokenPrice = new BigDecimal("-0.1");
+        var outputTokenPrice = new BigDecimal("15.00");
+
+        assertThrows(IllegalArgumentException.class, () -> new ChatPricing(inputTokenPrice, cachedInputTokenPrice, outputTokenPrice, null));
     }
 
     @Test
     void new_negativeOutputTokenPrice_throwsIAE() {
-        assertThrows(
-            IllegalArgumentException.class,
-            () -> new ChatPricing(new BigDecimal("3.00"), null, new BigDecimal("-15.00"), null)
-        );
+        var inputTokenPrice = new BigDecimal("3.00");
+        var outputTokenPrice = new BigDecimal("-15.00");
+
+        assertThrows(IllegalArgumentException.class, () -> new ChatPricing(inputTokenPrice, null, outputTokenPrice, null));
     }
 
     // =================================================================================================================

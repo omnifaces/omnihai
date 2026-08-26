@@ -185,7 +185,9 @@ class AIServiceProducerTest {
         var beanManager = mock(BeanManager.class);
         when(beanManager.resolve(any())).thenReturn(null);
 
-        assertThrows(IllegalArgumentException.class, () -> new AIServiceProducer().produce(injectionPoint, beanManager));
+        var producer = new AIServiceProducer();
+
+        assertThrows(IllegalArgumentException.class, () -> producer.produce(injectionPoint, beanManager));
     }
 
     /**
@@ -193,7 +195,9 @@ class AIServiceProducerTest {
      */
     @Test
     void produce_withDependentToolBean_throws() {
-        assertThrows(IllegalArgumentException.class, () -> produce(new AIServiceProducer(), "withTools", Dependent.class));
+        var producer = new AIServiceProducer();
+
+        assertThrows(IllegalArgumentException.class, () -> produce(producer, "withTools", Dependent.class));
     }
 
     private static AIService produce(String fieldName) {

@@ -82,10 +82,9 @@ class ModerationResultTest {
         scores.put("hate", 0.5);
         var result = new ModerationResult(false, scores);
 
-        assertThrows(
-            UnsupportedOperationException.class,
-            () -> result.getScores().put("violence", 0.3)
-        );
+        var immutableScores = result.getScores();
+
+        assertThrows(UnsupportedOperationException.class, () -> immutableScores.put("violence", 0.3));
     }
 
     @Test

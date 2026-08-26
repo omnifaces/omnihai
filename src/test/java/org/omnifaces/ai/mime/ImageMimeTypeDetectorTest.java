@@ -16,8 +16,14 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.params.provider.Arguments.arguments;
+
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 class ImageMimeTypeDetectorTest {
 
@@ -125,42 +131,31 @@ class ImageMimeTypeDetectorTest {
     // Test guessImageMimeType - SVG detection (special case)
     // =================================================================================================================
 
-    @Test
-    void guessImageMimeType_svg_direct() {
-        var content = "<svg xmlns=\"http://www.w3.org/2000/svg\"></svg>".getBytes(UTF_8);
-        var result = ImageMimeTypeDetector.guessImageMimeType(content);
+    /**
+     * An SVG is recognized by its content alone, so one table states every opening which must still be taken for one.
+     */
+    @ParameterizedTest(name = "{0}")
+    @MethodSource
+    void guessImageMimeType_ofSvgContent(String description, String content) {
+        var result = ImageMimeTypeDetector.guessImageMimeType(content.getBytes(UTF_8));
+
         assertTrue(result.isPresent());
         assertEquals("svg", result.get().extension());
     }
 
-    @Test
-    void guessImageMimeType_svg_withXmlDeclaration() {
-        var content = "<?xml version=\"1.0\"?><svg xmlns=\"http://www.w3.org/2000/svg\"></svg>".getBytes(UTF_8);
-        var result = ImageMimeTypeDetector.guessImageMimeType(content);
-        assertTrue(result.isPresent());
-        assertEquals("svg", result.get().extension());
-    }
-
-    @Test
-    void guessImageMimeType_svg_withNamespace() {
-        var content = "<?xml version=\"1.0\"?><root xmlns=\"http://www.w3.org/2000/svg\"></root>".getBytes(UTF_8);
-        var result = ImageMimeTypeDetector.guessImageMimeType(content);
-        assertTrue(result.isPresent());
-        assertEquals("svg", result.get().extension());
+    static Stream<Arguments> guessImageMimeType_ofSvgContent() {
+        return Stream.of(
+            arguments("direct", "<svg xmlns=\"http://www.w3.org/2000/svg\"></svg>"),
+            arguments("withXmlDeclaration", "<?xml version=\"1.0\"?><svg xmlns=\"http://www.w3.org/2000/svg\"></svg>"),
+            arguments("withNamespace", "<?xml version=\"1.0\"?><root xmlns=\"http://www.w3.org/2000/svg\"></root>"),
+            arguments("withLeadingWhitespace", "\n\t <?xml version=\"1.0\"?><svg></svg>")
+        );
     }
 
     @Test
     void guessImageMimeType_svg_withByteOrderMark() {
         var content = new byte[] { (byte) 0xEF, (byte) 0xBB, (byte) 0xBF };
         var result = ImageMimeTypeDetector.guessImageMimeType(concat(content, "<svg></svg>".getBytes(UTF_8)));
-        assertTrue(result.isPresent());
-        assertEquals("svg", result.get().extension());
-    }
-
-    @Test
-    void guessImageMimeType_svg_withLeadingWhitespace() {
-        var content = "\n\t <?xml version=\"1.0\"?><svg></svg>".getBytes(UTF_8);
-        var result = ImageMimeTypeDetector.guessImageMimeType(content);
         assertTrue(result.isPresent());
         assertEquals("svg", result.get().extension());
     }

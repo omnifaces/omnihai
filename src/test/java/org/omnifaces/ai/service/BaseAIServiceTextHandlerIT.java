@@ -151,7 +151,7 @@ abstract class BaseAIServiceTextHandlerIT extends AIServiceIT {
             () -> assertTrue(usage.inputTokens() > 0, "inputTokens must be positive: " + usage.inputTokens()),
             () -> assertTrue(usage.outputTokens() > 0, "outputTokens must be positive: " + usage.outputTokens()),
             () -> assertTrue(usage.totalTokens() > 0, "totalTokens must be positive: " + usage.totalTokens()),
-            () -> assertTrue(usage.totalTokens() == usage.inputTokens() + usage.outputTokens(), "totalTokens = inputTokens + outputTokens")
+            () -> assertEquals(usage.inputTokens() + usage.outputTokens(), usage.totalTokens(), "totalTokens = inputTokens + outputTokens")
         );
 
         if (supportsReasoningTokens()) {
@@ -159,7 +159,7 @@ abstract class BaseAIServiceTextHandlerIT extends AIServiceIT {
             assertTrue(usage.reasoningTokens() <= usage.outputTokens(), "reasoningTokens <= outputTokens");
         }
         else {
-            assertTrue(usage.reasoningTokens() == -1, "reasoningTokens must be -1: " + usage.reasoningTokens());
+            assertEquals(-1, usage.reasoningTokens(), "reasoningTokens must be -1: " + usage.reasoningTokens());
         }
     }
 
@@ -411,7 +411,9 @@ abstract class BaseAIServiceTextHandlerIT extends AIServiceIT {
 
     @Test
     void classifyWithTooFewLabels() {
-        assertThrows(IllegalArgumentException.class, () -> service.classify("Anything", List.of("only-one")));
+        var labels = List.of("only-one");
+
+        assertThrows(IllegalArgumentException.class, () -> service.classify("Anything", labels));
     }
 
     @Test
@@ -454,9 +456,9 @@ abstract class BaseAIServiceTextHandlerIT extends AIServiceIT {
         var harassmentScore = response.getScores().get(Category.HARASSMENT.name().toLowerCase());
         assertAll(
             () -> assertTrue(response.isFlagged(), "content must be flagged"),
-            () -> assertTrue(violenceScore != null, "violence score must be set"),
+            () -> assertNotNull(violenceScore, "violence score must be set"),
             () -> assertTrue(violenceScore > 0.5, "violence score " + violenceScore + " must be above half"),
-            () -> assertTrue(harassmentScore != null, "harassment score must be set"),
+            () -> assertNotNull(harassmentScore, "harassment score must be set"),
             () -> assertTrue(harassmentScore > 0.5, "harassment score " + harassmentScore + " must be above half")
         );
     }
