@@ -73,6 +73,10 @@ import org.omnifaces.ai.tool.ToolRegistry;
  * AIService agent = ai.withTools(orderTools);
  * String answer = agent.chat("Where is order 42?");
  * </pre>
+ * <p>
+ * A tool registry binds live bean instances and the reflective methods it invokes on them, so a tool calling service is not passivation capable. Hold it in a
+ * {@code @RequestScoped} or {@code @ApplicationScoped} bean, not in a {@code @SessionScoped} or {@code @ConversationScoped} one. An {@code @ApplicationScoped}
+ * holder is safe with request scoped tools, as the registry invokes each tool through its container reference and therefore observes its scope on every call.
  *
  * @author Bauke Scholtz
  * @since 1.6

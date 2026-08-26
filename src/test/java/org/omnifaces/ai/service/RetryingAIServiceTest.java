@@ -13,6 +13,7 @@
 package org.omnifaces.ai.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -22,6 +23,10 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.net.URI;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -29,6 +34,7 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
 
 import org.junit.jupiter.api.Test;
 import org.mockito.stubbing.Answer;
@@ -191,6 +197,26 @@ class RetryingAIServiceTest {
             onToken.accept(token);
             return CompletableFuture.failedFuture(unavailable());
         };
+    }
+
+    /**
+     * The default predicate is a named class rather than a lambda, so that a service configured with the default policy can be passivated by a container.
+     */
+    @Test
+    @SuppressWarnings("unchecked")
+    void defaultRetryPredicateSurvivesSerialization() throws Exception {
+        var bytes = new ByteArrayOutputStream();
+
+        try (var out = new ObjectOutputStream(bytes)) {
+            out.writeObject(RetryingAIService.DEFAULT_RETRY_ON);
+        }
+
+        try (var in = new ObjectInputStream(new ByteArrayInputStream(bytes.toByteArray()))) {
+            var predicate = (Predicate<Throwable>) in.readObject();
+
+            assertTrue(predicate.test(unavailable()));
+            assertFalse(predicate.test(new AIBadRequestException(ENDPOINT, "bad")));
+        }
     }
 
     private static RetryingAIService.Builder fast(AIService wrapped) {

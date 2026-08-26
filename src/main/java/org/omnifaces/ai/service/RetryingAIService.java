@@ -366,6 +366,8 @@ public class RetryingAIService extends InterceptingAIServiceWrapper {
 
         /**
          * Sets the predicate deciding whether a failure is worth retrying. Defaults to {@link RetryingAIService#DEFAULT_RETRY_ON}.
+         * <p>
+         * A service which lives in a passivating scope needs a serializable predicate; the default one is, a lambda is not.
          *
          * @param retryOn The predicate, receiving the failure cause (unwrapped from any {@link CompletionException}).
          * @return This builder instance for chaining.

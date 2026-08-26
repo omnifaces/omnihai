@@ -190,6 +190,8 @@ public class FailoverAIService extends InterceptingAIServiceWrapper {
 
         /**
          * Sets the predicate deciding whether a failure warrants failing over to the next service. Defaults to {@link FailoverAIService#DEFAULT_FAILOVER_ON}.
+         * <p>
+         * A service which lives in a passivating scope needs a serializable predicate; the default one is, a lambda is not.
          *
          * @param failoverOn The predicate, receiving the failure cause (unwrapped from any {@link CompletionException}).
          * @return This builder instance for chaining.

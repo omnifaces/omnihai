@@ -13,6 +13,7 @@
 package org.omnifaces.ai.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -21,6 +22,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import java.io.Serializable;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
@@ -188,6 +190,14 @@ class FailoverAIServiceTest {
         assertEquals("fresh", tokens.toString());
         assertEquals(List.of(2), resets);
         verify(secondary).chatStream(any(ChatInput.class), any(ChatOptions.class), any());
+    }
+
+    /**
+     * The default predicate must stay a named class rather than become a lambda, so that a service configured with it can be passivated by a container.
+     */
+    @Test
+    void defaultFailoverPredicateIsSerializable() {
+        assertInstanceOf(Serializable.class, FailoverAIService.DEFAULT_FAILOVER_ON);
     }
 
     private static AIServiceUnavailableException unavailable() {
