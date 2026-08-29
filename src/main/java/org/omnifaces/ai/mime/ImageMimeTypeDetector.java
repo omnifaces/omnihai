@@ -15,7 +15,6 @@ package org.omnifaces.ai.mime;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static org.omnifaces.ai.mime.AudioVideoMimeTypeDetector.FTYP_MAGIC;
 import static org.omnifaces.ai.mime.AudioVideoMimeTypeDetector.RIFF_MAGIC;
-import static org.omnifaces.ai.mime.AudioVideoMimeTypeDetector.startsWith;
 
 import java.util.Arrays;
 import java.util.Locale;
@@ -37,35 +36,32 @@ final class ImageMimeTypeDetector {
 
     private enum ImageMimeType implements MimeType {
 
-        JPEG("image/jpeg", 0, new byte[] { (byte) 0xFF, (byte) 0xD8, (byte) 0xFF }, 0, null),
-        PNG("image/png", 0, new byte[] { (byte) 0x89, 'P', 'N', 'G' }, 0, null),
-        GIF("image/gif", 0, new byte[] { 'G', 'I', 'F', '8' }, 0, null),
-        BMP("image/bmp", 0, new byte[] { 'B', 'M' }, 0, null),
-        WEBP("image/webp", 0, RIFF_MAGIC, 8, new byte[] { 'W', 'E', 'B', 'P' }),
-        ICO("image/x-icon", 0, new byte[] { 0x00, 0x00, 0x01, 0x00 }, 0, null),
-        SVG("image/svg+xml", 0, new byte[] { '<', 's', 'v', 'g' }, 0, null), // Also handled as special case.
-        HEIC("image/heic", 4, FTYP_MAGIC, 8, new byte[] { 'h', 'e', 'i', 'c' }),
-        HEIX("image/heic", 4, FTYP_MAGIC, 8, new byte[] { 'h', 'e', 'i', 'x' }),
-        HEVC("image/heic", 4, FTYP_MAGIC, 8, new byte[] { 'h', 'e', 'v', 'c' }),
-        HEVX("image/heic", 4, FTYP_MAGIC, 8, new byte[] { 'h', 'e', 'v', 'x' }),
-        MIF1("image/heif", 4, FTYP_MAGIC, 8, new byte[] { 'm', 'i', 'f', '1' }),
-        MSF1("image/heif", 4, FTYP_MAGIC, 8, new byte[] { 'm', 's', 'f', '1' }),
-        AVIF("image/avif", 4, FTYP_MAGIC, 8, new byte[] { 'a', 'v', 'i', 'f' }),
-        AVIS("image/avif", 4, FTYP_MAGIC, 8, new byte[] { 'a', 'v', 'i', 's' }),
-        JXL_BOXED("image/jxl", 4, FTYP_MAGIC, 8, new byte[] { 'j', 'x', 'l', ' ' }),
-        JXL("image/jxl", 0, new byte[] { (byte) 0xFF, 0x0A }, 0, null),
-        JXL_CODESTREAM("image/jxl", 0, new byte[] { 'J', 'X', 'L', ' ' }, 0, null),
-        TIFF_LE("image/tiff", 0, new byte[] { 'I', 'I', '*', 0 }, 0, null),
-        TIFF_BE("image/tiff", 0, new byte[] { 'M', 'M', 0, '*' }, 0, null);
+        JPEG("image/jpeg", new MagicNumber(0, new byte[] { (byte) 0xFF, (byte) 0xD8, (byte) 0xFF })),
+        PNG("image/png", new MagicNumber(0, new byte[] { (byte) 0x89, 'P', 'N', 'G' })),
+        GIF("image/gif", new MagicNumber(0, new byte[] { 'G', 'I', 'F', '8' })),
+        BMP("image/bmp", new MagicNumber(0, new byte[] { 'B', 'M' })),
+        WEBP("image/webp", new MagicNumber(0, RIFF_MAGIC, 8, new byte[] { 'W', 'E', 'B', 'P' })),
+        ICO("image/x-icon", new MagicNumber(0, new byte[] { 0x00, 0x00, 0x01, 0x00 })),
+        SVG("image/svg+xml", new MagicNumber(0, new byte[] { '<', 's', 'v', 'g' })), // Also handled as special case.
+        HEIC("image/heic", new MagicNumber(4, FTYP_MAGIC, 8, new byte[] { 'h', 'e', 'i', 'c' })),
+        HEIX("image/heic", new MagicNumber(4, FTYP_MAGIC, 8, new byte[] { 'h', 'e', 'i', 'x' })),
+        HEVC("image/heic", new MagicNumber(4, FTYP_MAGIC, 8, new byte[] { 'h', 'e', 'v', 'c' })),
+        HEVX("image/heic", new MagicNumber(4, FTYP_MAGIC, 8, new byte[] { 'h', 'e', 'v', 'x' })),
+        MIF1("image/heif", new MagicNumber(4, FTYP_MAGIC, 8, new byte[] { 'm', 'i', 'f', '1' })),
+        MSF1("image/heif", new MagicNumber(4, FTYP_MAGIC, 8, new byte[] { 'm', 's', 'f', '1' })),
+        AVIF("image/avif", new MagicNumber(4, FTYP_MAGIC, 8, new byte[] { 'a', 'v', 'i', 'f' })),
+        AVIS("image/avif", new MagicNumber(4, FTYP_MAGIC, 8, new byte[] { 'a', 'v', 'i', 's' })),
+        JXL_BOXED("image/jxl", new MagicNumber(4, FTYP_MAGIC, 8, new byte[] { 'j', 'x', 'l', ' ' })),
+        JXL("image/jxl", new MagicNumber(0, new byte[] { (byte) 0xFF, 0x0A })),
+        JXL_CODESTREAM("image/jxl", new MagicNumber(0, new byte[] { 'J', 'X', 'L', ' ' })),
+        TIFF_LE("image/tiff", new MagicNumber(0, new byte[] { 'I', 'I', '*', 0 })),
+        TIFF_BE("image/tiff", new MagicNumber(0, new byte[] { 'M', 'M', 0, '*' }));
 
         private final String value;
         private final String extension;
-        private final int magicOffset;
-        private final byte[] magic;
-        private final int subMagicOffset;
-        private final byte[] subMagic;
+        private final MagicNumber magicNumber;
 
-        ImageMimeType(String value, int magicOffset, byte[] magic, int subMagicOffset, byte[] subMagic) {
+        ImageMimeType(String value, MagicNumber magicNumber) {
             this.value = value;
             var subtype = value.substring(value.indexOf('/') + 1);
             this.extension = switch (subtype) {
@@ -74,10 +70,7 @@ final class ImageMimeTypeDetector {
                 case "svg+xml" -> "svg";
                 default -> subtype;
             };
-            this.magicOffset = magicOffset;
-            this.magic = magic;
-            this.subMagicOffset = subMagicOffset;
-            this.subMagic = subMagic;
+            this.magicNumber = magicNumber;
         }
 
         @Override
@@ -91,15 +84,7 @@ final class ImageMimeTypeDetector {
         }
 
         boolean matches(byte[] content) {
-            if (!startsWith(content, magicOffset, magic)) {
-                return false;
-            }
-
-            if (subMagic != null) {
-                return startsWith(content, subMagicOffset, subMagic);
-            }
-
-            return true;
+            return magicNumber.matches(content);
         }
 
     }

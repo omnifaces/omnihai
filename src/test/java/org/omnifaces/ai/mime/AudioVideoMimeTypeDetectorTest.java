@@ -305,40 +305,6 @@ class AudioVideoMimeTypeDetectorTest {
         assertFalse(result.isPresent());
     }
 
-    // =================================================================================================================
-    // Test startsWith helper
-    // =================================================================================================================
-
-    @Test
-    void startsWith_matchAtOffset0_shouldReturnTrue() {
-        var content = new byte[] { 'A', 'B', 'C', 'D' };
-        assertTrue(AudioVideoMimeTypeDetector.startsWith(content, 0, new byte[] { 'A', 'B' }));
-    }
-
-    @Test
-    void startsWith_matchAtOffset2_shouldReturnTrue() {
-        var content = new byte[] { 'A', 'B', 'C', 'D' };
-        assertTrue(AudioVideoMimeTypeDetector.startsWith(content, 2, new byte[] { 'C', 'D' }));
-    }
-
-    @Test
-    void startsWith_noMatch_shouldReturnFalse() {
-        var content = new byte[] { 'A', 'B', 'C', 'D' };
-        assertFalse(AudioVideoMimeTypeDetector.startsWith(content, 0, new byte[] { 'X', 'Y' }));
-    }
-
-    @Test
-    void startsWith_contentTooShort_shouldReturnFalse() {
-        var content = new byte[] { 'A', 'B' };
-        assertFalse(AudioVideoMimeTypeDetector.startsWith(content, 0, new byte[] { 'A', 'B', 'C', 'D' }));
-    }
-
-    @Test
-    void startsWith_offsetTooLarge_shouldReturnFalse() {
-        var content = new byte[] { 'A', 'B', 'C', 'D' };
-        assertFalse(AudioVideoMimeTypeDetector.startsWith(content, 10, new byte[] { 'A' }));
-    }
-
     private static byte[] newFtypContent(String brand) {
         var content = new byte[] { 0x00, 0x00, 0x00, 0x00, 'f', 't', 'y', 'p', 0x00, 0x00, 0x00, 0x00 };
 

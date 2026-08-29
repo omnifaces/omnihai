@@ -14,7 +14,7 @@ package org.omnifaces.ai.mime;
 
 import static java.nio.charset.CodingErrorAction.REPORT;
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.omnifaces.ai.mime.AudioVideoMimeTypeDetector.startsWith;
+import static org.omnifaces.ai.mime.MagicNumber.startsWith;
 
 import java.io.ByteArrayInputStream;
 import java.nio.ByteBuffer;

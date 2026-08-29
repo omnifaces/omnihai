@@ -46,35 +46,29 @@ final class AudioVideoMimeTypeDetector {
 
     private enum AudioVideoMimeType implements MimeType {
 
-        AAC("audio/aac", "aac", 0, new byte[] { (byte) 0xFF, (byte) 0xF1 }, 0, null),
-        AAC_ADTS("audio/aac", "aac", 0, new byte[] { (byte) 0xFF, (byte) 0xF9 }, 0, null), // Also handled as special case.
-        MP3("audio/mpeg", "mp3", 0, new byte[] { (byte) 0xFF, (byte) 0xE0 }, 0, null), // Also handled as special case.
-        MP3_ID3("audio/mpeg", "mp3", 0, new byte[] { 'I', 'D', '3' }, 0, null),
-        FLAC("audio/flac", "flac", 0, new byte[] { 'f', 'L', 'a', 'C' }, 0, null),
-        OGG("audio/ogg", "ogg", 0, new byte[] { 'O', 'g', 'g', 'S' }, 0, null),
-        MKV("video/x-matroska", "mkv", 0, MKV_MAGIC, 0, null),
-        WEBM("video/webm", "webm", 0, MKV_MAGIC, 0, null), // Handled as special case.
-        AIFF("audio/x-aiff", "aif", 0, FORM_MAGIC, 8, new byte[] { 'A', 'I', 'F', 'F' }),
-        AVI("video/x-msvideo", "avi", 0, RIFF_MAGIC, 8, new byte[] { 'A', 'V', 'I', ' ' }),
-        WAV("audio/wav", "wav", 0, RIFF_MAGIC, 8, new byte[] { 'W', 'A', 'V', 'E' }),
-        MOV("video/quicktime", "mov", 4, FTYP_MAGIC, 8, new byte[] { 'q', 't', ' ', ' ' }),
-        M4A("audio/mp4", "m4a", 4, FTYP_MAGIC, 8, new byte[] { 'M', '4', 'A', ' ' }),
-        MP4("video/mp4", "mp4", 4, FTYP_MAGIC, 8, null); // Handled as special case.
+        AAC("audio/aac", "aac", new MagicNumber(0, new byte[] { (byte) 0xFF, (byte) 0xF1 })),
+        AAC_ADTS("audio/aac", "aac", new MagicNumber(0, new byte[] { (byte) 0xFF, (byte) 0xF9 })), // Also handled as special case.
+        MP3("audio/mpeg", "mp3", new MagicNumber(0, new byte[] { (byte) 0xFF, (byte) 0xE0 })), // Also handled as special case.
+        MP3_ID3("audio/mpeg", "mp3", new MagicNumber(0, new byte[] { 'I', 'D', '3' })),
+        FLAC("audio/flac", "flac", new MagicNumber(0, new byte[] { 'f', 'L', 'a', 'C' })),
+        OGG("audio/ogg", "ogg", new MagicNumber(0, new byte[] { 'O', 'g', 'g', 'S' })),
+        MKV("video/x-matroska", "mkv", new MagicNumber(0, MKV_MAGIC)),
+        WEBM("video/webm", "webm", new MagicNumber(0, MKV_MAGIC)), // Handled as special case.
+        AIFF("audio/x-aiff", "aif", new MagicNumber(0, FORM_MAGIC, 8, new byte[] { 'A', 'I', 'F', 'F' })),
+        AVI("video/x-msvideo", "avi", new MagicNumber(0, RIFF_MAGIC, 8, new byte[] { 'A', 'V', 'I', ' ' })),
+        WAV("audio/wav", "wav", new MagicNumber(0, RIFF_MAGIC, 8, new byte[] { 'W', 'A', 'V', 'E' })),
+        MOV("video/quicktime", "mov", new MagicNumber(4, FTYP_MAGIC, 8, new byte[] { 'q', 't', ' ', ' ' })),
+        M4A("audio/mp4", "m4a", new MagicNumber(4, FTYP_MAGIC, 8, new byte[] { 'M', '4', 'A', ' ' })),
+        MP4("video/mp4", "mp4", new MagicNumber(4, FTYP_MAGIC)); // Handled as special case.
 
         private final String value;
         private final String extension;
-        private final int magicOffset;
-        private final byte[] magic;
-        private final int subMagicOffset;
-        private final byte[] subMagic;
+        private final MagicNumber magicNumber;
 
-        AudioVideoMimeType(String value, String extension, int magicOffset, byte[] magic, int subMagicOffset, byte[] subMagic) {
+        AudioVideoMimeType(String value, String extension, MagicNumber magicNumber) {
             this.value = value;
             this.extension = extension;
-            this.magicOffset = magicOffset;
-            this.magic = magic;
-            this.subMagicOffset = subMagicOffset;
-            this.subMagic = subMagic;
+            this.magicNumber = magicNumber;
         }
 
         @Override
@@ -88,15 +82,11 @@ final class AudioVideoMimeTypeDetector {
         }
 
         boolean matches(byte[] content) {
-            if (!startsWith(content, magicOffset, magic)) {
-                return false;
-            }
+            return magicNumber.matches(content);
+        }
 
-            if (subMagic != null) {
-                return startsWith(content, subMagicOffset, subMagic);
-            }
-
-            return true;
+        boolean hasMagic(byte[] magic) {
+            return magicNumber.hasMagic(magic);
         }
 
     }
@@ -160,7 +150,7 @@ final class AudioVideoMimeTypeDetector {
     private static Optional<MimeType> resolveMagicMatch(AudioVideoMimeType type, byte[] content) {
 
         // Special case: WEBM submagic can appear "anywhere" in the beginning.
-        if (type.magic == MKV_MAGIC && new String(content, 0, Math.min(128, content.length), US_ASCII).contains("webm")) {
+        if (type.hasMagic(MKV_MAGIC) && new String(content, 0, Math.min(128, content.length), US_ASCII).contains("webm")) {
             return Optional.of(AudioVideoMimeType.WEBM);
         }
 
@@ -187,30 +177,6 @@ final class AudioVideoMimeTypeDetector {
      */
     static Optional<MimeType> lookupAudioVideoMimeType(String value) {
         return Arrays.stream(AudioVideoMimeType.values()).filter(type -> type.value.equals(value)).map(MimeType.class::cast).findFirst();
-    }
-
-    // Common helper ---------------------------------------------------------------------------------------------------
-
-    /**
-     * Checks if the byte array starts with the given prefix at the specified offset.
-     *
-     * @param content The byte array to check.
-     * @param offset The offset within the content to start checking.
-     * @param prefix The prefix bytes to match.
-     * @return {@code true} if content contains prefix at the given offset, {@code false} otherwise.
-     */
-    static boolean startsWith(byte[] content, int offset, byte[] prefix) {
-        if (content.length < offset + prefix.length) {
-            return false;
-        }
-
-        for (int i = 0; i < prefix.length; i++) {
-            if (content[offset + i] != prefix[i]) {
-                return false;
-            }
-        }
-
-        return true;
     }
 
 }

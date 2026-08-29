@@ -12,7 +12,7 @@
  */
 package org.omnifaces.ai.mime;
 
-import static org.omnifaces.ai.mime.AudioVideoMimeTypeDetector.startsWith;
+import static org.omnifaces.ai.mime.MagicNumber.startsWith;
 
 /**
  * The UTF-8 byte order mark, which a text document may lead with and which the detection of its type must therefore look past.
