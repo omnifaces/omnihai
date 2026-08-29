@@ -24,7 +24,6 @@ import java.lang.reflect.Modifier;
 import java.lang.reflect.Parameter;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Stream;
 
 /**
@@ -38,7 +37,7 @@ import java.util.stream.Stream;
  * @see AITool
  * @see ToolRegistry
  */
-final class ToolMethod implements Tool {
+final class ToolMethod extends BaseTool {
 
     /**
      * The unbound metadata per declaring class, so that the reflection happens once. A {@link ClassValue} keeps the association on the class itself rather than
@@ -56,28 +55,18 @@ final class ToolMethod implements Tool {
 
     /** The annotated method. */
     private final Method method;
-    /** The tool name as read by the AI. */
-    private final String name;
-    /** The tool description as read by the AI. */
-    private final String description;
-    /** The parameters of the annotated method. */
-    private final List<ToolParam> params;
     /** The object the method is invoked on, or {@code null} while this is unbound metadata. */
     private final Object instance;
 
     private ToolMethod(Method method, String name) {
+        super(name, method.getAnnotation(AITool.class).value(), stream(method.getParameters()).map(parameter -> toToolParam(method, parameter)).toList());
         this.method = method;
-        this.name = name;
-        this.description = method.getAnnotation(AITool.class).value();
-        this.params = stream(method.getParameters()).map(parameter -> toToolParam(method, parameter)).toList();
         this.instance = null;
     }
 
     private ToolMethod(ToolMethod metadata, Object instance) {
+        super(metadata.getName(), metadata.getDescription(), metadata.getParams());
         this.method = metadata.method;
-        this.name = metadata.name;
-        this.description = metadata.description;
-        this.params = metadata.params;
         this.instance = instance;
     }
 
@@ -200,43 +189,20 @@ final class ToolMethod implements Tool {
     }
 
     @Override
-    public String getName() {
-        return name;
-    }
-
-    @Override
-    public String getDescription() {
-        return description;
-    }
-
-    @Override
-    public List<ToolParam> getParams() {
-        return params;
-    }
-
-    @Override
-    public Object invoke(Map<String, String> arguments) {
-        var values = params.stream().map(param -> param.convert(arguments)).toArray();
-
+    Object call(Object[] values) {
         try {
-            var result = method.invoke(instance, values);
-            return result == null ? "" : result;
+            return method.invoke(instance, values);
         }
         catch (InvocationTargetException e) {
             if (e.getCause() instanceof Error error) {
                 throw error;
             }
 
-            throw new ToolInvocationException(name, e.getCause());
+            throw new ToolInvocationException(getName(), e.getCause());
         }
         catch (ReflectiveOperationException e) {
-            throw new ToolInvocationException(name, e);
+            throw new ToolInvocationException(getName(), e);
         }
-    }
-
-    @Override
-    public String toString() {
-        return ToolRegistry.toManifestLine(this);
     }
 
 }

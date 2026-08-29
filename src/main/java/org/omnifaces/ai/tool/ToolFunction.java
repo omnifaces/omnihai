@@ -15,7 +15,6 @@ package org.omnifaces.ai.tool;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
-import java.util.Map;
 import java.util.function.Function;
 
 /**
@@ -28,55 +27,24 @@ import java.util.function.Function;
  * @since 1.6
  * @see ToolRegistry#newBuilder()
  */
-final class ToolFunction implements Tool {
+final class ToolFunction extends BaseTool {
 
-    /** The tool name as read by the AI. */
-    private final String name;
-    /** The tool description as read by the AI. */
-    private final String description;
-    /** The parameters the AI must supply. */
-    private final List<ToolParam> params;
     /** What the tool does, taking the converted arguments in declaration order. */
     private final Function<Object[], Object> function;
 
     ToolFunction(String name, String description, List<ToolParam> params, Function<Object[], Object> function) {
-        this.name = requireNonNull(name, "name");
-        this.description = requireNonNull(description, "description");
-        this.params = List.copyOf(requireNonNull(params, "params"));
+        super(name, description, params);
         this.function = requireNonNull(function, "function");
     }
 
     @Override
-    public String getName() {
-        return name;
-    }
-
-    @Override
-    public String getDescription() {
-        return description;
-    }
-
-    @Override
-    public List<ToolParam> getParams() {
-        return params;
-    }
-
-    @Override
-    public Object invoke(Map<String, String> arguments) {
-        var values = params.stream().map(param -> param.convert(arguments)).toArray();
-
+    Object call(Object[] values) {
         try {
-            var result = function.apply(values);
-            return result == null ? "" : result;
+            return function.apply(values);
         }
         catch (RuntimeException e) {
-            throw new ToolInvocationException(name, e);
+            throw new ToolInvocationException(getName(), e);
         }
-    }
-
-    @Override
-    public String toString() {
-        return ToolRegistry.toManifestLine(this);
     }
 
 }

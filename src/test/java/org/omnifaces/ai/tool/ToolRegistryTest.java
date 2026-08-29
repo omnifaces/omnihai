@@ -412,4 +412,29 @@ class ToolRegistryTest {
         assertInstanceOf(IllegalStateException.class, exception.getCause());
     }
 
+    /**
+     * A throwing tool function surfaces the same way a throwing tool method does, as the loop cannot tell the two apart.
+     */
+    @Test
+    void invoke_whenToolFunctionThrows_wrapsInToolInvocationException() {
+        var registry = ToolRegistry.newBuilder().add("explode", "Always fails", () -> {
+            throw new IllegalStateException("boom");
+        }).build();
+
+        var exception = assertThrows(ToolInvocationException.class, () -> registry.invoke("explode", Map.of()));
+
+        assertEquals("explode", exception.getToolName());
+        assertInstanceOf(IllegalStateException.class, exception.getCause());
+    }
+
+    /**
+     * A tool which returns nothing answers an empty string, as the answer travels back to the AI as text and there is no null to send.
+     */
+    @Test
+    void invoke_whenToolReturnsNothing_answersEmptyString() {
+        var registry = ToolRegistry.newBuilder().add("silent", "Returns nothing", () -> null).build();
+
+        assertEquals("", registry.invoke("silent", Map.of()));
+    }
+
 }
