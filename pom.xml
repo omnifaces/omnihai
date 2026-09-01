@@ -62,6 +62,12 @@
         <maven.source.excludeResources>true</maven.source.excludeResources>
         <skipUTs>false</skipUTs>
         <skipITs>true</skipITs>
+
+        <!-- Sonar config. -->
+        <sonar.organization>balusc-github</sonar.organization>
+        <sonar.host.url>https://sonarcloud.io</sonar.host.url>
+        <!-- Ignored rules live in the project settings on SonarCloud, not here, as sonar.issue.ignore.multicriteria is a multi value property which is not
+             persisted when it is passed by the scanner. -->
     </properties>
 
     <dependencies>
