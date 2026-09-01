@@ -138,7 +138,7 @@ public enum AIProvider {
      * @see XAIImageHandler
      * @see DefaultAIAudioHandler
      * @see XAIVideoHandler
-     * @see <a href="https://console.x.ai/">Manage xAI API Keys</a>
+     * @see <a href="https://console.x.ai">Manage xAI API Keys</a>
      * @see <a href="https://docs.x.ai/developers/models">Available xAI Models</a>
      */
     XAI(
@@ -155,7 +155,7 @@ public enum AIProvider {
      * @see MistralAITextHandler
      * @see OpenAIImageHandler
      * @see DefaultAIAudioHandler
-     * @see <a href="https://console.mistral.ai/home?profile_dialog=api-keys">Manage Mistral AI API Keys</a>
+     * @see <a href="https://admin.mistral.ai/organization/api-keys">Manage Mistral AI API Keys</a>
      * @see <a href="https://docs.mistral.ai/models">Available Mistral AI Models</a>
      */
     MISTRAL(
@@ -171,8 +171,8 @@ public enum AIProvider {
      * @see OpenAITextHandler
      * @see OpenAIImageHandler
      * @see DefaultAIAudioHandler
-     * @see <a href="https://dev.meta.ai/api-keys/">Manage Meta AI API Keys</a>
-     * @see <a href="https://dev.meta.ai/docs/getting-started/overview/">Available Meta AI Models</a>
+     * @see <a href="https://dev.meta.ai/api-keys">Manage Meta AI API Keys</a>
+     * @see <a href="https://dev.meta.ai/docs/models">Available Meta AI Models</a>
      */
     META(
         "Meta AI", MetaAIService.class, true, "muse-spark-1.2", "https://api.meta.ai/v1", OpenAITextHandler.class,
@@ -188,7 +188,7 @@ public enum AIProvider {
      * @see AzureAITextHandler
      * @see OpenAIImageHandler
      * @see DefaultAIAudioHandler
-     * @see <a href="https://portal.azure.com/">Manage Azure OpenAI API Keys</a>
+     * @see <a href="https://portal.azure.com">Manage Azure OpenAI API Keys</a>
      * @see <a href="https://ai.azure.com/catalog">Available Azure OpenAI Models</a>
      */
     AZURE(
@@ -206,7 +206,7 @@ public enum AIProvider {
      * @see OpenAIImageHandler
      * @see OpenRouterAIAudioHandler
      * @see OpenRouterAIVideoHandler
-     * @see <a href="https://openrouter.ai/settings/keys/">Manage OpenRouter API Keys</a>
+     * @see <a href="https://openrouter.ai/workspaces/default/keys">Manage OpenRouter API Keys</a>
      * @see <a href="https://openrouter.ai/models">Available OpenRouter Models</a>
      */
     OPENROUTER(
