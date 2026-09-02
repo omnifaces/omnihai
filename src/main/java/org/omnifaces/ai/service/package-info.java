@@ -20,7 +20,7 @@
  * <li>{@link org.omnifaces.ai.service.AnthropicAIService} - Anthropic (Claude models)</li>
  * <li>{@link org.omnifaces.ai.service.GoogleAIService} - Google AI (Gemini models)</li>
  * <li>{@link org.omnifaces.ai.service.XAIService} - xAI (Grok models)</li>
- * <li>{@link org.omnifaces.ai.service.MetaAIService} - Meta AI (Llama models)</li>
+ * <li>{@link org.omnifaces.ai.service.MetaAIService} - Meta AI (Muse models)</li>
  * <li>{@link org.omnifaces.ai.service.MistralAIService} - Mistral AI (Mistral models)</li>
  * <li>{@link org.omnifaces.ai.service.AzureAIService} - Azure OpenAI (multi-provider gateway)</li>
  * <li>{@link org.omnifaces.ai.service.OpenRouterAIService} - OpenRouter (multi-provider gateway)</li>

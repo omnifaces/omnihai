@@ -27,6 +27,7 @@
  * {@link org.omnifaces.ai.modality.GoogleAIAudioHandler} / {@link org.omnifaces.ai.modality.GoogleAIVideoHandler} - Google AI-specific handling</li>
  * <li>{@link org.omnifaces.ai.modality.XAIImageHandler} / {@link org.omnifaces.ai.modality.XAIVideoHandler} - xAI-specific handling</li>
  * <li>{@link org.omnifaces.ai.modality.MistralAITextHandler} - Mistral-specific handling</li>
+ * <li>{@link org.omnifaces.ai.modality.MetaAIAudioHandler} - Meta AI-specific handling</li>
  * <li>{@link org.omnifaces.ai.modality.AzureAITextHandler} - Azure AI-specific handling</li>
  * <li>{@link org.omnifaces.ai.modality.OpenRouterAITextHandler} / {@link org.omnifaces.ai.modality.OpenRouterAIAudioHandler} /
  * {@link org.omnifaces.ai.modality.OpenRouterAIVideoHandler} - OpenRouter-specific handling</li>
