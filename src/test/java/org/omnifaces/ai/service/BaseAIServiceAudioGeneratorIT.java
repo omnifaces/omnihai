@@ -17,6 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 
 import org.junit.jupiter.api.Test;
 import org.omnifaces.ai.mime.MimeType;
@@ -28,6 +29,12 @@ import org.omnifaces.ai.mime.MimeType;
  * transcription.
  */
 abstract class BaseAIServiceAudioGeneratorIT extends AIServiceIT {
+
+    /**
+     * The spellings which the spoken name may come back under. Dayana and Diana are one name, near enough homophones in Spanish that a transcriber picks
+     * between them on identical audio, so the name proves that the audio starts where it should and nothing more.
+     */
+    private static final List<String> SPOKEN_NAME_SPELLINGS = List.of("dayana", "diana");
 
     /**
      * The model which reads the generated audio back. A text to speech model cannot transcribe, so this is a second model next to {@link #getModel()}. Defaults
@@ -55,7 +62,10 @@ abstract class BaseAIServiceAudioGeneratorIT extends AIServiceIT {
         var transcription = createService(getTranscriptionModel()).transcribe(response).toLowerCase();
         log("transcribed as " + transcription);
         assertAll(
-            () -> assertTrue(transcription.contains("dayana"), "the generated audio must contain 'Dayana', case insensitive: " + transcription),
+            () -> assertTrue(
+                SPOKEN_NAME_SPELLINGS.stream().anyMatch(transcription::contains),
+                "the generated audio must open with the name, spelled as any of " + SPOKEN_NAME_SPELLINGS + ", case insensitive: " + transcription
+            ),
             () -> assertTrue(
                 transcription.contains("feliz día del amor"),
                 "the generated audio must contain 'Feliz día del amor', case insensitive: " + transcription
