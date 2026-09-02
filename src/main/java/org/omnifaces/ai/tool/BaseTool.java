@@ -23,7 +23,7 @@ import java.util.Map;
  * A subclass states only what it is that gets called, and answers for whatever that throws by wrapping it in a {@link ToolInvocationException}.
  *
  * @author Bauke Scholtz
- * @since 1.8
+ * @since 1.7.1
  * @see ToolRegistry
  */
 abstract class BaseTool implements Tool {

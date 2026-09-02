@@ -23,7 +23,7 @@ import java.util.Arrays;
  * @param subOffset The offset within the content at which the submagic is expected.
  * @param subMagic The submagic bytes, or {@code null} when the magic alone identifies the type.
  * @author Bauke Scholtz
- * @since 1.8
+ * @since 1.7.1
  */
 final record MagicNumber(int offset, byte[] magic, int subOffset, byte[] subMagic) {
 
