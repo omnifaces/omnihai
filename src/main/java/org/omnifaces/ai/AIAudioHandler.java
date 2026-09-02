@@ -17,6 +17,7 @@ import java.io.Serializable;
 
 import jakarta.json.JsonObject;
 
+import org.omnifaces.ai.exception.AIException;
 import org.omnifaces.ai.exception.AIResponseException;
 import org.omnifaces.ai.modality.DefaultAIAudioHandler;
 import org.omnifaces.ai.model.GenerateAudioOptions;
@@ -46,6 +47,33 @@ public interface AIAudioHandler extends Serializable {
      * @return The system prompt.
      */
     String buildTranscribePrompt();
+
+    /**
+     * Builds the JSON request payload for all transcribe operations of an AI provider which transcribes via a dedicated speech-to-text endpoint rather than via
+     * a chat completion.
+     *
+     * @implNote The default implementation throws UnsupportedOperationException.
+     * @param service The visiting AI service.
+     * @return The JSON request payload.
+     * @since 1.7.1
+     */
+    default JsonObject buildTranscribePayload(AIService service) {
+        throw new UnsupportedOperationException("Please implement buildTranscribePayload(AIService service) for this AI provider");
+    }
+
+    /**
+     * Converts the audio content into the format which the transcribe endpoint of the AI provider accepts. This is invoked by an AI service which transcribes
+     * via a dedicated speech-to-text endpoint; one transcribing via a chat completion attaches the audio content as it is.
+     *
+     * @implNote The default implementation returns the audio content unchanged.
+     * @param audio The audio content to transcribe.
+     * @return The audio content in the format which the transcribe endpoint accepts.
+     * @throws AIException If the audio content cannot be converted into that format.
+     * @since 1.7.1
+     */
+    default byte[] buildTranscribeContent(byte[] audio) {
+        return audio;
+    }
 
     /**
      * Parses transcription text from the API response JSON of a transcribe operation.

@@ -25,6 +25,7 @@ import org.omnifaces.ai.modality.GoogleAIAudioHandler;
 import org.omnifaces.ai.modality.GoogleAIImageHandler;
 import org.omnifaces.ai.modality.GoogleAITextHandler;
 import org.omnifaces.ai.modality.GoogleAIVideoHandler;
+import org.omnifaces.ai.modality.MetaAIAudioHandler;
 import org.omnifaces.ai.modality.MistralAITextHandler;
 import org.omnifaces.ai.modality.OllamaAITextHandler;
 import org.omnifaces.ai.modality.OpenAIAudioHandler;
@@ -163,20 +164,21 @@ public enum AIProvider {
     ),
 
     /**
-     * Meta AI: Muse Spark, accessed via the OpenAI-compatible Meta Model API.
+     * Meta AI: Muse Spark, accessed via the OpenAI-compatible Meta Model API, and Muse Voice Transcribe, accessed via the Meta ASR API.
      * <p>
-     * Defaults currently to model {@code muse-spark-1.2} at endpoint {@code https://api.meta.ai/v1}.
+     * Defaults currently to model {@code muse-spark-1.2} at endpoint {@code https://api.meta.ai/v1}. Transcription needs model
+     * {@code muse-voice-transcribe-1.0}, as Muse Spark takes no audio input.
      *
      * @see MetaAIService
      * @see OpenAITextHandler
      * @see OpenAIImageHandler
-     * @see DefaultAIAudioHandler
+     * @see MetaAIAudioHandler
      * @see <a href="https://dev.meta.ai/api-keys">Manage Meta AI API Keys</a>
      * @see <a href="https://dev.meta.ai/docs/models">Available Meta AI Models</a>
      */
     META(
-        "Meta AI", MetaAIService.class, true, "muse-spark-1.2", "https://api.meta.ai/v1", OpenAITextHandler.class,
-        OpenAIImageHandler.class
+        "Meta AI", MetaAIService.class, true, "muse-spark-1.2", "https://api.meta.ai/v1", OpenAITextHandler.class, OpenAIImageHandler.class,
+        MetaAIAudioHandler.class
     ),
 
     /**

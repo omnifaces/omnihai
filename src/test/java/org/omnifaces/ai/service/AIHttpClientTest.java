@@ -12,6 +12,8 @@
  */
 package org.omnifaces.ai.service;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -19,6 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.omnifaces.ai.AIProvider.META;
 import static org.omnifaces.ai.AIProvider.OPENAI;
 import static org.omnifaces.ai.service.BaseAIService.HTTP_CLIENT;
 
@@ -32,13 +35,20 @@ import java.net.http.HttpHeaders;
 import java.net.http.HttpRequest;
 import java.net.http.HttpRequest.BodyPublishers;
 import java.net.http.HttpResponse;
+import java.nio.ByteBuffer;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Flow;
 
 import org.junit.jupiter.api.Test;
 import org.omnifaces.ai.AIConfig;
 import org.omnifaces.ai.exception.AIHttpException;
+import org.omnifaces.ai.mime.MimeType;
+import org.omnifaces.ai.model.ChatInput.Attachment;
 
 class AIHttpClientTest {
+
+    private static final int BODY_TIMEOUT_SECONDS = 5;
 
     // =================================================================================================================
     // isRetryable - null / non-IOException
@@ -201,6 +211,68 @@ class AIHttpClientTest {
             Redirect.NEVER, BaseAIService.HTTP_CLIENT.client.followRedirects(),
             "the JDK carries the authorization header across hosts when it follows a redirect"
         );
+    }
+
+    // =================================================================================================================
+    // Multipart upload
+    // =================================================================================================================
+
+    @Test
+    void newUploadRequest_namesTheFilePartAsTheAIProviderExpects() {
+        var request = newUploadRequest("audio");
+
+        assertTrue(readBody(request).contains("name=\"audio\"; filename="), "an AI provider expecting another name than the default must get it");
+    }
+
+    @Test
+    void newUploadRequest_byDefaultNamesTheFilePartFile() {
+        var request = newUploadRequest(AIHttpClient.DEFAULT_FILE_PART_NAME);
+
+        assertTrue(readBody(request).contains("name=\"file\"; filename="));
+    }
+
+    @Test
+    void newUploadRequest_carriesTheMetadataAsPartsOfTheirOwn() {
+        var request = newUploadRequest("audio");
+
+        assertTrue(readBody(request).contains("name=\"request\""), "metadata may not end up as a parameter of the file part");
+    }
+
+    private static HttpRequest newUploadRequest(String filePartName) {
+        var service = (BaseAIService) AIConfig.of(META, "test-api-key").createService();
+        var attachment = new Attachment(new byte[] { 'x' }, MimeType.of("audio/wav"), "audio.wav", Map.of("request", "{}"));
+        return HTTP_CLIENT.newUploadRequest(service, "asr/transcribe", attachment, filePartName, "application/json");
+    }
+
+    private static String readBody(HttpRequest request) {
+        var body = new StringBuilder();
+        var completed = new CompletableFuture<String>();
+
+        request.bodyPublisher().orElseThrow().subscribe(new Flow.Subscriber<ByteBuffer>() {
+
+            @Override
+            public void onSubscribe(Flow.Subscription subscription) {
+                subscription.request(Long.MAX_VALUE);
+            }
+
+            @Override
+            public void onNext(ByteBuffer item) {
+                body.append(UTF_8.decode(item));
+            }
+
+            @Override
+            public void onError(Throwable throwable) {
+                completed.completeExceptionally(throwable);
+            }
+
+            @Override
+            public void onComplete() {
+                completed.complete(body.toString());
+            }
+
+        });
+
+        return completed.orTimeout(BODY_TIMEOUT_SECONDS, SECONDS).join();
     }
 
     @SuppressWarnings("unchecked")

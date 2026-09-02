@@ -90,6 +90,8 @@ final class AIHttpClient {
     private static final int MIN_REDIRECT_STATUS_CODE = 300;
     private static final String MULTIPART_FORM_DATA = "multipart/form-data";
 
+    /** The name of the file part of a multipart/form-data request, as expected by nearly every AI provider: {@value} */
+    public static final String DEFAULT_FILE_PART_NAME = "file";
     /** Default max retries: {@value} */
     public static final int MAX_RETRIES = 3;
     /** Initial retry backoff time: {@value}ms (increases exponentially on every retry) */
@@ -240,7 +242,25 @@ final class AIHttpClient {
      * @throws AIResponseException if the response JSON parsing fails
      */
     public CompletableFuture<JsonObject> upload(BaseAIService service, String path, Attachment attachment) throws AIHttpException {
-        return sendWithRetryAsync(service, path, attachment, newUploadRequest(service, path, attachment, APPLICATION_JSON)).thenApply(JsonHelper::parseJson);
+        return upload(service, path, attachment, DEFAULT_FILE_PART_NAME);
+    }
+
+    /**
+     * Sends a multipart/form-data upload request for the specified {@link BaseAIService}, with the file part under the given name. Will retry at most
+     * {@value #MAX_RETRIES} times in case of a connection error with exponentially incremental backoff of {@value #INITIAL_BACKOFF_MS}ms.
+     *
+     * @param service The {@link BaseAIService} to extract URI and headers from.
+     * @param path The API path
+     * @param attachment The file attachment to upload
+     * @param filePartName The name of the file part, for an AI provider which expects another name than {@value #DEFAULT_FILE_PART_NAME}
+     * @return The response body as JSON
+     * @throws AIHttpException if the request fails
+     * @throws AIResponseException if the response JSON parsing fails
+     * @since 1.7.1
+     */
+    public CompletableFuture<JsonObject> upload(BaseAIService service, String path, Attachment attachment, String filePartName) throws AIHttpException {
+        return sendWithRetryAsync(service, path, attachment, newUploadRequest(service, path, attachment, filePartName, APPLICATION_JSON))
+            .thenApply(JsonHelper::parseJson);
     }
 
     /**
@@ -298,8 +318,8 @@ final class AIHttpClient {
         return newRequest(service, path, POST, APPLICATION_JSON, accept, ofString(payload.toString()));
     }
 
-    private HttpRequest newUploadRequest(BaseAIService service, String path, Attachment attachment, String accept) {
-        var multipart = new MultipartBodyPublisher(attachment);
+    HttpRequest newUploadRequest(BaseAIService service, String path, Attachment attachment, String filePartName, String accept) {
+        var multipart = new MultipartBodyPublisher(attachment, filePartName);
         return newRequest(service, path, POST, MULTIPART_FORM_DATA + "; boundary=" + multipart.boundary, accept, multipart.body);
     }
 
@@ -526,7 +546,7 @@ final class AIHttpClient {
         private final BodyPublisher body;
         private final String boundary;
 
-        private MultipartBodyPublisher(Attachment attachment) {
+        private MultipartBodyPublisher(Attachment attachment, String filePartName) {
             this.boundary = multipartBoundaryPrefix + UUID.randomUUID();
 
             try {
@@ -536,7 +556,7 @@ final class AIHttpClient {
                     appendTextPart(textPartBuilder, entry.getKey(), entry.getValue());
                 }
 
-                prependFilePart(textPartBuilder, "file", uploadedFileNamePrefix + attachment.fileName(), attachment.mimeType().value());
+                prependFilePart(textPartBuilder, filePartName, uploadedFileNamePrefix + attachment.fileName(), attachment.mimeType().value());
 
                 this.body = concat(
                     ofString(textPartBuilder.toString(), UTF_8),

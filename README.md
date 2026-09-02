@@ -526,6 +526,8 @@ byte[] tuned = service.generateAudio("Hello!",
         .build());
 ```
 
+Some providers transcribe by attaching the audio to a chat completion. Others have a dedicated endpoint, which needs a model that serves it: `gpt-4o-transcribe` on OpenAI, `muse-voice-transcribe-1.0` on Meta AI, Voxtral on Mistral and Whisper on Hugging Face. The Meta AI one accepts a mono 16-bit PCM WAV at 16 or 24 kHz alone, so OmniHai converts the audio to that format first; audio which the Java Sound API cannot read, such as MP3, is refused before the call.
+
 OpenAI honors the output format and defaults to MP3. Gemini and OpenRouter emit bare PCM which OmniHai prepends a WAV header to, so they answer WAV whichever format was asked for, and a file named `.mp3` would hold a WAV. Use `MimeType.guessMimeType(audio)` to learn what actually came back, as the audio generation IT does.
 
 ### Video Analysis
