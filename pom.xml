@@ -136,6 +136,12 @@
             <scope>test</scope>
         </dependency>
         <dependency>
+            <groupId>org.jboss.weld</groupId>
+            <artifactId>weld-junit5</artifactId>
+            <version>5.0.3.Final</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
             <groupId>io.smallrye.config</groupId>
             <artifactId>smallrye-config</artifactId>
             <version>3.18.1</version>
@@ -274,6 +280,7 @@
                         <configuration>
                             <excludes>
                                 <exclude>**/*VanillaTest.java</exclude>
+                                <exclude>**/*CDIContainerTest.java</exclude>
                             </excludes>
                         </configuration>
                     </execution>
@@ -290,6 +297,7 @@
                             </includes>
                             <excludes>
                                 <exclude>**/*CDIOnlyVanillaTest.java</exclude>
+                                <exclude>**/*CDINoELVanillaTest.java</exclude>
                                 <exclude>**/*NoJsonVanillaTest.java</exclude>
                             </excludes>
                             <classpathDependencyExcludes>
@@ -319,6 +327,37 @@
                                 <classpathDependencyExclude>org.eclipse.microprofile.config:microprofile-config-api</classpathDependencyExclude>
                                 <classpathDependencyExclude>io.smallrye.config:smallrye-config</classpathDependencyExclude>
                             </classpathDependencyExcludes>
+                        </configuration>
+                    </execution>
+
+                    <!-- CDI is on the runtime classpath here, but the EL binding it offers an expression is not, which is the runtime a CDI container
+                         without EL support offers. -->
+                    <execution>
+                        <id>cdi-no-el-test</id>
+                        <goals>
+                            <goal>test</goal>
+                        </goals>
+                        <configuration>
+                            <includes>
+                                <include>**/*CDINoELVanillaTest.java</include>
+                            </includes>
+                            <classpathDependencyExcludes>
+                                <classpathDependencyExclude>jakarta.enterprise:jakarta.enterprise.cdi-el-api</classpathDependencyExclude>
+                            </classpathDependencyExcludes>
+                        </configuration>
+                    </execution>
+
+                    <!-- A CDI container is booted here, which is what makes the annotations testable as annotations rather than as producer method arguments.
+                         It runs in a fork of its own because ExecutorServiceHelper picks its executor once per JVM, on whether a container was up by then. -->
+                    <execution>
+                        <id>cdi-container-test</id>
+                        <goals>
+                            <goal>test</goal>
+                        </goals>
+                        <configuration>
+                            <includes>
+                                <include>**/*CDIContainerTest.java</include>
+                            </includes>
                         </configuration>
                     </execution>
 
