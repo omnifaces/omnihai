@@ -341,6 +341,33 @@
                 </executions>
             </plugin>
 
+            <!-- Configure the code coverage report which the Sonar analysis reads. -->
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>0.8.15</version>
+                <configuration>
+                    <skip>${skipUTs}</skip>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>prepare-agent</id>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                    </execution>
+
+                    <!-- The Sonar analysis runs up to package, so the report has to be there before verify. -->
+                    <execution>
+                        <id>report</id>
+                        <phase>test</phase>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
             <!-- Configure the integration tests (*IT.java). -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
