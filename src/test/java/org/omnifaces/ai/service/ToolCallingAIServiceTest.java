@@ -24,7 +24,12 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.omnifaces.ai.helper.JsonHelper.parseJson;
 
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletionException;
@@ -32,13 +37,17 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
+import javax.imageio.ImageIO;
+
 import jakarta.json.JsonObject;
 import jakarta.json.JsonString;
 
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.omnifaces.ai.AIService;
+import org.omnifaces.ai.DeliberateFailures;
 import org.omnifaces.ai.exception.AIToolIterationException;
 import org.omnifaces.ai.model.ChatInput;
 import org.omnifaces.ai.model.ChatInput.Message.Role;
@@ -51,6 +60,44 @@ import org.omnifaces.ai.tool.ToolRegistry;
 
 class ToolCallingAIServiceTest {
 
+    /** An image, which never travels through the history and therefore always travels along with the turn itself. */
+    private static final byte[] PNG = newPng();
+
+    private static byte[] newPng() {
+        try {
+            var image = new BufferedImage(1, 1, BufferedImage.TYPE_INT_RGB);
+            var bytes = new ByteArrayOutputStream();
+            ImageIO.write(image, "PNG", bytes);
+            return bytes.toByteArray();
+        }
+        catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    /** The message of the failure which the failing tool below raises on purpose. */
+    private static final String DELIBERATE_FAILURE = "boom";
+
+    /**
+     * The deliberately failing tool provokes a warning per call, which is the behavior under test rather than a problem to look into. The filter is installed
+     * once and never changed, so a test running beside this one keeps every warning of its own: raising and lowering the log level around a test would silence
+     * whatever else happens to be running at that moment.
+     */
+    @BeforeAll
+    static void dropTheWarningsOfTheDeliberateFailure() {
+        DeliberateFailures.drop(ToolCallingAIService.class.getPackageName(), record -> isDeliberateFailure(record.getThrown()));
+    }
+
+    private static boolean isDeliberateFailure(Throwable thrown) {
+        for (var cause = thrown; cause != null && cause != cause.getCause(); cause = cause.getCause()) {
+            if (cause instanceof IllegalStateException && DELIBERATE_FAILURE.equals(cause.getMessage())) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public static class OrderTools {
 
         @AITool("Looks up a single order by id")
@@ -60,7 +107,7 @@ class ToolCallingAIServiceTest {
 
         @AITool("Always fails")
         public String explode() {
-            throw new IllegalStateException("boom");
+            throw new IllegalStateException(DELIBERATE_FAILURE);
         }
 
         @AITool("Always fails hard")
@@ -108,7 +155,9 @@ class ToolCallingAIServiceTest {
         return "{\"tool\":\"ANSWER\",\"arguments\":[],\"answer\":\"" + answer + "\"}";
     }
 
-    // Loop ------------------------------------------------------------------------------------------------------------
+    // =================================================================================================================
+    // Loop
+    // =================================================================================================================
 
     @Test
     void chat_whenAiAnswersImmediately_returnsTheAnswer() {
@@ -335,6 +384,18 @@ class ToolCallingAIServiceTest {
         assertEquals("Where is order 42?", typedTurn.getMessage());
     }
 
+    /**
+     * The question counts as remembered only where the history holds it as asked, so a history of the AI's own replies restates it.
+     */
+    @Test
+    void chat_withType_andMemory_restatesTheQuestionWhenTheHistoryHoldsSomethingElse() {
+        var options = ChatOptions.newBuilder().withMemory(50).build();
+        options.recordMessage(Role.ASSISTANT, "Where is order 42?");
+        options.recordMessage(Role.USER, "Where is order 43?");
+
+        assertEquals("Where is order 42?", typedTurnOf(options).getMessage());
+    }
+
     private ChatInput typedTurnOf(ChatOptions options) {
         var typedTurns = new ArrayList<ChatInput>();
         var wrapped = mock(AIService.class);
@@ -371,7 +432,9 @@ class ToolCallingAIServiceTest {
         assertEquals("{\"answer\":\"passed through\"}", agent.chat("Anything", options));
     }
 
-    // Observer --------------------------------------------------------------------------------------------------------
+    // =================================================================================================================
+    // Observer
+    // =================================================================================================================
 
     @Test
     void chat_notifiesObserverOfEveryToolCall() {
@@ -389,7 +452,9 @@ class ToolCallingAIServiceTest {
         assertNotNull(invocations.get(1).failure());
     }
 
-    // Programmatically declared tools ----------------------------------------------------------------------------------
+    // =================================================================================================================
+    // Programmatically declared tools
+    // =================================================================================================================
 
     /**
      * The builder is the programmatic counterpart of the annotation, so a lambda declared tool behaves the same as an annotated method.
@@ -744,6 +809,164 @@ class ToolCallingAIServiceTest {
 
         assertThrows(IllegalArgumentException.class, () -> new ToolCallingAIService(mock(AIService.class), registry, 0, null));
         assertThrows(IllegalArgumentException.class, () -> new ToolCallingAIService(mock(AIService.class), registry, -1, null));
+    }
+
+    // =================================================================================================================
+    // What the decorator states about itself
+    // =================================================================================================================
+
+    @Test
+    void getMaxToolCalls_isTheCapTheLoopStopsAt() {
+        assertEquals(ToolCallingAIService.DEFAULT_MAX_TOOL_CALLS, new ToolCallingAIService(scripted(), ToolRegistry.of(new OrderTools())).getMaxToolCalls());
+        assertEquals(7, new ToolCallingAIService(scripted(), ToolRegistry.of(new OrderTools()), 7, null).getMaxToolCalls());
+    }
+
+    @Test
+    void toString_namesTheToolsAndTheServiceBehindThem() {
+        var agent = withTools(scripted());
+
+        assertTrue(agent.toString().contains("OrderTools_findOrder"), agent.toString());
+    }
+
+    // =================================================================================================================
+    // Overloads which must run the loop rather than pass straight through
+    // =================================================================================================================
+
+    @Test
+    void chatAsync_viaThePlainTextOverloads_runsTheLoop() {
+        var agent = withTools(scripted(toolCall("OrderTools_findOrder", "orderId", "42"), answer("Found it.")));
+
+        assertEquals("Found it.", agent.chatAsync("Where is order 42?", ChatOptions.DEFAULT).join());
+    }
+
+    @Test
+    void chatAsync_withType_viaThePlainTextOverload_runsTheLoop() {
+        var wrapped = mock(AIService.class);
+        var remaining = new ArrayList<>(List.of(toolCall("OrderTools_findOrder", "orderId", "42"), answer("done")));
+        when(wrapped.chatAsync(any(ChatInput.class), any(ChatOptions.class))).thenAnswer(invocation -> completedFuture(remaining.remove(0)));
+        when(wrapped.chatAsync(any(ChatInput.class), any(ChatOptions.class), eq(Answer.class))).thenReturn(completedFuture(new Answer("ZZTOP-9")));
+
+        var agent = new ToolCallingAIService(wrapped, ToolRegistry.of(new OrderTools()));
+
+        assertEquals(new Answer("ZZTOP-9"), agent.chatAsync("Which carrier shipped order 42?", ChatOptions.DEFAULT, Answer.class).join());
+    }
+
+    /**
+     * A caller which asks for a shape of its own leaves no room for a tool call, so the question goes straight to the wrapped service.
+     */
+    @Test
+    void chatAsync_whenCallerSuppliedItsOwnSchema_passesStraightThrough() {
+        var agent = withTools(scripted("{\"status\":\"shipped\"}"));
+        var options = ChatOptions.DEFAULT.withJsonSchema(parseJson("{\"type\":\"object\"}"));
+
+        assertEquals("{\"status\":\"shipped\"}", agent.chatAsync(ChatInput.newBuilder().message("Where is order 42?").build(), options).join());
+        assertEquals(1, requests.size(), "the loop offers no tool of its own on a call which carries a schema");
+    }
+
+    /**
+     * A question asked without a system prompt is answered with the tool manifest as the whole prompt rather than as an addition to one.
+     */
+    @Test
+    void chat_withoutASystemPrompt_statesTheToolManifestAsTheWholePrompt() {
+        var agent = withTools(scripted(answer("Found it.")));
+
+        assertEquals("Found it.", agent.chat(ChatInput.newBuilder().message("Where is order 42?").build(), ChatOptions.DEFAULT));
+    }
+
+    // =================================================================================================================
+    // Argument shapes which state nothing usable
+    // =================================================================================================================
+
+    /**
+     * A positional pair which carries no value states nothing, so the argument is left out and the tool says what it is missing.
+     */
+    @Test
+    void chat_positionalPairWithoutAValue_feedsTheFailureBack() {
+        var agent = withTools(scripted("{\"tool\":\"OrderTools_findOrder\",\"arguments\":[[\"orderId\"]],\"answer\":\"\"}", answer("Cannot find it.")));
+
+        assertEquals("Cannot find it.", agent.chat("Where is order 42?"));
+        assertTrue(requests.get(1).getMessage().contains("Correct the arguments"), requests.get(1).getMessage());
+    }
+
+    /**
+     * An argument stated as {@code null} reaches the tool as the empty string rather than as the text {@code null}.
+     */
+    @Test
+    void chat_argumentStatedAsNull_reachesTheToolAsEmpty() {
+        var agent = withTools(scripted("{\"tool\":\"OrderTools_findOrder\",\"arguments\":[{\"orderId\":null}],\"answer\":\"\"}", answer("Cannot find it.")));
+
+        assertEquals("Cannot find it.", agent.chat("Where is order 42?"));
+        assertTrue(requests.get(1).getMessage().contains("OrderTools_findOrder(orderId=)"), requests.get(1).getMessage());
+    }
+
+    /**
+     * A tool parameter called {@code name} stated on its own is a keyed argument rather than half a pair, as a pair states a value alongside it.
+     */
+    @Test
+    void chat_argumentKeyedByAParameterCalledName_reachesTheTool() {
+        var tools = ToolRegistry.newBuilder()
+            .add("FIND_PERSON", "Looks up a person by name", (String name) -> "person " + name, ToolParam.of(String.class, "name", "The person name"))
+            .build();
+        var wrapped = scripted("{\"tool\":\"FIND_PERSON\",\"arguments\":[{\"name\":\"Wubbo\"}],\"answer\":\"\"}", answer("Found."));
+
+        assertEquals("Found.", new ToolCallingAIService(wrapped, tools).chat("Who is Wubbo?"));
+        assertTrue(requests.get(1).getMessage().contains("returned: person Wubbo"), requests.get(1).getMessage());
+    }
+
+    /**
+     * A caller which states a system prompt of its own keeps it, with the tool manifest stated beneath it.
+     */
+    @Test
+    void chat_withASystemPrompt_statesTheToolManifestBeneathIt() {
+        var wrapped = mock(AIService.class);
+        var prompts = new ArrayList<String>();
+
+        when(wrapped.chat(any(ChatInput.class), any(ChatOptions.class))).thenAnswer(invocation -> {
+            prompts.add(invocation.<ChatOptions>getArgument(1).getSystemPrompt());
+            return answer("Found it.");
+        });
+
+        new ToolCallingAIService(wrapped, ToolRegistry.of(new OrderTools()))
+            .chat(ChatInput.newBuilder().message("Where is order 42?").build(), ChatOptions.DEFAULT.withSystemPrompt("You are terse."));
+
+        assertTrue(prompts.get(0).startsWith("You are terse."), prompts.get(0));
+        assertTrue(prompts.get(0).contains("OrderTools_findOrder"), prompts.get(0));
+    }
+
+    /**
+     * An argument which is neither a pair nor a keyed object states nothing usable, so it is left out and the tool says what it is missing.
+     */
+    @Test
+    void chat_argumentWhichIsNeitherAPairNorAnObject_feedsTheFailureBack() {
+        var agent = withTools(scripted("{\"tool\":\"OrderTools_findOrder\",\"arguments\":[\"orderId\"],\"answer\":\"\"}", answer("Cannot find it.")));
+
+        assertEquals("Cannot find it.", agent.chat("Where is order 42?"));
+        assertTrue(requests.get(1).getMessage().contains("Correct the arguments"), requests.get(1).getMessage());
+    }
+
+    /**
+     * The asynchronous typed path spends the same turns as the synchronous one: with memory it records the answer before the type is asked for, and the
+     * attachment travels to the call which produces the type.
+     */
+    @Test
+    void chatAsync_withTypeAndMemory_spendsOneTurnOnTheAnswerAndCarriesTheAttachment() {
+        var typedTurns = new ArrayList<ChatInput>();
+        var input = ChatInput.newBuilder().message("What does this show?").attach("payload".getBytes()).attach(PNG).build();
+        var wrapped = mock(AIService.class);
+        when(wrapped.chatAsync(any(ChatInput.class), any(ChatOptions.class))).thenAnswer(invocation -> {
+            requests.add(invocation.getArgument(0));
+            return completedFuture(toolCall("OrderTools_findOrder", "orderId", "42"));
+        });
+        when(wrapped.chatAsync(any(ChatInput.class), any(ChatOptions.class), eq(Answer.class))).thenAnswer(invocation -> {
+            typedTurns.add(invocation.getArgument(0));
+            return completedFuture(new Answer("ZZTOP-9"));
+        });
+
+        var agent = new ToolCallingAIService(wrapped, ToolRegistry.of(new OrderTools()), 1, null);
+
+        assertEquals(new Answer("ZZTOP-9"), agent.chatAsync(input, ChatOptions.newBuilder().withMemory(50).build(), Answer.class).join());
+        assertEquals(2, requests.size(), "one tool call and one turn spent on the answer");
+        assertEquals(2, typedTurns.get(0).getFiles().size() + typedTurns.get(0).getImages().size());
     }
 
 }

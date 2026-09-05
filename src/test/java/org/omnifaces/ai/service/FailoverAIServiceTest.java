@@ -214,4 +214,105 @@ class FailoverAIServiceTest {
         return false;
     }
 
+    // =================================================================================================================
+    // Failures which end the chain
+    // =================================================================================================================
+
+    /**
+     * A stream which already replayed its tokens is beyond saving, so the next service is not tried even when the predicate would allow it.
+     */
+    @Test
+    void syncUnrecoverableFailure_doesNotFailOver() {
+        var primary = mock(AIService.class);
+        var secondary = mock(AIService.class);
+        when(primary.chat("hi")).thenThrow(new AIStreamAbortedException("aborted", unavailable()));
+
+        var service = new FailoverAIService(primary, secondary);
+
+        assertThrows(AIStreamAbortedException.class, () -> service.chat("hi"));
+        verifyNoInteractions(secondary);
+    }
+
+    @Test
+    void asyncUnrecoverableFailure_doesNotFailOver() {
+        var primary = mock(AIService.class);
+        var secondary = mock(AIService.class);
+        when(primary.chatAsync(any(ChatInput.class), any(ChatOptions.class)))
+            .thenReturn(CompletableFuture.failedFuture(new AIStreamAbortedException("aborted", unavailable())));
+
+        var future = new FailoverAIService(primary, secondary).chatAsync(INPUT, OPTIONS);
+
+        assertTrue(chainContains(assertThrows(ExecutionException.class, future::get), AIStreamAbortedException.class));
+        verifyNoInteractions(secondary);
+    }
+
+    /**
+     * A service can fail before it returns a future at all, e.g. when building the payload uploads an attachment and that upload fails. That still counts as a
+     * failure of that service, so the next one is tried.
+     */
+    @Test
+    void asyncFailsOverWhenAttemptFailsBeforeReturningAFuture() throws Exception {
+        var primary = mock(AIService.class);
+        var secondary = mock(AIService.class);
+        when(primary.chatAsync(any(ChatInput.class), any(ChatOptions.class))).thenThrow(unavailable());
+        when(secondary.chatAsync(any(ChatInput.class), any(ChatOptions.class))).thenReturn(CompletableFuture.completedFuture("ok"));
+
+        assertEquals("ok", new FailoverAIService(primary, secondary).chatAsync(INPUT, OPTIONS).get());
+    }
+
+    // =================================================================================================================
+    // Builder
+    // =================================================================================================================
+
+    @Test
+    void failoverOn_ownPredicate_decidesWhichFailureMovesOn() {
+        var primary = mock(AIService.class);
+        var secondary = mock(AIService.class);
+        when(primary.chat("hi")).thenThrow(new AIBadRequestException(ENDPOINT, "bad"));
+        when(secondary.chat("hi")).thenReturn("ok");
+
+        var service = FailoverAIService.newBuilder(primary).fallback(secondary).failoverOn(AIBadRequestException.class::isInstance).build();
+
+        assertEquals("ok", service.chat("hi"));
+    }
+
+    @Test
+    void failoverOn_null_isRejected() {
+        var builder = FailoverAIService.newBuilder(mock(AIService.class));
+
+        assertThrows(NullPointerException.class, () -> builder.failoverOn(null));
+    }
+
+    /**
+     * A failure the predicate does not accept is one the next service would fail on too, so it is answered as it is.
+     */
+    @Test
+    void asyncDoesNotFailOverOnNonEligibleError() {
+        var primary = mock(AIService.class);
+        var secondary = mock(AIService.class);
+        when(primary.chatAsync(any(ChatInput.class), any(ChatOptions.class)))
+            .thenReturn(CompletableFuture.failedFuture(new AIBadRequestException(ENDPOINT, "bad")));
+
+        var future = new FailoverAIService(primary, secondary).chatAsync(INPUT, OPTIONS);
+
+        assertTrue(chainContains(assertThrows(ExecutionException.class, future::get), AIBadRequestException.class));
+        verifyNoInteractions(secondary);
+    }
+
+    /**
+     * The last service of the chain has nobody to fail over to, so its failure is what the caller is answered with.
+     */
+    @Test
+    void asyncPropagatesLastFailureWhenChainExhausted() {
+        var primary = mock(AIService.class);
+        var secondary = mock(AIService.class);
+        when(primary.chatAsync(any(ChatInput.class), any(ChatOptions.class))).thenReturn(CompletableFuture.failedFuture(unavailable()));
+        when(secondary.chatAsync(any(ChatInput.class), any(ChatOptions.class))).thenReturn(CompletableFuture.failedFuture(unavailable()));
+
+        var future = new FailoverAIService(primary, secondary).chatAsync(INPUT, OPTIONS);
+
+        assertTrue(chainContains(assertThrows(ExecutionException.class, future::get), AIServiceUnavailableException.class));
+        verify(secondary).chatAsync(any(ChatInput.class), any(ChatOptions.class));
+    }
+
 }

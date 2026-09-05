@@ -17,19 +17,31 @@ import static java.util.Arrays.stream;
 import static java.util.function.Predicate.not;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toSet;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Proxy;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 import org.junit.jupiter.api.Test;
 import org.omnifaces.ai.AIService;
+import org.omnifaces.ai.exception.AIServiceUnavailableException;
+import org.omnifaces.ai.exception.AIStreamAbortedException;
+import org.omnifaces.ai.model.ChatInput;
+import org.omnifaces.ai.model.ChatOptions;
 
 /**
  * Validates that {@link InterceptingAIServiceWrapper} funnels every work-performing operation through its interception hooks:
@@ -180,6 +192,61 @@ class InterceptingAIServiceWrapperTest {
             return CompletableFuture.completedFuture(null); // The streaming overloads compose onto the returned future.
         }
         return null;
+    }
+
+    // =================================================================================================================
+    // Reading the actual failure out of an asynchronous one
+    // =================================================================================================================
+
+    /**
+     * An asynchronous wrapper carries the actual failure, so a decision is made on that failure rather than on the wrapper.
+     */
+    @Test
+    void unwrap_completionException_answersItsCause() {
+        var cause = new IllegalStateException("the actual failure");
+
+        assertSame(cause, InterceptingAIServiceWrapper.unwrap(new CompletionException(cause)));
+    }
+
+    /**
+     * A wrapper without a cause carries nothing to unwrap to, so it is the failure itself.
+     */
+    @Test
+    void unwrap_completionExceptionWithoutCause_answersItself() {
+        var throwable = new CompletionException((Throwable) null);
+
+        assertSame(throwable, InterceptingAIServiceWrapper.unwrap(throwable));
+    }
+
+    @Test
+    void unwrap_plainFailure_answersItself() {
+        var throwable = new IllegalStateException("the actual failure");
+
+        assertSame(throwable, InterceptingAIServiceWrapper.unwrap(throwable));
+    }
+
+    // =================================================================================================================
+    // Streams which already emitted tokens
+    // =================================================================================================================
+
+    /**
+     * A stream which was already given up on stays given up on, so a decorator does not wrap the same abort a second time.
+     */
+    @Test
+    void stream_alreadyAbortedFailure_isPassedOnAsItIs() {
+        var wrapped = mock(AIService.class);
+        var aborted = new AIStreamAbortedException("aborted", new AIServiceUnavailableException(URI.create("https://example.invalid"), "unavailable"));
+
+        when(wrapped.chatStream(any(ChatInput.class), any(ChatOptions.class), any())).thenAnswer(invocation -> {
+            invocation.<Consumer<String>>getArgument(2).accept("partial");
+            return CompletableFuture.failedFuture(aborted);
+        });
+
+        var future = new FailoverAIService(wrapped, mock(AIService.class))
+            .chatStream(ChatInput.newBuilder().message("hi").build(), ChatOptions.DEFAULT, token -> {
+            });
+
+        assertSame(aborted, assertThrows(CompletionException.class, future::join).getCause());
     }
 
 }

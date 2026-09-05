@@ -166,4 +166,16 @@ class ModelModalitiesRegistryTest {
         assertTrue(ModelModalitiesRegistry.findModelModalities(List.of(listing), "nope/nope").isEmpty());
     }
 
+    /**
+     * A model which publishes one direction alone keeps what it published, rather than being taken to publish nothing.
+     */
+    @Test
+    void parseModels_architectureStatingOneDirectionAlone_keepsWhatItStates() {
+        var models = ModelModalitiesRegistry.parseModels(parseJson("""
+            {"data": [{"id": "acme/painter", "architecture": {"output_modalities": ["text", "image"]}}]}
+            """));
+
+        assertEquals(Set.of(IMAGE_GENERATION), models.get("acme/painter"));
+    }
+
 }
