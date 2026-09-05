@@ -288,6 +288,10 @@
                             <includes>
                                 <include>**/*VanillaTest.java</include>
                             </includes>
+                            <excludes>
+                                <exclude>**/*CDIOnlyVanillaTest.java</exclude>
+                                <exclude>**/*NoJsonVanillaTest.java</exclude>
+                            </excludes>
                             <classpathDependencyExcludes>
                                 <classpathDependencyExclude>jakarta.enterprise:jakarta.enterprise.cdi-api</classpathDependencyExclude>
                                 <classpathDependencyExclude>jakarta.enterprise:jakarta.enterprise.cdi-el-api</classpathDependencyExclude>
@@ -295,6 +299,42 @@
                                 <classpathDependencyExclude>org.glassfish.expressly:expressly</classpathDependencyExclude>
                                 <classpathDependencyExclude>org.eclipse.microprofile.config:microprofile-config-api</classpathDependencyExclude>
                                 <classpathDependencyExclude>io.smallrye.config:smallrye-config</classpathDependencyExclude>
+                            </classpathDependencyExcludes>
+                        </configuration>
+                    </execution>
+
+                    <!-- CDI is on the runtime classpath here, but the EL and MicroProfile Config implementations are not, which is the runtime a bare CDI
+                         container offers. -->
+                    <execution>
+                        <id>cdi-only-test</id>
+                        <goals>
+                            <goal>test</goal>
+                        </goals>
+                        <configuration>
+                            <includes>
+                                <include>**/*CDIOnlyVanillaTest.java</include>
+                            </includes>
+                            <classpathDependencyExcludes>
+                                <classpathDependencyExclude>org.glassfish.expressly:expressly</classpathDependencyExclude>
+                                <classpathDependencyExclude>org.eclipse.microprofile.config:microprofile-config-api</classpathDependencyExclude>
+                                <classpathDependencyExclude>io.smallrye.config:smallrye-config</classpathDependencyExclude>
+                            </classpathDependencyExcludes>
+                        </configuration>
+                    </execution>
+
+                    <!-- JSON-P is off the runtime classpath here, which is the one dependency the produced services cannot do without. -->
+                    <execution>
+                        <id>no-json-test</id>
+                        <goals>
+                            <goal>test</goal>
+                        </goals>
+                        <configuration>
+                            <includes>
+                                <include>**/*NoJsonVanillaTest.java</include>
+                            </includes>
+                            <classpathDependencyExcludes>
+                                <classpathDependencyExclude>jakarta.json:jakarta.json-api</classpathDependencyExclude>
+                                <classpathDependencyExclude>org.eclipse.parsson:parsson</classpathDependencyExclude>
                             </classpathDependencyExcludes>
                         </configuration>
                     </execution>

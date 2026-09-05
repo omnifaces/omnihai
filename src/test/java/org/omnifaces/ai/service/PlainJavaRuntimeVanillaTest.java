@@ -16,6 +16,7 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -57,6 +58,13 @@ class PlainJavaRuntimeVanillaTest {
     void runAsync_withoutCDI_fallsBackToItsOwnPoolAndRunsTheTask() throws InterruptedException {
         var latch = new CountDownLatch(1);
         ExecutorServiceHelper.runAsync(latch::countDown);
+        assertTrue(latch.await(5, TimeUnit.SECONDS));
+    }
+
+    @Test
+    void delayedExecutor_withoutCDI_fallsBackToItsOwnPoolAndRunsTheTask() throws InterruptedException {
+        var latch = new CountDownLatch(1);
+        ExecutorServiceHelper.delayedExecutor(Duration.ofMillis(1)).execute(latch::countDown);
         assertTrue(latch.await(5, TimeUnit.SECONDS));
     }
 

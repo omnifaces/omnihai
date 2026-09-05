@@ -19,6 +19,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -60,6 +61,9 @@ class AIServiceProducerTest {
 
     @AI(provider = AIProvider.OPENAI, apiKey = "test-key", maxAttempts = -1)
     private AIService withNegativeAttempts;
+
+    @AI(provider = AIProvider.OPENAI, apiKey = "#{config.apiKey}")
+    private AIService withELExpression;
 
     /**
      * The default must leave the produced service undecorated, so that existing injection points keep their exact behavior.
@@ -198,6 +202,16 @@ class AIServiceProducerTest {
         var producer = new AIServiceProducer();
 
         assertThrows(IllegalArgumentException.class, () -> produce(producer, "withTools", Dependent.class));
+    }
+
+    /**
+     * EL resolution reads the expression through the bean manager, so a runtime whose bean manager is not EL aware has to say which dependency is missing
+     * rather than fail somewhere further down.
+     */
+    @Test
+    void produce_elExpressionWithBeanManagerWhichIsNotELAware_throws() {
+        var exception = assertThrows(UnsupportedOperationException.class, () -> produce("withELExpression"));
+        assertTrue(exception.getMessage().contains("jakarta.enterprise.cdi-el-api"));
     }
 
     private static AIService produce(String fieldName) {
