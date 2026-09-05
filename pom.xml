@@ -260,7 +260,7 @@
                 </executions>
             </plugin>
 
-            <!-- Configure the unit tests (*Test.java). -->
+            <!-- Configure the unit tests (*Test.java) and the plain Java SE unit tests (*VanillaTest.java). -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
@@ -268,6 +268,37 @@
                 <configuration>
                     <skipTests>${skipUTs}</skipTests>
                 </configuration>
+                <executions>
+                    <execution>
+                        <id>default-test</id>
+                        <configuration>
+                            <excludes>
+                                <exclude>**/*VanillaTest.java</exclude>
+                            </excludes>
+                        </configuration>
+                    </execution>
+
+                    <!-- The optional APIs are off the runtime classpath here, which is what makes the guards around them testable as guards. -->
+                    <execution>
+                        <id>vanilla-test</id>
+                        <goals>
+                            <goal>test</goal>
+                        </goals>
+                        <configuration>
+                            <includes>
+                                <include>**/*VanillaTest.java</include>
+                            </includes>
+                            <classpathDependencyExcludes>
+                                <classpathDependencyExclude>jakarta.enterprise:jakarta.enterprise.cdi-api</classpathDependencyExclude>
+                                <classpathDependencyExclude>jakarta.enterprise:jakarta.enterprise.cdi-el-api</classpathDependencyExclude>
+                                <classpathDependencyExclude>jakarta.el:jakarta.el-api</classpathDependencyExclude>
+                                <classpathDependencyExclude>org.glassfish.expressly:expressly</classpathDependencyExclude>
+                                <classpathDependencyExclude>org.eclipse.microprofile.config:microprofile-config-api</classpathDependencyExclude>
+                                <classpathDependencyExclude>io.smallrye.config:smallrye-config</classpathDependencyExclude>
+                            </classpathDependencyExcludes>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
 
             <!-- Configure the integration tests (*IT.java). -->
