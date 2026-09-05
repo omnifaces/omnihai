@@ -63,7 +63,7 @@ public class GenerateAudioOptions implements Serializable {
      * {@link AIAudioHandler#buildGenerateAudioPayload(org.omnifaces.ai.AIService, String, GenerateAudioOptions)} choose its own default. The available values
      * depend on the AI provider used.
      *
-     * @return The voice name string.
+     * @return The voice name string; never {@code null}.
      */
     public String getVoice() {
         return voice;
@@ -82,7 +82,7 @@ public class GenerateAudioOptions implements Serializable {
      * Gets the output format of the generated audio. Defaults to {@value #DEFAULT_OUTPUT_FORMAT}. The available values depend on the AI provider used, or it
      * may even be ignored.
      *
-     * @return The output format string.
+     * @return The output format string; never {@code null}.
      */
     public String getOutputFormat() {
         return outputFormat;

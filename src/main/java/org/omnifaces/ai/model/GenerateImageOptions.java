@@ -76,7 +76,7 @@ public class GenerateImageOptions implements Serializable {
      * <li>{@code "1024x1792"} - Portrait image
      * </ul>
      *
-     * @return The image size string.
+     * @return The image size string; never {@code null}.
      */
     public String getSize() {
         return size;
@@ -92,7 +92,7 @@ public class GenerateImageOptions implements Serializable {
      * <li>{@code "2:3"}, {@code "3:4"}, {@code "4:5"}, {@code 9:16} - Portrait image
      * </ul>
      *
-     * @return The image aspect ratio string.
+     * @return The image aspect ratio string; never {@code null}.
      */
     public String getAspectRatio() {
         return aspectRatio;
@@ -109,7 +109,7 @@ public class GenerateImageOptions implements Serializable {
      * <li>{@code "low"}, {@code "medium"}, {@code "high"} - Quality levels
      * </ul>
      *
-     * @return The image quality string.
+     * @return The image quality string; never {@code null}.
      */
     public String getQuality() {
         return quality;
@@ -125,7 +125,7 @@ public class GenerateImageOptions implements Serializable {
      * <li>{@code "webp"} - WebP format
      * </ul>
      *
-     * @return The output format string.
+     * @return The output format string; never {@code null}.
      */
     public String getOutputFormat() {
         return outputFormat;
