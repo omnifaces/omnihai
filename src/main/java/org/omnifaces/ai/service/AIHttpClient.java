@@ -302,7 +302,7 @@ final class AIHttpClient {
         });
     }
 
-    private static int logRequest(BaseAIService service, String path, Object payload) {
+    static int logRequest(BaseAIService service, String path, Object payload) {
         if (logger.isLoggable(FINER)) {
             int requestId = requestCounter.incrementAndGet();
             var uriWithoutQueryString = service.resolveURI(path).toString().split("\\?", 2)[0]; // Because query string may contain API key (e.g. Google AI).
@@ -354,7 +354,7 @@ final class AIHttpClient {
         );
     }
 
-    private static <R> CompletableFuture<R> handleResponse(
+    static <R> CompletableFuture<R> handleResponse(
         int requestId, HttpRequest request, HttpResponse<InputStream> response, Function<HttpResponse<InputStream>, CompletableFuture<R>> successHandler
     )
     {
@@ -374,7 +374,11 @@ final class AIHttpClient {
         return future;
     }
 
-    private static void processEvents(int requestId, HttpResponse<InputStream> response, CompletableFuture<Void> future, Predicate<Event> eventProcessor) {
+    /**
+     * Reads the event stream of the given response line by line and hands each event to the given processor, completing the given future once the stream ends
+     * or the processor answers that it has seen enough.
+     */
+    static void processEvents(int requestId, HttpResponse<InputStream> response, CompletableFuture<Void> future, Predicate<Event> eventProcessor) {
         try (var reader = new BufferedReader(new InputStreamReader(decompressIfNeeded(response), UTF_8))) {
             var dataBuffer = new StringBuilder();
             String line;
@@ -493,7 +497,7 @@ final class AIHttpClient {
         return action.get().exceptionallyCompose(throwable -> handleFailureWithRetry(action, attempt, throwable));
     }
 
-    private static <R> CompletableFuture<R> handleFailureWithRetry(Supplier<CompletableFuture<R>> action, int attempt, Throwable throwable) {
+    static <R> CompletableFuture<R> handleFailureWithRetry(Supplier<CompletableFuture<R>> action, int attempt, Throwable throwable) {
         var cause = throwable instanceof CompletionException ce ? ce.getCause() : throwable;
 
         if (cause instanceof AIException) {

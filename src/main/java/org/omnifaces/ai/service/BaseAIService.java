@@ -16,7 +16,6 @@ import static java.util.Collections.emptyMap;
 import static java.util.Comparator.comparingDouble;
 import static java.util.Objects.requireNonNull;
 import static java.util.Optional.ofNullable;
-import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.function.Predicate.not;
 import static java.util.logging.Level.WARNING;
@@ -333,10 +332,12 @@ public abstract class BaseAIService implements AIService, Source {
             var fileId = asyncUploadAndParseFileIdResponse(getFilesPath(), attachment).join();
             awaitUploadedFile(attachment, fileId);
 
-            if (getUploadedFileJsonStructure() != null && staleUploadedFilesCleanupRunning.compareAndSet(false, true)) {
+            var jsonStructure = getUploadedFileJsonStructure();
+
+            if (jsonStructure != null && staleUploadedFilesCleanupRunning.compareAndSet(false, true)) {
                 ExecutorServiceHelper.runAsync(() -> {
                     try {
-                        cleanupStaleUploadedFiles();
+                        cleanupStaleUploadedFiles(jsonStructure);
                     }
                     finally {
                         staleUploadedFilesCleanupRunning.set(false);
@@ -407,13 +408,7 @@ public abstract class BaseAIService implements AIService, Source {
         return null;
     }
 
-    private void cleanupStaleUploadedFiles() {
-        var jsonStructure = getUploadedFileJsonStructure();
-
-        if (jsonStructure == null) {
-            throw new IllegalStateException();
-        }
-
+    private void cleanupStaleUploadedFiles(UploadedFileJsonStructure jsonStructure) {
         try {
             var responseJson = HTTP_CLIENT.get(this, getFilesPath()).join();
             var files = responseJson.getJsonArray(jsonStructure.filesArrayProperty);
@@ -458,7 +453,7 @@ public abstract class BaseAIService implements AIService, Source {
         }
     }
 
-    private static Instant tryParseFileCreatedAtTimestamp(String createdAt) {
+    static Instant tryParseFileCreatedAtTimestamp(String createdAt) {
         try {
             return Instant.ofEpochSecond(Long.parseLong(createdAt)); // At least OpenAI, Mistral and xAI.
         }
@@ -551,7 +546,7 @@ public abstract class BaseAIService implements AIService, Source {
      * @param labels The labels to pick from.
      * @return The JSON schema.
      */
-    private static JsonObject buildClassifyJsonSchema(List<String> labels) {
+    static JsonObject buildClassifyJsonSchema(List<String> labels) {
         var labelValues = Json.createArrayBuilder();
         labels.forEach(labelValues::add);
 
@@ -582,7 +577,7 @@ public abstract class BaseAIService implements AIService, Source {
      * @param labels The labels to score.
      * @return The JSON schema.
      */
-    private static JsonObject buildClassifyAllJsonSchema(List<String> labels) {
+    static JsonObject buildClassifyAllJsonSchema(List<String> labels) {
         var labelValues = Json.createArrayBuilder();
         labels.forEach(labelValues::add);
 
@@ -633,10 +628,6 @@ public abstract class BaseAIService implements AIService, Source {
 
     @Override
     public CompletableFuture<ModerationResult> moderateContentAsync(String content, ModerationOptions options) throws AIException {
-        if (options.getCategories().isEmpty()) {
-            return completedFuture(ModerationResult.SAFE);
-        }
-
         var chatOptions = ChatOptions.newBuilder()
             .systemPrompt(textHandler.buildModerationPrompt(options))
             .jsonSchema(buildModerationJsonSchema(options))
@@ -647,7 +638,7 @@ public abstract class BaseAIService implements AIService, Source {
             .thenApply(response -> parseModerationResult(response, options));
     }
 
-    private static JsonObject buildModerationJsonSchema(ModerationOptions options) {
+    static JsonObject buildModerationJsonSchema(ModerationOptions options) {
         var categoryProperties = Json.createObjectBuilder();
         var requiredCategories = Json.createArrayBuilder();
 
@@ -668,7 +659,7 @@ public abstract class BaseAIService implements AIService, Source {
             .build();
     }
 
-    private static ModerationResult parseModerationResult(JsonObject responseJson, ModerationOptions options) throws AIResponseException {
+    static ModerationResult parseModerationResult(JsonObject responseJson, ModerationOptions options) throws AIResponseException {
         var scores = new TreeMap<String, Double>();
         var flagged = false;
 

@@ -77,14 +77,14 @@ final class ModelModalitiesRegistry {
         "image", AIModality.IMAGE_GENERATION, "audio", AIModality.AUDIO_GENERATION, "video", AIModality.VIDEO_GENERATION
     );
 
-    private static final Map<URI, CachedModels> MODELS = new ConcurrentHashMap<>();
+    static final Map<URI, CachedModels> MODELS = new ConcurrentHashMap<>();
     private static final Duration MODELS_MAX_AGE = Duration.ofDays(1);
     private static final Duration INITIAL_FAILED_MODELS_MAX_AGE = Duration.ofMinutes(1);
     private static final Duration MAX_FAILED_MODELS_MAX_AGE = Duration.ofHours(1);
     private static final int MAX_FAILED_MODELS_BACKOFF_SHIFT = 6;
 
     private ModelModalitiesRegistry() {
-        // Hide constructor.
+        throw new AssertionError();
     }
 
     /**

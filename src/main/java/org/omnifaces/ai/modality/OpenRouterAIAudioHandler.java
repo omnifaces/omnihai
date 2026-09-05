@@ -197,7 +197,7 @@ public class OpenRouterAIAudioHandler extends DefaultAIAudioHandler {
             audioContentTempFile = Files.createTempFile(OmniHai.name() + "-openrouter-audio-content-", ".pcm");
 
             try (var audioContent = Files.newOutputStream(audioContentTempFile)) {
-                collectAudioContent(responseStream, chunk -> writeQuietly(audioContent, chunk));
+                collectAudioContent(responseStream, chunk -> writeUnchecked(audioContent, chunk));
             }
 
             var pcmContentLength = Files.size(audioContentTempFile);
@@ -264,7 +264,11 @@ public class OpenRouterAIAudioHandler extends DefaultAIAudioHandler {
         }
     }
 
-    private static void writeQuietly(OutputStream output, byte[] chunk) {
+    /**
+     * Writes one decoded audio chunk to the temp file, reporting a failure as unchecked so that it travels past the catch which reports a failure to read the
+     * response body, and is reported as the write failure it is.
+     */
+    static void writeUnchecked(OutputStream output, byte[] chunk) {
         try {
             output.write(chunk);
         }

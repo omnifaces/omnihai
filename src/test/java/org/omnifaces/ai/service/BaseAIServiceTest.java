@@ -13,14 +13,21 @@
 package org.omnifaces.ai.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.omnifaces.ai.helper.JsonHelper.parseJson;
 import static org.omnifaces.ai.service.BaseAIService.parseClassificationResults;
 
+import java.time.Instant;
+import java.time.format.DateTimeParseException;
 import java.util.List;
+import java.util.Set;
 
 import org.junit.jupiter.api.Test;
 import org.omnifaces.ai.model.ClassificationResult;
+import org.omnifaces.ai.model.ModerationOptions;
+import org.omnifaces.ai.model.ModerationOptions.Category;
 import org.omnifaces.ai.service.BaseAIService.UploadedFileJsonStructure;
 
 class BaseAIServiceTest {
@@ -119,6 +126,108 @@ class BaseAIServiceTest {
 
         assertEquals(LABELS.size(), results.size());
         assertEquals(0.0, results.stream().mapToDouble(ClassificationResult::confidence).sum());
+    }
+
+    // =================================================================================================================
+    // The schemas which shape the answer
+    // =================================================================================================================
+
+    /**
+     * The classification schema offers the labels as the only values the AI may answer with, so it cannot invent one of its own.
+     */
+    @Test
+    void buildClassifyJsonSchema_offersTheLabelsAsTheOnlyChoices() {
+        var schema = BaseAIService.buildClassifyJsonSchema(LABELS);
+
+        var label = schema.getJsonObject("properties").getJsonObject("label");
+        assertEquals("string", label.getString("type"));
+        assertEquals(LABELS, label.getJsonArray("enum").getValuesAs(jakarta.json.JsonString.class).stream().map(jakarta.json.JsonString::getString).toList());
+        assertEquals(
+            List.of("label", "confidence"), schema.getJsonArray("required").getValuesAs(jakarta.json.JsonString.class).stream()
+                .map(jakarta.json.JsonString::getString).toList()
+        );
+    }
+
+    /**
+     * Scoring every label needs each of them stated as a required field, as a label the AI leaves out is not the same as one it scored at zero.
+     */
+    @Test
+    void buildClassifyAllJsonSchema_requiresAScorePerLabel() {
+        var schema = BaseAIService.buildClassifyAllJsonSchema(LABELS);
+
+        assertEquals("object", schema.getString("type"));
+        assertFalse(schema.toString().isEmpty());
+        LABELS.forEach(label -> assertTrue(schema.toString().contains(label), label));
+    }
+
+    @Test
+    void buildModerationJsonSchema_requiresAScorePerRequestedCategory() {
+        var options = ModerationOptions.newBuilder().categories(Category.HATE, Category.VIOLENCE).build();
+
+        var scores = BaseAIService.buildModerationJsonSchema(options).getJsonObject("properties").getJsonObject("scores");
+
+        assertEquals("number", scores.getJsonObject("properties").getJsonObject("hate").getString("type"));
+        assertEquals("number", scores.getJsonObject("properties").getJsonObject("violence").getString("type"));
+        assertEquals(2, scores.getJsonArray("required").size());
+    }
+
+    // =================================================================================================================
+    // Reading the moderation answer
+    // =================================================================================================================
+
+    @Test
+    void parseModerationResult_keepsTheScoresOfTheRequestedCategoriesAlone() {
+        var options = ModerationOptions.newBuilder().categories(Category.HATE).build();
+
+        var result = BaseAIService.parseModerationResult(parseJson("{\"scores\":{\"hate\":0.2,\"violence\":0.9}}"), options);
+
+        assertEquals(Set.of("hate"), result.getScores().keySet());
+    }
+
+    @Test
+    void parseModerationResult_flagsWhenAScoreExceedsTheThreshold() {
+        var options = ModerationOptions.newBuilder().categories(Category.HATE).threshold(0.5).build();
+
+        assertFalse(BaseAIService.parseModerationResult(parseJson("{\"scores\":{\"hate\":0.4}}"), options).isFlagged());
+        assertTrue(BaseAIService.parseModerationResult(parseJson("{\"scores\":{\"hate\":0.6}}"), options).isFlagged());
+    }
+
+    /**
+     * A category the AI did not score is left out rather than reported as zero, which would read as a judgement it never made.
+     */
+    @Test
+    void parseModerationResult_categoryWhichWasNotScored_isLeftOut() {
+        var options = ModerationOptions.newBuilder().categories(Category.HATE, Category.VIOLENCE).build();
+
+        var result = BaseAIService.parseModerationResult(parseJson("{\"scores\":{\"hate\":0.2}}"), options);
+
+        assertEquals(Set.of("hate"), result.getScores().keySet());
+    }
+
+    @Test
+    void parseModerationResult_answerWithoutAnyScores_isNotFlagged() {
+        var result = BaseAIService.parseModerationResult(parseJson("{}"), ModerationOptions.DEFAULT);
+
+        assertFalse(result.isFlagged());
+        assertTrue(result.getScores().isEmpty());
+    }
+
+    // =================================================================================================================
+    // Reading the timestamp of an uploaded file
+    // =================================================================================================================
+
+    /**
+     * Providers state the upload time either as epoch seconds or as an ISO instant, so both are read into the same instant.
+     */
+    @Test
+    void tryParseFileCreatedAtTimestamp_epochSecondsAndIsoInstant_readTheSameInstant() {
+        assertEquals(Instant.parse("2024-01-01T00:00:00Z"), BaseAIService.tryParseFileCreatedAtTimestamp("1704067200"));
+        assertEquals(Instant.parse("2024-01-01T00:00:00Z"), BaseAIService.tryParseFileCreatedAtTimestamp("2024-01-01T00:00:00Z"));
+    }
+
+    @Test
+    void tryParseFileCreatedAtTimestamp_valueWhichIsNeither_isRejected() {
+        assertThrows(DateTimeParseException.class, () -> BaseAIService.tryParseFileCreatedAtTimestamp("yesterday"));
     }
 
 }
