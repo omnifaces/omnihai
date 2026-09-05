@@ -24,6 +24,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
+import java.time.Duration;
 
 import org.junit.jupiter.api.Test;
 
@@ -205,6 +206,17 @@ class AnalyzeVideoOptionsTest {
             assertEquals(original.getStartOffset(), deserialized.getStartOffset());
             assertEquals(original.getEndOffset(), deserialized.getEndOffset());
         }
+    }
+
+    /**
+     * The sampling rate and the fragment bounds are what a caller checks when the AI describes the wrong part of a video, so all three belong in the
+     * description.
+     */
+    @Test
+    void toString_namesTheRateAndBothOffsets() {
+        var options = AnalyzeVideoOptions.newBuilder().fps(2).startOffset(Duration.ofSeconds(30)).endOffset(Duration.ofSeconds(90)).build();
+
+        assertEquals("AnalyzeVideoOptions[fps=2.0, startOffset=PT30S, endOffset=PT1M30S]", options.toString());
     }
 
 }

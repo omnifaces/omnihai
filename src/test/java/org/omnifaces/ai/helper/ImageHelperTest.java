@@ -13,9 +13,18 @@
 package org.omnifaces.ai.helper;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+
+import javax.imageio.ImageIO;
 
 import org.junit.jupiter.api.Test;
 import org.omnifaces.ai.exception.AIException;
@@ -117,6 +126,68 @@ class ImageHelperTest {
     void sanitizeImageAttachment_heic_shouldThrow() {
         var content = new byte[] { 0, 0, 0, 0, 'f', 't', 'y', 'p', 'h', 'e', 'i', 'c', 0, 0, 0, 0 };
         assertThrows(AIException.class, () -> ImageHelper.sanitizeImageAttachment(content));
+    }
+
+    // =================================================================================================================
+    // sanitizeImageAttachment - format conversion
+    // =================================================================================================================
+
+    /**
+     * Several models render an alpha channel as black, so a PNG carrying one is flattened onto white before it is sent.
+     */
+    @Test
+    void sanitizeImageAttachment_pngWithAlphaChannel_isFlattened() throws IOException {
+        var sanitized = ImageHelper.sanitizeImageAttachment(png(BufferedImage.TYPE_INT_ARGB));
+
+        assertEquals("image/png", MimeType.guessMimeType(sanitized).value());
+        assertFalse(ImageIO.read(new ByteArrayInputStream(sanitized)).getColorModel().hasAlpha());
+    }
+
+    /**
+     * The legacy formats are not served by every model, so they travel as PNG instead.
+     */
+    @Test
+    void sanitizeImageAttachment_bmp_isConvertedToPng() throws IOException {
+        var sanitized = ImageHelper.sanitizeImageAttachment(image(BufferedImage.TYPE_INT_RGB, "BMP"));
+
+        assertEquals("image/png", MimeType.guessMimeType(sanitized).value());
+    }
+
+    @Test
+    void sanitizeImageAttachment_jpeg_isLeftAsItIs() throws IOException {
+        var jpeg = image(BufferedImage.TYPE_INT_RGB, "JPEG");
+
+        assertArrayEquals(jpeg, ImageHelper.sanitizeImageAttachment(jpeg));
+    }
+
+    private static byte[] png(int imageType) throws IOException {
+        return image(imageType, "PNG");
+    }
+
+    private static byte[] image(int imageType, String format) throws IOException {
+        var image = new BufferedImage(2, 2, imageType);
+        image.setRGB(0, 0, 0x7F112233);
+        var output = new ByteArrayOutputStream();
+        ImageIO.write(image, format, output);
+        return output.toByteArray();
+    }
+
+    /**
+     * The magic bytes name the format but say nothing about the rest being intact, so content which cannot be decoded is reported as unsupported rather than
+     * travelling on half converted.
+     */
+    @Test
+    void sanitizeImageAttachment_truncatedPng_isReportedAsUnsupported() {
+        var truncated = new byte[] { (byte) 0x89, 'P', 'N', 'G', 13, 10, 26, 10, 0, 0, 0 };
+
+        assertThrows(AIException.class, () -> ImageHelper.sanitizeImageAttachment(truncated));
+    }
+
+    @Test
+    void sanitizeImageAttachment_truncatedBmp_isReportedAsUnsupported() {
+        var truncated = new byte[] { 'B', 'M', 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+
+        assertThrows(AIException.class, () -> ImageHelper.sanitizeImageAttachment(truncated));
     }
 
 }

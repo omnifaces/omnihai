@@ -18,17 +18,28 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
+import java.net.URL;
+import java.net.URLClassLoader;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import javax.tools.ToolProvider;
+
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 class ToolRegistryTest {
+
+    @TempDir
+    private Path tempDir;
 
     @AIToolGroup
     @Retention(RUNTIME)
@@ -186,7 +197,9 @@ class ToolRegistryTest {
 
     }
 
-    // Registration ----------------------------------------------------------------------------------------------------
+    // =================================================================================================================
+    // Registration
+    // =================================================================================================================
 
     @Test
     void of_derivesNamesFromTheClassAndMethodNames() {
@@ -333,7 +346,9 @@ class ToolRegistryTest {
         assertThrows(IllegalArgumentException.class, () -> builder.add(null, OrderTools.class, "not an OrderTools"));
     }
 
-    // Schema ----------------------------------------------------------------------------------------------------------
+    // =================================================================================================================
+    // Schema
+    // =================================================================================================================
 
     /**
      * The tool name is constrained by the schema, so a narrowed registry makes the omitted tools unreachable rather than merely unadvertised.
@@ -366,7 +381,9 @@ class ToolRegistryTest {
         assertTrue(manifest.contains("- OrderTools_findOrdersByDate(date: The order date) -> Lists orders placed on a date"), manifest);
     }
 
-    // Invocation ------------------------------------------------------------------------------------------------------
+    // =================================================================================================================
+    // Invocation
+    // =================================================================================================================
 
     @Test
     void invoke_convertsArgumentsToTheDeclaredParameterTypes() {
@@ -435,6 +452,246 @@ class ToolRegistryTest {
         var registry = ToolRegistry.newBuilder().add("silent", "Returns nothing", () -> null).build();
 
         assertEquals("", registry.invoke("silent", Map.of()));
+    }
+
+    // =================================================================================================================
+    // Declaration errors
+    // =================================================================================================================
+
+    /**
+     * A tool method invoked from outside its own package needs its class to be public, so a non-public one is rejected at registration rather than at the call
+     * the AI makes later.
+     */
+    @Test
+    void add_nonPublicClass_throws() {
+        var builder = ToolRegistry.newBuilder();
+
+        var exception = assertThrows(IllegalArgumentException.class, () -> builder.add(new NonPublicTools()));
+        assertTrue(exception.getMessage().contains("must be public"));
+    }
+
+    /**
+     * The AI is told what to pass by the parameter description, so a parameter without one cannot be offered.
+     */
+    @Test
+    void add_parameterWithoutDescription_throws() {
+        var builder = ToolRegistry.newBuilder();
+
+        var exception = assertThrows(IllegalArgumentException.class, () -> builder.add(new UnannotatedParamTools()));
+        assertTrue(exception.getMessage().contains("@AIToolParam"));
+    }
+
+    @Test
+    void build_withoutAnyTool_throws() {
+        var builder = ToolRegistry.newBuilder();
+
+        assertThrows(IllegalArgumentException.class, builder::build);
+    }
+
+    // =================================================================================================================
+    // Container proxies
+    // =================================================================================================================
+
+    /**
+     * A container hands out a generated subclass, whose own class carries neither the parameter names nor a stable identity, so the scan walks up to the class
+     * which declares the tools.
+     */
+    @Test
+    void add_containerProxy_scansTheClassItProxies() {
+        var registry = ToolRegistry.newBuilder().add(new OrderTools_ClientProxy()).build();
+
+        assertTrue(registry.getManifest().contains("findOrder"));
+    }
+
+    // =================================================================================================================
+    // Two argument function tools
+    // =================================================================================================================
+
+    @Test
+    void add_functionOfTwoArguments_passesThemInDeclarationOrder() {
+        var registry = ToolRegistry.newBuilder()
+            .add(
+                "concat", "Joins two values", (String one, String other) -> one + "-" + other,
+                ToolParam.of(String.class, "one", "The first value"), ToolParam.of(String.class, "other", "The second value")
+            )
+            .build();
+
+        assertEquals("a-b", registry.invoke("concat", Map.of("one", "a", "other", "b")));
+    }
+
+    // =================================================================================================================
+    // Errors versus exceptions
+    // =================================================================================================================
+
+    /**
+     * An Error states that the JVM itself is in trouble, so it travels on rather than being reported to the AI as a tool which failed.
+     */
+    @Test
+    void invoke_toolThrowingAnError_letsItThrough() {
+        var registry = ToolRegistry.newBuilder().add(new ErroringTools()).build();
+
+        assertThrows(StackOverflowError.class, () -> registry.invoke("ErroringTools_fail", Map.of()));
+    }
+
+    /**
+     * A group narrows the selection, so a class declaring tools which none of them carries names the group it found nothing for.
+     */
+    @Test
+    void add_groupMatchingNoToolMethod_namesTheGroup() {
+        var builder = ToolRegistry.newBuilder();
+        var shippingTools = new ShippingTools();
+
+        var exception = assertThrows(IllegalArgumentException.class, () -> builder.add(ReadOnly.class, ShippingTools.class, shippingTools));
+        assertTrue(exception.getMessage().contains("@" + ReadOnly.class.getSimpleName()), exception.getMessage());
+    }
+
+    /**
+     * A container may hand out a proxy whose whole hierarchy is generated, in which case there is no declaring class to walk up to and the proxy itself is
+     * scanned.
+     */
+    @Test
+    void add_proxyWithoutADeclaringClassBehindIt_scansTheProxyItself() {
+        var registry = ToolRegistry.newBuilder().add(new OrderTools_Subclass()).build();
+
+        assertTrue(registry.getManifest().contains("findOrderProxied"), registry.getManifest());
+    }
+
+    /**
+     * A tool declared on the class itself is reachable directly, so the bridge the compiler generates alongside it is not offered a second time.
+     */
+    @Test
+    void add_toolDeclaredBesideItsOwnBridge_isOfferedOnce() {
+        var registry = ToolRegistry.newBuilder().add(new PublicHandler()).build();
+
+        assertEquals(1, registry.getManifest().lines().filter(line -> line.contains("PublicHandler_handle")).count(), registry.getManifest());
+    }
+
+    /**
+     * A tool appears in the manifest the AI reads as its name, its parameters and what it does.
+     */
+    @Test
+    void toString_ofATool_isItsManifestLine() {
+        var tool = new ToolFunction("greet", "Greets someone", List.of(ToolParam.of(String.class, "name", "The name")), values -> "hi");
+
+        assertEquals("- greet(name: The name) -> Greets someone", tool.toString());
+    }
+
+    /**
+     * A narrowed return type makes the compiler generate a bridge beside the tool the class declares itself, and the bridge is not a second tool.
+     */
+    @Test
+    void add_toolNarrowingItsReturnType_isOfferedOnce() {
+        var registry = ToolRegistry.newBuilder().add(new CovariantSub()).build();
+
+        assertEquals(1, registry.getManifest().lines().filter(line -> line.contains("CovariantSub_answer")).count(), registry.getManifest());
+    }
+
+    /** Stands in for a container proxy whose own hierarchy carries no declaring class to walk up to. */
+    public static class OrderTools_Subclass {
+
+        @AITool("Looks up a single order by id")
+        public String findOrderProxied(@AIToolParam(value = "The order id", name = "orderId") long orderId) {
+            return "order " + orderId;
+        }
+
+    }
+
+    public static class CovariantBase {
+
+        @AITool("Answers something")
+        public Object answer() {
+            return "base";
+        }
+
+    }
+
+    /** Narrows the return type of the tool it inherits, so the compiler generates a bridge beside it in this very class. */
+    public static class CovariantSub extends CovariantBase {
+
+        @Override
+        @AITool("Answers something")
+        public String answer() {
+            return "sub";
+        }
+
+    }
+
+    /** A public class implementing a generic interface, so the compiler generates a bridge beside the tool it declares itself. */
+    public static class PublicHandler implements Handled<String> {
+
+        @Override
+        @AITool("Handles a value")
+        public String handle(@AIToolParam(value = "The value", name = "value") String value) {
+            return "handled " + value;
+        }
+
+    }
+
+    // =================================================================================================================
+    // Tools compiled without parameter names
+    // =================================================================================================================
+
+    /**
+     * A parameter name is only in the class file when the tool was compiled with {@code -parameters}, which is not the default, so a tool declared without one
+     * has to state the name in its annotation. This build compiles its own classes with that flag, so the tool is compiled here without it.
+     */
+    @Test
+    void add_parameterWithoutANameAndCompiledWithoutParameterNames_throws() throws Exception {
+        var compiler = ToolProvider.getSystemJavaCompiler();
+        assumeTrue(compiler != null, "a JDK is needed to compile the tool without parameter names");
+
+        var source = Files.writeString(tempDir.resolve("NamelessTools.java"), """
+            public class NamelessTools {
+                @org.omnifaces.ai.tool.AITool("Looks up an order")
+                public String findOrder(@org.omnifaces.ai.tool.AIToolParam("The order id") long orderId) {
+                    return "order " + orderId;
+                }
+            }
+            """);
+
+        var options = List.of("-classpath", System.getProperty("java.class.path"), "-d", tempDir.toString());
+        assumeTrue(
+            compiler.getTask(
+                null, null, null, options, null, compiler.getStandardFileManager(null, null, null)
+                    .getJavaFileObjects(source.toFile())
+            ).call(), "the tool must compile"
+        );
+
+        try (var loader = new URLClassLoader(new URL[] { tempDir.toUri().toURL() }, getClass().getClassLoader())) {
+            var instance = loader.loadClass("NamelessTools").getDeclaredConstructor().newInstance();
+            var builder = ToolRegistry.newBuilder();
+
+            var exception = assertThrows(IllegalArgumentException.class, () -> builder.add(instance));
+            assertTrue(exception.getMessage().contains("@AIToolParam"), exception.getMessage());
+        }
+    }
+
+    /** A tool class which is not public, whose methods are therefore not invocable from here. */
+    static class NonPublicTools {
+
+        @AITool("Looks up a single order by id")
+        public String findOrderHidden(@AIToolParam(value = "The order id", name = "orderId") long orderId) {
+            return "order " + orderId;
+        }
+
+    }
+
+    public static class UnannotatedParamTools {
+
+        @AITool("Looks up a single order by id")
+        public String findOrderUnannotated(long orderId) {
+            return "order " + orderId;
+        }
+
+    }
+
+    public static class ErroringTools {
+
+        @AITool("Always fails hard")
+        public String fail() {
+            throw new StackOverflowError("boom");
+        }
+
     }
 
 }

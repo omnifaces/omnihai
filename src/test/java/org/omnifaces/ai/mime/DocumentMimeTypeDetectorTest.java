@@ -214,4 +214,55 @@ class DocumentMimeTypeDetectorTest {
         return DocumentMimeTypeDetector.guessDocumentMimeType(content);
     }
 
+    // =================================================================================================================
+    // Text shapes which are recognized by their opening characters
+    // =================================================================================================================
+
+    @Test
+    void guessDocumentMimeType_jsonArray_isJson() {
+        assertEquals("application/json", DocumentMimeTypeDetector.guessDocumentMimeType("[{\"a\":1}]".getBytes(UTF_8)).value());
+    }
+
+    /**
+     * An opening brace alone does not make a document JSON, as the text may merely start with one.
+     */
+    @Test
+    void guessDocumentMimeType_unclosedJson_isPlainText() {
+        assertEquals("text/plain", DocumentMimeTypeDetector.guessDocumentMimeType("{ this never closes".getBytes(UTF_8)).value());
+    }
+
+    @Test
+    void guessDocumentMimeType_unclosedJsonArray_isPlainText() {
+        assertEquals("text/plain", DocumentMimeTypeDetector.guessDocumentMimeType("[ this never closes".getBytes(UTF_8)).value());
+    }
+
+    @Test
+    void guessDocumentMimeType_markdownHeadersOfEveryDepth_areMarkdown() {
+        assertEquals("text/markdown", DocumentMimeTypeDetector.guessDocumentMimeType("# Title".getBytes(UTF_8)).value());
+        assertEquals("text/markdown", DocumentMimeTypeDetector.guessDocumentMimeType("## Title".getBytes(UTF_8)).value());
+        assertEquals("text/markdown", DocumentMimeTypeDetector.guessDocumentMimeType("### Title".getBytes(UTF_8)).value());
+        assertEquals("text/markdown", DocumentMimeTypeDetector.guessDocumentMimeType("Intro\n# Title".getBytes(UTF_8)).value());
+        assertEquals("text/markdown", DocumentMimeTypeDetector.guessDocumentMimeType("Intro\n## Title".getBytes(UTF_8)).value());
+    }
+
+    @Test
+    void guessDocumentMimeType_unclosedTag_isPlainText() {
+        assertEquals("text/plain", DocumentMimeTypeDetector.guessDocumentMimeType("< this never closes".getBytes(UTF_8)).value());
+    }
+
+    @Test
+    void guessDocumentMimeType_markdownHeaderBeyondTheFirstLine_isMarkdown() {
+        assertEquals("text/markdown", DocumentMimeTypeDetector.guessDocumentMimeType("Intro\n### Heading".getBytes(UTF_8)).value());
+    }
+
+    @Test
+    void guessDocumentMimeType_markdownLink_isMarkdown() {
+        assertEquals("text/markdown", DocumentMimeTypeDetector.guessDocumentMimeType("see [the docs](https://omnihai.org)".getBytes(UTF_8)).value());
+    }
+
+    @Test
+    void guessDocumentMimeType_markdownCodeFence_isMarkdown() {
+        assertEquals("text/markdown", DocumentMimeTypeDetector.guessDocumentMimeType("Example:\n```\ncode\n```".getBytes(UTF_8)).value());
+    }
+
 }
