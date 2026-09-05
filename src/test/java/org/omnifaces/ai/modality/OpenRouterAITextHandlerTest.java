@@ -16,6 +16,8 @@ import static java.util.stream.Collectors.joining;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 import static org.omnifaces.ai.AIProvider.OPENROUTER;
 import static org.omnifaces.ai.helper.JsonHelper.parseJson;
 
@@ -28,6 +30,7 @@ import org.omnifaces.ai.AIService;
 import org.omnifaces.ai.model.ChatInput;
 import org.omnifaces.ai.model.ChatOptions;
 import org.omnifaces.ai.model.ChatOptions.Location;
+import org.omnifaces.ai.model.ChatOptions.ReasoningEffort;
 
 class OpenRouterAITextHandlerTest {
 
@@ -99,6 +102,91 @@ class OpenRouterAITextHandlerTest {
 
     private static AIService newService() {
         return AIConfig.of(OPENROUTER, "test-api-key").withModel("deepseek/deepseek-v4-pro").createService();
+    }
+
+    // =================================================================================================================
+    // Inline attachments
+    // =================================================================================================================
+
+    /**
+     * OpenRouter takes a video under a block of its own, and leaves every other file to the shape the OpenAI base states.
+     */
+    @Test
+    void buildChatPayload_withAVideo_carriesItAsAVideoUrl() {
+        var input = ChatInput.newBuilder().message("What happens here?").attach(mp4()).build();
+
+        var content = handler.buildChatPayload(newService(), input, ChatOptions.DEFAULT, false).getJsonArray("messages").getJsonObject(0)
+            .getJsonArray("content");
+
+        assertEquals("video_url", content.getJsonObject(0).getString("type"));
+        assertTrue(content.getJsonObject(0).getJsonObject("video_url").getString("url").startsWith("data:video/mp4;base64,"));
+    }
+
+    @Test
+    void buildChatPayload_withADocument_leavesItToTheBaseShape() {
+        var input = ChatInput.newBuilder().message("Read it").attach(pdf()).build();
+
+        var content = handler.buildChatPayload(newService(), input, ChatOptions.DEFAULT, false).getJsonArray("messages").getJsonObject(0)
+            .getJsonArray("content");
+
+        assertEquals("file", content.getJsonObject(0).getString("type"));
+    }
+
+    // =================================================================================================================
+    // Reasoning effort
+    // =================================================================================================================
+
+    /**
+     * OpenRouter translates the effort for whichever model it routes to, so the caller's own level is passed on rather than folded into another.
+     */
+    @Test
+    void buildChatPayload_reasoningEffort_isPassedOnUnderANestedObject() {
+        var options = ChatOptions.newBuilder().reasoningEffort(ReasoningEffort.LOW).build();
+
+        var payload = handler.buildChatPayload(newService(), ChatInput.newBuilder().message("Hello").build(), options, false);
+
+        assertEquals("low", payload.getJsonObject("reasoning").getString("effort"));
+    }
+
+    /**
+     * A routed model may mandate reasoning and reject being told not to, so an unstated effort leaves the object off entirely.
+     */
+    @Test
+    void buildChatPayload_effortLeftToTheModel_statesNothing() {
+        var options = ChatOptions.newBuilder().reasoningEffort(ReasoningEffort.AUTO).build();
+
+        assertFalse(handler.buildChatPayload(newService(), ChatInput.newBuilder().message("Hello").build(), options, false).containsKey("reasoning"));
+    }
+
+    /**
+     * A routed reasoning model may answer with no content at all and the answer itself among its reasoning, which is the last place to look.
+     */
+    @Test
+    void getChatResponseContentPaths_fallBackToTheReasoningOfTheAnswer() {
+        assertEquals("choices[0].message.reasoning", handler.getChatResponseContentPaths().get(handler.getChatResponseContentPaths().size() - 1));
+    }
+
+    private static byte[] mp4() {
+        var mp4 = new byte[32];
+        System.arraycopy("ftyp".getBytes(java.nio.charset.StandardCharsets.US_ASCII), 0, mp4, 4, 4);
+        System.arraycopy("isom".getBytes(java.nio.charset.StandardCharsets.US_ASCII), 0, mp4, 8, 4);
+        return mp4;
+    }
+
+    private static byte[] pdf() {
+        return "%PDF-1.4\n%%EOF\n".getBytes(java.nio.charset.StandardCharsets.US_ASCII);
+    }
+
+    /**
+     * A model which cannot think is asked for none, and the effort is then left off the payload entirely.
+     */
+    @Test
+    void buildChatPayload_onAServiceWhichCannotThink_statesNoReasoning() {
+        var service = mock(AIService.class);
+        when(service.getModelName()).thenReturn("deepseek/deepseek-v4-pro");
+        var options = ChatOptions.newBuilder().reasoningEffort(ReasoningEffort.HIGH).build();
+
+        assertFalse(handler.buildChatPayload(service, ChatInput.newBuilder().message("Hello").build(), options, false).containsKey("reasoning"));
     }
 
 }

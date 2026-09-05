@@ -22,6 +22,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Base64;
+import java.util.List;
 
 import org.junit.jupiter.api.Test;
 import org.omnifaces.ai.exception.AIResponseException;
@@ -65,6 +66,71 @@ class GoogleAIAudioHandlerTest {
         var responseStream = new ByteArrayInputStream("{\"candidates\":[{\"content\":{\"parts\":[{\"text\":\"nope\"}]}}]}".getBytes(UTF_8));
 
         assertThrows(AIResponseException.class, () -> handler.parseAudioContent(responseStream));
+    }
+
+    /**
+     * A response body which cannot be read is reported as an unusable answer rather than as an empty one.
+     */
+    @Test
+    void parseAudioContent_unreadableStream_saysSo() {
+        var responseStream = new InputStream() {
+
+            @Override
+            public int read() throws IOException {
+                throw new IOException("connection reset");
+            }
+
+        };
+
+        assertThrows(AIResponseException.class, () -> handler.parseAudioContentInMemory(responseStream));
+    }
+
+    @Test
+    void parseAudioContent_contentWhichDoesNotDecode_saysSo() {
+        var responseStream = new ByteArrayInputStream(
+            "{\"candidates\":[{\"content\":{\"parts\":[{\"inlineData\":{\"data\":\"!!!not base64!!!\"}}]}}]}".getBytes(UTF_8)
+        );
+
+        assertThrows(AIResponseException.class, () -> handler.parseAudioContentInMemory(responseStream));
+    }
+
+    /**
+     * A handler which states no path to the audio has nothing to read, and says which method to implement.
+     */
+    @Test
+    void parseAudioContent_withoutAnyStatedPath_namesTheMethod() {
+        var pathless = new GoogleAIAudioHandler() {
+
+            @Override
+            protected List<String> getAudioResponseContentPaths() {
+                return List.of();
+            }
+
+        };
+        var responseStream = new ByteArrayInputStream("{}".getBytes(UTF_8));
+
+        assertThrows(IllegalStateException.class, () -> pathless.parseAudioContent(responseStream));
+    }
+
+    @Test
+    void parseAudioContent_answerWithoutAudio_saysWhereItLooked() {
+        var responseStream = new ByteArrayInputStream("{\"candidates\":[]}".getBytes(UTF_8));
+
+        var exception = assertThrows(AIResponseException.class, () -> handler.parseAudioContentInMemory(responseStream));
+        assertTrue(exception.getMessage().contains("No audio content found"), exception.getMessage());
+    }
+
+    /**
+     * The temp file route leaves what it wrote behind when it fails, so the content can still be looked at rather than being lost with the error.
+     */
+    @Test
+    void parseAudioContentViaTempFiles_contentWhichDoesNotDecode_saysTheTempFileIsLeft() {
+        var responseStream = new ByteArrayInputStream(
+            "{\"candidates\":[{\"content\":{\"parts\":[{\"inlineData\":{\"data\":\"!!!\"}}]}}]}".getBytes(UTF_8)
+        );
+
+        var exception = assertThrows(AIResponseException.class, () -> handler.parseAudioContentViaTempFiles(responseStream));
+        assertTrue(exception.getMessage().contains("temp file left"), exception.getMessage());
     }
 
 }
