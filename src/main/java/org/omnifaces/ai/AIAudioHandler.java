@@ -14,6 +14,7 @@ package org.omnifaces.ai;
 
 import java.io.InputStream;
 import java.io.Serializable;
+import java.nio.file.Path;
 
 import jakarta.json.JsonObject;
 
@@ -72,6 +73,23 @@ public interface AIAudioHandler extends Serializable {
      * @since 1.7.1
      */
     default byte[] buildTranscribeContent(byte[] audio) {
+        return audio;
+    }
+
+    /**
+     * Converts the audio at the given source into a file in the format which the transcribe endpoint of the AI provider accepts, without holding either the
+     * source or the result in memory. This is invoked by an AI service which transcribes via a dedicated speech-to-text endpoint.
+     * <p>
+     * The answer is the source itself when it needs no conversion, and a temporary file otherwise. The caller therefore deletes the answer once the request is
+     * done only when it is not the source it passed in.
+     *
+     * @implNote The default implementation answers the source unchanged, as the audio needs no conversion.
+     * @param audio The source of the audio content to transcribe.
+     * @return The audio in a file in the format which the transcribe endpoint accepts.
+     * @throws AIException If the audio content cannot be converted into that format.
+     * @since 1.7.2
+     */
+    default Path buildTranscribeContent(Path audio) {
         return audio;
     }
 

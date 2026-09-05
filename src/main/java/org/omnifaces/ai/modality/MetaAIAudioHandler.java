@@ -13,14 +13,21 @@
 package org.omnifaces.ai.modality;
 
 import static java.lang.System.arraycopy;
+import static java.nio.file.Files.createTempFile;
+import static java.nio.file.Files.newByteChannel;
+import static java.nio.file.StandardOpenOption.WRITE;
 import static java.util.Objects.requireNonNull;
 import static javax.sound.sampled.AudioFormat.Encoding.PCM_SIGNED;
+import static org.omnifaces.ai.helper.FileHelper.cleanupFiles;
 import static org.omnifaces.ai.helper.JsonHelper.checkErrors;
 import static org.omnifaces.ai.helper.JsonHelper.findFirstNonBlankByPaths;
 import static org.omnifaces.ai.modality.DefaultAITextHandler.DEFAULT_ERROR_MESSAGE_PATHS;
 
 import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
+import java.nio.ByteBuffer;
+import java.nio.channels.Channels;
+import java.nio.file.Path;
 import java.util.List;
 
 import javax.sound.sampled.AudioFormat;
@@ -30,6 +37,7 @@ import jakarta.json.Json;
 import jakarta.json.JsonObject;
 
 import org.omnifaces.ai.AIService;
+import org.omnifaces.ai.OmniHai;
 import org.omnifaces.ai.exception.AIException;
 import org.omnifaces.ai.exception.AIResponseException;
 import org.omnifaces.ai.service.MetaAIService;
@@ -66,7 +74,7 @@ public class MetaAIAudioHandler extends DefaultAIAudioHandler {
         PCM_WAV_SAMPLE_RATE, PCM_WAV_BITS_PER_SAMPLE, PCM_WAV_CHANNELS, true, false
     );
 
-    private static final String ERROR_UNSUPPORTED_AUDIO = "Cannot convert audio to a WAV which Meta AI accepts; the Java Sound API reads WAV, AIFF and AU.";
+    private static final String ERROR_UNSUPPORTED_AUDIO = "Cannot convert audio%s to a WAV which Meta AI accepts; the Java Sound API reads WAV, AIFF and AU.";
 
     @Override
     public JsonObject buildTranscribePayload(AIService service) {
@@ -96,7 +104,40 @@ public class MetaAIAudioHandler extends DefaultAIAudioHandler {
             return toWav(converted.readAllBytes());
         }
         catch (Exception e) {
-            throw new AIException(ERROR_UNSUPPORTED_AUDIO, e);
+            throw new AIException(ERROR_UNSUPPORTED_AUDIO.formatted(""), e);
+        }
+    }
+
+    /**
+     * Converts the audio at the given source into a temporary WAV of the same shape, reading the source and writing the result a buffer at a time so that
+     * neither is held in memory as a whole. The header states the length of the converted audio, which is only known once it is written, so it is written a
+     * second time over the placeholder the file starts with.
+     */
+    @Override
+    public Path buildTranscribeContent(Path audio) {
+        requireNonNull(audio, "audio");
+        Path converted = null;
+
+        try {
+            converted = createTempFile(OmniHai.name() + "-meta-asr-", ".wav");
+
+            try (
+                var source = AudioSystem.getAudioInputStream(audio.toFile());
+                var decoded = AudioSystem.getAudioInputStream(PCM_SIGNED, source);
+                var pcm = AudioSystem.getAudioInputStream(SUPPORTED_AUDIO_FORMAT, decoded);
+                var channel = newByteChannel(converted, WRITE)
+            ) {
+                channel.write(ByteBuffer.wrap(createWavHeader(0)));
+                var pcmContentLength = pcm.transferTo(Channels.newOutputStream(channel));
+                channel.position(0);
+                channel.write(ByteBuffer.wrap(createWavHeader(pcmContentLength)));
+            }
+
+            return converted;
+        }
+        catch (Exception e) {
+            cleanupFiles(converted);
+            throw new AIException(ERROR_UNSUPPORTED_AUDIO.formatted(" " + audio), e);
         }
     }
 
