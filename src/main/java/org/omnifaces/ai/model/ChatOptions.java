@@ -763,7 +763,7 @@ public class ChatOptions implements Serializable {
         var totalCost = accounting.getTotalCost();
 
         if (maxTotalCost != null && totalCost.compareTo(maxTotalCost) >= 0) {
-            throw new AIBudgetExceededException(totalCost, maxTotalCost, pricing != null ? pricing.currency() : null);
+            throw new AIBudgetExceededException(totalCost, maxTotalCost, pricing.currency());
         }
     }
 

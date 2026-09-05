@@ -136,12 +136,7 @@ public final class FileHelper {
                     logger.log(FINEST, e, () -> "Cannot delete file " + path);
                 }
 
-                try {
-                    path.toFile().deleteOnExit();
-                }
-                catch (Exception e) {
-                    logger.log(FINEST, e, () -> "Cannot register delete on exit for file " + path);
-                }
+                path.toFile().deleteOnExit();
             }
         }
     }
