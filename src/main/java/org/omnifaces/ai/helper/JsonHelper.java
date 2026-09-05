@@ -170,10 +170,6 @@ public final class JsonHelper {
         var result = new ArrayList<String>();
 
         for (var terminal : currentNodes) {
-            if (terminal == null) {
-                return emptyList();
-            }
-
             var string = terminal instanceof JsonString jsonString ? jsonString.getString() : terminal.toString();
 
             if (!string.isEmpty()) { // Do not use isBlank! Whitespace can be significant.
@@ -456,7 +452,7 @@ public final class JsonHelper {
     // Internal --------------------------------------------------------------------------------------------------------
 
     private static void collectNextLevelValues(JsonValue current, String segment, List<JsonValue> collector) {
-        if ((current == null) || (!(current instanceof JsonObject) && !(current instanceof JsonArray))) {
+        if (!(current instanceof JsonObject) && !(current instanceof JsonArray)) {
             return;
         }
 
@@ -477,9 +473,7 @@ public final class JsonHelper {
             return;
         }
 
-        var array = object.getJsonArray(propertyName);
-
-        if (array == null) {
+        if (!(object.get(propertyName) instanceof JsonArray array)) {
             return;
         }
 
@@ -529,16 +523,31 @@ public final class JsonHelper {
     }
 
     /**
-     * Descends into the element at the given index of the array at the current position, or into each element in turn when the index is
+     * Descends into the element at the given index of the array which starts at the current position, or into each element in turn when the index is
      * {@link #WILDCARD_INDEX}, answering the first non-null result.
      */
     private static <R> R findFirstByIndex(JsonParser parser, int targetIndex, Queue<String> segments, Function<JsonParser, R> processor) {
+        if (!parser.hasNext() || parser.next() != START_ARRAY) {
+            return null;
+        }
+
+        return findFirstByIndexInArray(parser, targetIndex, segments, processor);
+    }
+
+    /**
+     * As {@link #findFirstByIndex(JsonParser, int, Queue, Function)}, for an array whose opening event is already consumed.
+     */
+    private static <R> R findFirstByIndexInArray(JsonParser parser, int targetIndex, Queue<String> segments, Function<JsonParser, R> processor) {
         var isWildcard = targetIndex == WILDCARD_INDEX;
         var currentIndex = -1;
 
-        Event event;
+        while (parser.hasNext()) {
+            var event = parser.next();
 
-        while ((event = nextElement(parser)) != null) {
+            if (event == END_ARRAY) {
+                return null;
+            }
+
             currentIndex++;
 
             if (!isWildcard && currentIndex != targetIndex) {
@@ -546,11 +555,7 @@ public final class JsonHelper {
                 continue;
             }
 
-            if (segments.isEmpty()) {
-                throw new IllegalArgumentException("Path must point to a value, not to an object or array.");
-            }
-
-            var result = findFirstByPath(parser, isWildcard ? new LinkedList<>(segments) : segments, processor);
+            var result = findFirstInElement(parser, event, isWildcard ? new LinkedList<>(segments) : segments, processor);
 
             if (result != null || !isWildcard) {
                 return result;
@@ -561,22 +566,25 @@ public final class JsonHelper {
     }
 
     /**
-     * Advances to the start of the next element of the array at the current position, answering its start event, or {@code null} when the array ends.
+     * Descends into the array element whose opening event is already consumed, so that the remaining path is resolved against what that element is rather than
+     * against a value the parser has yet to reach.
      */
-    private static Event nextElement(JsonParser parser) {
-        while (parser.hasNext()) {
-            var event = parser.next();
-
-            if (event == END_ARRAY) {
-                return null;
-            }
-
-            if (event == START_OBJECT || event == START_ARRAY) {
-                return event;
-            }
+    private static <R> R findFirstInElement(JsonParser parser, Event start, Queue<String> segments, Function<JsonParser, R> processor) {
+        if (segments.isEmpty()) {
+            throw new IllegalArgumentException("Path must point to a value, not to an object or array.");
         }
 
-        return null;
+        var segment = segments.poll();
+
+        if ("*".equals(segment)) {
+            return start == START_ARRAY ? findFirstByIndexInArray(parser, WILDCARD_INDEX, segments, processor) : null;
+        }
+
+        if (segment.matches("\\d+")) {
+            return start == START_ARRAY ? findFirstByIndexInArray(parser, Integer.parseInt(segment), segments, processor) : null;
+        }
+
+        return start == START_OBJECT ? findFirstByKey(parser, segment, segments, processor) : null;
     }
 
     /**
@@ -590,19 +598,33 @@ public final class JsonHelper {
                 return null;
             }
 
-            if (event == KEY_NAME && key.equals(parser.getString())) {
-                return segments.isEmpty() ? processor.apply(parser) : findFirstByPath(parser, segments, processor);
+            if (event == KEY_NAME) {
+                if (key.equals(parser.getString())) {
+                    return segments.isEmpty() ? processor.apply(parser) : findFirstByPath(parser, segments, processor);
+                }
+
+                skipValue(parser);
             }
         }
 
         return null;
     }
 
+    /**
+     * Steps over the value which follows the key at the current position, so that a nested object or array cannot be mistaken for the end of the object the key
+     * belongs to.
+     */
+    private static void skipValue(JsonParser parser) {
+        if (parser.hasNext()) {
+            skip(parser, parser.next());
+        }
+    }
+
     private static void skip(JsonParser parser, Event event) {
         if (event == START_OBJECT) {
             parser.skipObject();
         }
-        else {
+        else if (event == START_ARRAY) {
             parser.skipArray();
         }
     }
