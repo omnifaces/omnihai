@@ -37,16 +37,13 @@ class ExecutorServiceManager {
     @PostConstruct
     public void init() {
         try {
-            InitialContext context = null;
+            var context = new InitialContext();
 
             try {
-                context = new InitialContext();
                 executorService = (ExecutorService) context.lookup("java:comp/DefaultManagedExecutorService");
             }
             finally {
-                if (context != null) {
-                    context.close();
-                }
+                context.close();
             }
         }
         catch (Exception | LinkageError ignoreAndTryMicroProfile) {
