@@ -22,6 +22,8 @@ import java.util.Base64;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.omnifaces.ai.exception.AIResponseException;
 
 /**
@@ -55,28 +57,21 @@ class DefaultAIImageHandlerTest {
         assertArrayEquals("image bytes".getBytes(UTF_8), handler.parseImageContent(parseJson("{\"data\":[{\"b64_json\":\"" + encoded + "\"}]}")));
     }
 
-    @Test
-    void parseImageContent_withoutAnyContent_saysWhereItLooked() {
-        var response = parseJson("{\"data\":[]}");
+    /**
+     * An answer which carries no image is reported as an unusable answer naming why, whether the provider stated an error, stated no content at all, or stated
+     * content which is no image. The expected message names the case.
+     */
+    @ParameterizedTest(name = "{1}")
+    @CsvSource(delimiter = '|', textBlock = """
+        {"data":[]}                                | No image content found
+        {"data":[{"b64_json":"!!!not base64!!!"}]} | Base64
+        {"error":{"message":"content policy"}}     | content policy
+        """)
+    void parseImageContent_answerWhichCarriesNoImage_saysWhy(String answer, String expected) {
+        var response = parseJson(answer);
 
         var exception = assertThrows(AIResponseException.class, () -> handler.parseImageContent(response));
-        assertTrue(exception.getMessage().contains("No image content found"), exception.getMessage());
-    }
-
-    @Test
-    void parseImageContent_contentWhichDoesNotDecode_saysSo() {
-        var response = parseJson("{\"data\":[{\"b64_json\":\"!!!not base64!!!\"}]}");
-
-        var exception = assertThrows(AIResponseException.class, () -> handler.parseImageContent(response));
-        assertTrue(exception.getMessage().contains("Base64"), exception.getMessage());
-    }
-
-    @Test
-    void parseImageContent_responseStatingAnError_reportsTheError() {
-        var response = parseJson("{\"error\":{\"message\":\"content policy\"}}");
-
-        var exception = assertThrows(AIResponseException.class, () -> handler.parseImageContent(response));
-        assertTrue(exception.getMessage().contains("content policy"), exception.getMessage());
+        assertTrue(exception.getMessage().contains(expected), exception.getMessage());
     }
 
 }
