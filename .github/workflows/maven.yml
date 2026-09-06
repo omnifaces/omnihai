@@ -26,48 +26,38 @@ permissions:
   contents: read
 
 jobs:
-  test:
-    name: Test
+  build:
+    # The library is built for the oldest Java it supports and run on every newer one its users may run it on.
+    name: Build on JDK ${{matrix.java}}
     runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v7
-    - name: Set up JDK 17
-      uses: actions/setup-java@v5
-      with:
-        java-version: '17'
-        distribution: 'temurin'
-        cache: maven
-    - name: Test with Maven
-      run: mvn -B clean verify # The integration tests are skipped by default as they require an API key of each AI provider.
-
-  analyze:
-    name: Analyze with Sonar
-    needs: test
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false # One Java failing may not hide whether the others pass.
+      matrix:
+        java: [ '17', '21', '25' ]
     steps:
     - uses: actions/checkout@v7
       with:
         fetch-depth: 0 # Shallow clones should be disabled for a better relevancy of analysis
-    - name: Set up JDK 17
+    - name: Set up JDK ${{matrix.java}}
       uses: actions/setup-java@v5
       with:
-        java-version: '17'
+        java-version: ${{matrix.java}}
         distribution: 'temurin'
         cache: maven
     - name: Cache Sonar packages
+      if: matrix.java == '17'
       uses: actions/cache@v6
       with:
         path: ~/.sonar/cache
         key: ${{runner.os}}-sonar
         restore-keys: ${{runner.os}}-sonar
-    - name: Cache Maven packages
-      uses: actions/cache@v6
-      with:
-        path: ~/.m2
-        key: ${{runner.os}}-m2-${{hashFiles('**/pom.xml')}}
-        restore-keys: ${{runner.os}}-m2
-    - name: Build and analyze
-      run: mvn -B clean package org.sonarsource.scanner.maven:sonar-maven-plugin:5.7.0.6970:sonar -Dsonar.projectKey=omnifaces_omnihai -Dmaven.javadoc.skip=true
+    - name: Build and test
+      if: matrix.java != '17'
+      run: mvn -B -ntp clean verify # The integration tests are skipped by default as they require an API key of each AI provider.
+    # Analyzing takes the build it analyzes, so it runs the tests once rather than after a job which already ran them.
+    - name: Build, test and analyze with Sonar
+      if: matrix.java == '17'
+      run: mvn -B -ntp clean verify org.sonarsource.scanner.maven:sonar-maven-plugin:5.7.0.6970:sonar -Dsonar.projectKey=omnifaces_omnihai
       env:
         GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
         SONAR_TOKEN: ${{secrets.SONAR_TOKEN}}
