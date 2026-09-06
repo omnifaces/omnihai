@@ -222,7 +222,7 @@ public final class FileHelper {
                 delegate = Channels.newInputStream(channel);
                 this.endOffset = endOffset;
             }
-            catch (IOException e) {
+            catch (IOException | RuntimeException e) {
                 closeQuietly(channel);
                 throw e;
             }

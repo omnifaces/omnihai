@@ -20,6 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeFalse;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.io.IOException;
 import java.lang.annotation.ElementType;
@@ -243,6 +244,45 @@ class FileHelperTest {
     @Retention(RetentionPolicy.RUNTIME)
     @Target(ElementType.METHOD)
     @interface WithFinestLogging {
+    }
+
+    /**
+     * A range which reaches past the file is refused once the file has been opened to measure it, so the channel opened to find that out is closed rather than
+     * left behind as an open file which nothing will close.
+     */
+    @Test
+    void newOffsetInputStream_rangeBeyondTheFile_isRefusedWithoutLeavingTheFileOpen() throws IOException {
+        var file = Files.write(directory.resolve("ten.txt"), new byte[10]);
+
+        for (var i = 0; i < 20; i++) {
+            assertThrows(IllegalArgumentException.class, () -> FileHelper.newOffsetInputStream(file, 0, 100));
+        }
+
+        assertEquals(0, openCountOf(file), "a refused range may not leave a file open");
+    }
+
+    /**
+     * Counts how often this process holds the given file open, which only a system carrying /proc states; elsewhere the test states nothing rather than
+     * failing. Counting this file alone rather than every open file keeps the answer free of what a test running beside this one has open.
+     */
+    private static long openCountOf(Path file) throws IOException {
+        var openFiles = Path.of("/proc/self/fd");
+        assumeTrue(Files.isDirectory(openFiles), "counting the open files of this process needs /proc");
+        var target = file.toRealPath();
+
+        try (var openFile = Files.list(openFiles)) {
+            return openFile.filter(fileDescriptor -> target.equals(readLinkQuietly(fileDescriptor))).count();
+        }
+    }
+
+    /** A descriptor may be gone by the time it is read, as this process opens and closes files of its own meanwhile. */
+    private static Path readLinkQuietly(Path fileDescriptor) {
+        try {
+            return Files.readSymbolicLink(fileDescriptor);
+        }
+        catch (IOException ignore) {
+            return null;
+        }
     }
 
 }
