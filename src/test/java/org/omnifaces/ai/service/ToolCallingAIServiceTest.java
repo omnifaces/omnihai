@@ -85,7 +85,7 @@ class ToolCallingAIServiceTest {
      */
     @BeforeAll
     static void dropTheWarningsOfTheDeliberateFailure() {
-        DeliberateFailures.drop(ToolCallingAIService.class.getPackageName(), record -> isDeliberateFailure(record.getThrown()));
+        DeliberateFailures.drop(ToolCallingAIService.class.getPackageName(), logRecord -> isDeliberateFailure(logRecord.getThrown()));
     }
 
     private static boolean isDeliberateFailure(Throwable thrown) {

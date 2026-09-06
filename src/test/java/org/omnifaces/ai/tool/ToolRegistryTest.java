@@ -466,7 +466,9 @@ class ToolRegistryTest {
     void add_nonPublicClass_throws() {
         var builder = ToolRegistry.newBuilder();
 
-        var exception = assertThrows(IllegalArgumentException.class, () -> builder.add(new NonPublicTools()));
+        var tools = new NonPublicTools();
+
+        var exception = assertThrows(IllegalArgumentException.class, () -> builder.add(tools));
         assertTrue(exception.getMessage().contains("must be public"));
     }
 
@@ -477,7 +479,9 @@ class ToolRegistryTest {
     void add_parameterWithoutDescription_throws() {
         var builder = ToolRegistry.newBuilder();
 
-        var exception = assertThrows(IllegalArgumentException.class, () -> builder.add(new UnannotatedParamTools()));
+        var tools = new UnannotatedParamTools();
+
+        var exception = assertThrows(IllegalArgumentException.class, () -> builder.add(tools));
         assertTrue(exception.getMessage().contains("@AIToolParam"));
     }
 

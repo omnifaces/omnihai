@@ -44,7 +44,7 @@ public final class DeliberateFailures {
     public static void drop(String loggerName, Predicate<LogRecord> deliberate) {
         var dropped = DROPPED.computeIfAbsent(loggerName, name -> ConcurrentHashMap.newKeySet());
         dropped.add(deliberate);
-        Logger.getLogger(loggerName).setFilter(record -> dropped.stream().noneMatch(predicate -> predicate.test(record)));
+        Logger.getLogger(loggerName).setFilter(logRecord -> dropped.stream().noneMatch(predicate -> predicate.test(logRecord)));
     }
 
     /**
@@ -55,7 +55,7 @@ public final class DeliberateFailures {
      */
     public static void dropMessagesContaining(String loggerName, String... messageFragments) {
         for (var fragment : messageFragments) {
-            drop(loggerName, record -> String.valueOf(record.getMessage()).contains(fragment));
+            drop(loggerName, logRecord -> String.valueOf(logRecord.getMessage()).contains(fragment));
         }
     }
 

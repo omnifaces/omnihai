@@ -270,7 +270,9 @@ class RetryingAIServiceTest {
     void maxDuration_negative_isRejected() {
         var builder = RetryingAIService.newBuilder(mock(AIService.class));
 
-        assertThrows(IllegalArgumentException.class, () -> builder.maxDuration(Duration.ofSeconds(-1)));
+        var negative = Duration.ofSeconds(-1);
+
+        assertThrows(IllegalArgumentException.class, () -> builder.maxDuration(negative));
     }
 
     /**

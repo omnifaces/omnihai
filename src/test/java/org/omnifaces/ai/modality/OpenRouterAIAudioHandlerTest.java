@@ -217,8 +217,11 @@ class OpenRouterAIAudioHandlerTest {
      */
     @Test
     void parseAudioContent_contentWhichDoesNotDecode_saysSo() {
-        assertThrows(AIResponseException.class, () -> handler.parseAudioContentInMemory(undecodableStream()));
-        assertThrows(AIResponseException.class, () -> handler.parseAudioContentViaTempFile(undecodableStream()));
+        var inMemory = undecodableStream();
+        var viaTempFile = undecodableStream();
+
+        assertThrows(AIResponseException.class, () -> handler.parseAudioContentInMemory(inMemory));
+        assertThrows(AIResponseException.class, () -> handler.parseAudioContentViaTempFile(viaTempFile));
     }
 
     /**

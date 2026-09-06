@@ -688,7 +688,9 @@ class JsonHelperTest {
     void checkErrors_file_statingAnError_throws() throws IOException {
         var file = jsonFile("{\"error\":{\"message\":\"quota exceeded\"}}");
 
-        var exception = assertThrows(AIResponseException.class, () -> JsonHelper.checkErrors(file, List.of("error.message")));
+        var paths = List.of("error.message");
+
+        var exception = assertThrows(AIResponseException.class, () -> JsonHelper.checkErrors(file, paths));
         assertTrue(exception.getMessage().contains("quota exceeded"));
     }
 

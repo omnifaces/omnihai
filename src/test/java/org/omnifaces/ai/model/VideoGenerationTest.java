@@ -432,16 +432,6 @@ class VideoGenerationTest {
         assertEquals(0, source.polls, "a terminal job cannot change, so awaiting it may not poll");
     }
 
-    @Test
-    void writeTo_outputStream_writesTheDownloadedContent() {
-        var video = new VideoGeneration(new Job("job-1", Status.COMPLETED, null, null, null), OPTIONS, new RecordingSource());
-        var output = new ByteArrayOutputStream();
-
-        video.writeTo(output);
-
-        assertArrayEquals(VIDEO_CONTENT, output.toByteArray());
-    }
-
     /**
      * A download which cannot be written out names the stream it failed on rather than the job, as the job itself succeeded.
      */

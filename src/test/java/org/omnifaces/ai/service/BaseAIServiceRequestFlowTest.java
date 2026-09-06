@@ -46,6 +46,7 @@ import org.omnifaces.ai.mime.MimeType;
 import org.omnifaces.ai.model.AnalyzeVideoOptions;
 import org.omnifaces.ai.model.ChatInput;
 import org.omnifaces.ai.model.ChatInput.Attachment;
+import org.omnifaces.ai.model.ChatInput.Message;
 import org.omnifaces.ai.model.ChatInput.Message.Role;
 import org.omnifaces.ai.model.ChatInput.UploadedFile;
 import org.omnifaces.ai.model.ChatOptions;
@@ -108,7 +109,7 @@ class BaseAIServiceRequestFlowTest {
         service.chatStream(newInput("Hi."), options, tokens::append).join();
 
         assertEquals("Hello there.", tokens.toString());
-        assertEquals(List.of("Hi.", "Hello there."), options.getHistory().stream().map(message -> message.content()).toList());
+        assertEquals(List.of("Hi.", "Hello there."), options.getHistory().stream().map(Message::content).toList());
     }
 
     @Test
@@ -156,7 +157,7 @@ class BaseAIServiceRequestFlowTest {
         var options = ChatOptions.newBuilder().withMemory(50).build();
 
         assertEquals("Hello there.", service.chatAsync(newInput("Hi."), options).join());
-        assertEquals(List.of("Hi.", "Hello there."), options.getHistory().stream().map(message -> message.content()).toList());
+        assertEquals(List.of("Hi.", "Hello there."), options.getHistory().stream().map(Message::content).toList());
         assertEquals(service.getChatPath(false), service.lastPath);
     }
 
@@ -229,8 +230,9 @@ class BaseAIServiceRequestFlowTest {
     void upload_whichFails_isAnsweredAsAnAiFailure() {
         var service = streaming();
         service.uploadFailure = new IllegalStateException("upload refused");
+        var attachment = newPngAttachment();
 
-        assertThrows(AIException.class, () -> service.upload(newPngAttachment(), ChatOptions.DEFAULT));
+        assertThrows(AIException.class, () -> service.upload(attachment, ChatOptions.DEFAULT));
     }
 
     // =================================================================================================================

@@ -121,7 +121,9 @@ class MetaAIServiceLoopbackTest {
         var before = countTempWavs();
         var audio = Files.write(tempDir.resolve("failing.wav"), WAV);
 
-        assertThrows(CompletionException.class, () -> service.transcribeAsync(audio).join());
+        var future = service.transcribeAsync(audio);
+
+        assertThrows(CompletionException.class, future::join);
         assertEquals(before, countTempWavs());
     }
 
@@ -157,9 +159,9 @@ class MetaAIServiceLoopbackTest {
     void transcribeAsync_handlerWhichConvertsNothing_leavesTheCallersFileAlone() throws IOException {
         server.answer(Answer.ofJson("{\"transcript\":\"Hello there.\"}"));
         var audio = Files.write(tempDir.resolve("unconverted.wav"), WAV);
-        var service = newService(PassThroughAudioHandler.class);
+        var passThrough = newService(PassThroughAudioHandler.class);
 
-        assertEquals("Hello there.", service.transcribeAsync(audio).join());
+        assertEquals("Hello there.", passThrough.transcribeAsync(audio).join());
         assertTrue(Files.exists(audio));
     }
 

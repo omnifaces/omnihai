@@ -416,16 +416,18 @@ class OpenAITextHandlerTest {
     @Test
     void processChatStreamEvent_responsesApiIncomplete_throws() {
         var event = new Event(Type.EVENT, "response.incomplete");
+        var service = newService();
 
-        assertThrows(AITokenLimitExceededException.class, () -> process(newService(), event, ChatOptions.DEFAULT, token -> {
+        assertThrows(AITokenLimitExceededException.class, () -> process(service, event, ChatOptions.DEFAULT, token -> {
             /* none */ }));
     }
 
     @Test
     void processChatStreamEvent_responsesApiFailure_throws() {
         var event = data("{\"type\":\"response.failed\"}");
+        var service = newService();
 
-        assertThrows(AIResponseException.class, () -> process(newService(), event, ChatOptions.DEFAULT, token -> {
+        assertThrows(AIResponseException.class, () -> process(service, event, ChatOptions.DEFAULT, token -> {
             /* none */ }));
     }
 
@@ -828,7 +830,6 @@ class OpenAITextHandlerTest {
         var service = (OpenAIService) AIConfig.of(OPENAI, "test-api-key").withModel("gpt-3.5-turbo").createService();
         var input = ChatInput.newBuilder().message("What is the news?").build();
         var options = ChatOptions.DEFAULT.withWebSearch(Location.GLOBAL);
-        var handler = new OpenAITextHandler();
 
         assertThrows(UnsupportedOperationException.class, () -> handler.buildChatPayload(service, input, options, false));
     }

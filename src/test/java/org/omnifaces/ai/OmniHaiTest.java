@@ -30,7 +30,7 @@ class OmniHaiTest {
 
     @Test
     void version_isTheBuildVersion() {
-        assertTrue(OmniHai.version().matches("\\d+\\.\\d+.*"), OmniHai.version());
+        assertTrue(OmniHai.version().matches("\\d++\\.\\d++.*"), OmniHai.version());
     }
 
     @Test

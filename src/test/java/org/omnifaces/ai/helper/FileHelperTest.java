@@ -45,12 +45,21 @@ class FileHelperTest {
     private Path directory;
 
     @BeforeEach
-    void createDirectory() throws IOException {
+    void createDirectory(TestInfo testInfo) throws IOException {
         directory = Files.createTempDirectory("omnihai-file-helper-");
+
+        if (testInfo.getTestMethod().filter(method -> method.isAnnotationPresent(WithFinestLogging.class)).isPresent()) {
+            savedLevel = HELPER_LOGGER.getLevel();
+            HELPER_LOGGER.setLevel(Level.ALL);
+        }
     }
 
     @AfterEach
     void deleteDirectory() throws IOException {
+        if (HELPER_LOGGER.getLevel() == Level.ALL) {
+            HELPER_LOGGER.setLevel(savedLevel);
+        }
+
         directory.toFile().setWritable(true);
 
         try (var files = Files.list(directory)) {
@@ -234,21 +243,6 @@ class FileHelperTest {
     @Retention(RetentionPolicy.RUNTIME)
     @Target(ElementType.METHOD)
     @interface WithFinestLogging {
-    }
-
-    @BeforeEach
-    void raiseLoggingWhenAsked(TestInfo testInfo) {
-        if (testInfo.getTestMethod().filter(method -> method.isAnnotationPresent(WithFinestLogging.class)).isPresent()) {
-            savedLevel = HELPER_LOGGER.getLevel();
-            HELPER_LOGGER.setLevel(Level.ALL);
-        }
-    }
-
-    @AfterEach
-    void restoreLogging() {
-        if (HELPER_LOGGER.getLevel() == Level.ALL) {
-            HELPER_LOGGER.setLevel(savedLevel);
-        }
     }
 
 }
