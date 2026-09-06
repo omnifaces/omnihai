@@ -30,4 +30,12 @@ class HuggingFaceAIServiceTextHandlerIT extends BaseAIServiceTextHandlerIT {
         return API_KEY_ENV_NAME;
     }
 
+    /**
+     * The router reports the reasoning tokens for every model it fronts, stating zero for a model which does not reason.
+     */
+    @Override
+    protected boolean supportsReasoningTokens() {
+        return true;
+    }
+
 }
