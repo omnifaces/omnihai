@@ -12,6 +12,7 @@
  */
 package org.omnifaces.ai.service;
 
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -20,9 +21,12 @@ import static org.omnifaces.ai.AIModality.IMAGE_GENERATION;
 import static org.omnifaces.ai.AIProvider.HUGGINGFACE;
 import static org.omnifaces.ai.service.ModelModalitiesRegistry.MODELS;
 
+import java.lang.Thread.State;
 import java.time.Duration;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -101,6 +105,8 @@ class ModelModalitiesRegistryLoopbackTest {
 
         assertTrue(service.supportsModality(IMAGE_GENERATION), "the listing in hand is worth more than guessing from the model name");
         assertEquals(1, server.requestCount());
+        assertEquals(Set.of(IMAGE_GENERATION), cached().byModelName().get(MODEL), "the listing which was in hand is what is still cached");
+        assertEquals(1, cached().consecutiveFailures());
     }
 
     /**
@@ -131,6 +137,50 @@ class ModelModalitiesRegistryLoopbackTest {
     private static String listingStating(String modality) {
         return "{\"data\":[{\"id\":\"" + MODEL + "\",\"architecture\":{\"input_modalities\":[\"text\",\"" + modality
             + "\"],\"output_modalities\":[\"text\",\"" + modality + "\"]}}]}";
+    }
+
+    /**
+     * A burst of callers costs one request: the fetch is serialized, and whoever waited on it is served what the one who fetched put there rather than fetching
+     * again.
+     */
+    @Test
+    void listingWhichTwoCallersAskForAtOnce_isFetchedOnce() throws Exception {
+        cache(IMAGE_GENERATION, Duration.ofDays(2), 0);
+        server.answer(Answer.ofJson(listingStating("audio")));
+        server.holdNextAnswer();
+
+        var fetching = ask();
+        server.awaitHeldRequest();
+
+        var waiting = ask();
+        awaitBlocked(waiting.getKey());
+
+        server.releaseHeldAnswer();
+
+        assertTrue(fetching.getValue().get(5, SECONDS), "the caller which fetched reads the listing it fetched");
+        assertTrue(waiting.getValue().get(5, SECONDS), "the caller which waited reads the same listing");
+        assertEquals(1, server.requestCount());
+    }
+
+    /** Asks the service on a thread of its own, so that two callers can be in the same question at once. */
+    private Entry<Thread, CompletableFuture<Boolean>> ask() {
+        var answer = new CompletableFuture<Boolean>();
+        var caller = new Thread(() -> answer.complete(service.supportsModality(AUDIO_ANALYSIS)), "asking");
+        caller.start();
+        return Map.entry(caller, answer);
+    }
+
+    /** Waits until the caller is waiting on the fetch rather than making one, which is what this test is about. */
+    private static void awaitBlocked(Thread caller) {
+        var deadline = System.nanoTime() + Duration.ofSeconds(5).toNanos();
+
+        while (caller.getState() != State.BLOCKED) {
+            if (System.nanoTime() > deadline) {
+                throw new AssertionError("The second caller never waited on the fetch, so this states nothing");
+            }
+
+            Thread.onSpinWait();
+        }
     }
 
 }

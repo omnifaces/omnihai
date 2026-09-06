@@ -13,6 +13,7 @@
 package org.omnifaces.ai.service;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.concurrent.TimeUnit.SECONDS;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -25,6 +26,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.zip.GZIPOutputStream;
 
@@ -98,6 +101,9 @@ final class LoopbackHttpServer implements AutoCloseable {
     private final Queue<Answer> answers = new ArrayDeque<>();
     private final List<Request> requests = new CopyOnWriteArrayList<>();
     private final AtomicInteger answered = new AtomicInteger();
+    private final AtomicBoolean holding = new AtomicBoolean();
+    private CountDownLatch arrived;
+    private CountDownLatch held;
     private Answer lastAnswer = Answer.ofJson("{}");
 
     static LoopbackHttpServer start() {
@@ -111,8 +117,18 @@ final class LoopbackHttpServer implements AutoCloseable {
 
     private LoopbackHttpServer(HttpServer server) {
         this.server = server;
-        server.createContext("/", this::handle);
+        server.createContext("/", this::handleQuietly);
         server.start();
+    }
+
+    private void handleQuietly(HttpExchange exchange) throws IOException {
+        try {
+            handle(exchange);
+        }
+        catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IOException(e);
+        }
     }
 
     /** The endpoint to configure a service with, which every path of a test resolves against. */
@@ -134,6 +150,26 @@ final class LoopbackHttpServer implements AutoCloseable {
     }
 
     /**
+     * Holds the next answer until {@link #releaseHeldAnswer()}, so that a test can keep one caller inside its request while another arrives.
+     */
+    void holdNextAnswer() {
+        arrived = new CountDownLatch(1);
+        held = new CountDownLatch(1);
+        holding.set(true);
+    }
+
+    /** Waits until the held request arrived, which is when its caller is inside the request rather than about to make it. */
+    void awaitHeldRequest() throws InterruptedException {
+        if (!arrived.await(5, SECONDS)) {
+            throw new AssertionError("The held request never arrived");
+        }
+    }
+
+    void releaseHeldAnswer() {
+        held.countDown();
+    }
+
+    /**
      * Waits until the server was asked the given number of times, so that a test can assert on a request which was sent beside the call rather than by it.
      */
     void awaitRequests(int count) {
@@ -148,7 +184,7 @@ final class LoopbackHttpServer implements AutoCloseable {
         }
     }
 
-    private void handle(HttpExchange exchange) throws IOException {
+    private void handle(HttpExchange exchange) throws IOException, InterruptedException {
         try (exchange) {
             // Recorded on arrival, so that a caller which was answered can read what it was answered about.
             requests.add(
@@ -157,6 +193,14 @@ final class LoopbackHttpServer implements AutoCloseable {
                     Map.copyOf(exchange.getRequestHeaders()), exchange.getRequestBody().readAllBytes()
                 )
             );
+
+            if (holding.compareAndSet(true, false)) {
+                arrived.countDown();
+
+                if (!held.await(5, SECONDS)) {
+                    throw new IOException("The held answer was never released");
+                }
+            }
 
             var answer = answers.isEmpty() ? lastAnswer : answers.poll();
             lastAnswer = answer;
