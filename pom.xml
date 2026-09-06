@@ -358,6 +358,12 @@
                             <includes>
                                 <include>**/*CDIContainerTest.java</include>
                             </includes>
+                            <properties>
+                                <configurationParameters>
+                                    <!-- A container is looked up through the thread context class loader, which a parallel worker thread does not carry. -->
+                                    junit.jupiter.execution.parallel.enabled = false
+                                </configurationParameters>
+                            </properties>
                         </configuration>
                     </execution>
 
