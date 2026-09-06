@@ -137,12 +137,13 @@ Jakarta Agentic AI standardizes a layer above this one, so the two compose rathe
 ## Is OmniHai smaller than e.g. LangChain4J?
 
 Yes, significantly:
-- OmniHai JAR: ~345 KB vs LangChain4J: ~5-10 MB (*per* AI provider!) — at least 15x smaller when using only one AI provider
-- 118 source files, ~25,000 lines (\~11,000 actual code, \~11,000 javadoc, rest is blank lines)
+- OmniHai JAR: ~346 KB vs LangChain4J: 3.3-6.6 MB for a single AI provider, transitive dependencies included (measured on 1.20.0: open-ai 6.6 MB, anthropic 3.3 MB, google-ai-gemini 3.4 MB) — 10x to 19x smaller
+- That one JAR carries all 10 AI providers, where LangChain4J needs a module per provider (they do share most of their weight, so all three above together still come to 7.0 MB)
+- 118 source files, ~25,000 lines (\~11,000 actual code, \~11,000 comment of which \~9,500 javadoc, rest is blank lines)
 - Zero external runtime dependencies — uses JDK's native `java.net.http.HttpClient` directly without any SDKs
 - Only one required dependency: Jakarta JSON-P (which Jakarta EE and MicroProfile runtimes already have)
 - Other dependencies are optional: CDI, EL and/or MP Config APIs (which Jakarta EE resp. MicroProfile runtimes already have)
-- On plain Java SE that one dependency is the entire footprint
+- On plain Java SE that one Jakarta JSON-P dependency is the entire footprint
 
 ## Is it faster?
 
