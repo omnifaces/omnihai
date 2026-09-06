@@ -530,6 +530,26 @@
 
     <profiles>
 
+        <!-- Left out on 17 because of a Javadoc bug it carries: it warns that a record component carries no comment where the record documents its components
+             itself, which 18 fixed. The rule therefore holds from the first Java without that bug. -->
+        <profile>
+            <id>javadoc-warnings-are-errors</id>
+            <activation>
+                <jdk>[21,)</jdk>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-javadoc-plugin</artifactId>
+                        <configuration>
+                            <failOnWarnings>true</failOnWarnings>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
         <!-- Release deploy: mvn clean deploy -P release -->
         <profile>
             <id>release</id>
