@@ -244,7 +244,7 @@ abstract class BaseAIServiceTextHandlerIT extends AIServiceIT {
         assertAll(
             () -> assertTrue(response.contains("TSLA"), "response contains 'TSLA'"),
             () -> assertTrue(response.contains("$") || response.contains("USD"), "response contains '$' or 'USD'"),
-            () -> assertTrue(Pattern.compile("\\d++\\.\\d{2}").matcher(response).find(), "response contains #0.00")
+            () -> assertTrue(Pattern.compile("\\d\\.\\d{2}").matcher(response).find(), "response contains #0.00")
         );
     }
 

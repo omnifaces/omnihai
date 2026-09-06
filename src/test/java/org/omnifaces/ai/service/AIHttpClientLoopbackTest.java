@@ -256,8 +256,8 @@ class AIHttpClientLoopbackTest {
         var handler = new Handler() {
 
             @Override
-            public void publish(LogRecord record) {
-                records.add(record);
+            public void publish(LogRecord logRecord) {
+                records.add(logRecord);
             }
 
             @Override
