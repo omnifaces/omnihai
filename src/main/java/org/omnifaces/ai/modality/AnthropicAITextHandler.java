@@ -133,11 +133,17 @@ public class AnthropicAITextHandler extends DefaultAITextHandler {
      */
     protected void buildChatPayloadHistoryMessages(AIService service, JsonArrayBuilder messages, ChatInput input) {
         for (var historyMessage : input.getHistory()) {
+            var content = Json.createArrayBuilder();
+
+            for (var uploadedFile : historyMessage.uploadedFiles()) {
+                content.add(newDocumentContent(uploadedFile.id()));
+            }
+
             messages.add(
                 Json.createObjectBuilder()
                     .add("role", historyMessage.role() == Role.USER ? "user" : "assistant")
                     .add(
-                        "content", Json.createArrayBuilder()
+                        "content", content
                             .add(
                                 Json.createObjectBuilder()
                                     .add("type", "text")
@@ -146,6 +152,22 @@ public class AnthropicAITextHandler extends DefaultAITextHandler {
                     )
             );
         }
+    }
+
+    /**
+     * Builds the content block referencing a file which was uploaded to the files API, which a turn attaching it and every later turn replaying it both use.
+     *
+     * @param fileId The provider-assigned ID of the uploaded file.
+     * @return The content block referencing the uploaded file.
+     */
+    private static JsonObjectBuilder newDocumentContent(String fileId) {
+        return Json.createObjectBuilder()
+            .add("type", "document")
+            .add(
+                "source", Json.createObjectBuilder()
+                    .add("type", "file")
+                    .add("file_id", fileId)
+            );
     }
 
     /**
@@ -179,15 +201,7 @@ public class AnthropicAITextHandler extends DefaultAITextHandler {
             for (var file : input.getFiles()) {
                 var fileId = service.upload(file, options);
 
-                content.add(
-                    Json.createObjectBuilder()
-                        .add("type", "document")
-                        .add(
-                            "source", Json.createObjectBuilder()
-                                .add("type", "file")
-                                .add("file_id", fileId)
-                        )
-                );
+                content.add(newDocumentContent(fileId));
             }
         }
 

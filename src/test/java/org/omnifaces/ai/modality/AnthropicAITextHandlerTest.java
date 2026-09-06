@@ -37,8 +37,10 @@ import org.omnifaces.ai.AIConfig;
 import org.omnifaces.ai.AIService;
 import org.omnifaces.ai.exception.AIResponseException;
 import org.omnifaces.ai.exception.AITokenLimitExceededException;
+import org.omnifaces.ai.mime.MimeType;
 import org.omnifaces.ai.model.ChatInput;
 import org.omnifaces.ai.model.ChatInput.Message.Role;
+import org.omnifaces.ai.model.ChatInput.UploadedFile;
 import org.omnifaces.ai.model.ChatOptions;
 import org.omnifaces.ai.model.ChatOptions.Location;
 import org.omnifaces.ai.model.ChatOptions.ReasoningEffort;
@@ -118,6 +120,24 @@ class AnthropicAITextHandlerTest {
         assertEquals("assistant", messages.getJsonObject(1).getString("role"));
         assertEquals("4", messages.getJsonObject(1).getJsonArray("content").getJsonObject(0).getString("text"));
         assertEquals("And 3+3?", messages.getJsonObject(2).getJsonArray("content").getJsonObject(0).getString("text"));
+    }
+
+    /**
+     * A file which an earlier turn uploaded is referenced again when that turn is replayed, as the provider keeps no state of the conversation itself.
+     */
+    @Test
+    void buildChatPayload_withHistoryCarryingAnUploadedFile_replaysTheFileReference() {
+        var options = ChatOptions.newBuilder().withMemory().build();
+        options.recordMessage(Role.USER, "Extract the contents of this PDF.");
+        options.recordUploadedFile(new UploadedFile("file-1", MimeType.of("application/pdf")));
+        options.recordMessage(Role.ASSISTANT, "Dummy PDF file");
+        var input = ChatInput.newBuilder().message("How many pages does it have?").build().withHistory(options.getHistory());
+
+        var content = payload(CLAUDE_SONNET_4_5, input, options).getJsonArray("messages").getJsonObject(0).getJsonArray("content");
+
+        assertEquals("document", content.getJsonObject(0).getString("type"));
+        assertEquals("file-1", content.getJsonObject(0).getJsonObject("source").getString("file_id"));
+        assertEquals("Extract the contents of this PDF.", content.getJsonObject(1).getString("text"));
     }
 
     /**
