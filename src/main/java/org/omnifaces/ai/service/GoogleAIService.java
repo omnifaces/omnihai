@@ -73,7 +73,9 @@ public class GoogleAIService extends BaseAIService {
     private static final String FILE_STATE_FAILED = "FAILED";
     private static final String FILE_ERROR_MESSAGE_PATH = "error.message";
 
-    private static final Duration INITIAL_UPLOADED_FILE_POLL_INTERVAL = Duration.ofSeconds(2);
+    // A small file is processed in well under a second, so the first wait is what its caller mostly pays, while a file which takes minutes reaches the ceiling
+    // whatever the first wait was.
+    private static final Duration INITIAL_UPLOADED_FILE_POLL_INTERVAL = Duration.ofMillis(500);
     private static final Duration MAX_UPLOADED_FILE_POLL_INTERVAL = Duration.ofSeconds(15);
     private static final double UPLOADED_FILE_POLL_BACKOFF_MULTIPLIER = 1.5;
 
