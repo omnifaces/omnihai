@@ -136,6 +136,12 @@
             <scope>test</scope>
         </dependency>
         <dependency>
+            <groupId>org.eclipse.microprofile.context-propagation</groupId>
+            <artifactId>microprofile-context-propagation-api</artifactId>
+            <version>1.3</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
             <groupId>org.jboss.weld</groupId>
             <artifactId>weld-junit5</artifactId>
             <version>5.0.3.Final</version>
@@ -282,6 +288,7 @@
                                 <exclude>**/*VanillaTest.java</exclude>
                                 <exclude>**/*CDIContainerTest.java</exclude>
                                 <exclude>**/*NoTempFilesTest.java</exclude>
+                                <exclude>**/*ManagedExecutorTest.java</exclude>
                             </excludes>
                         </configuration>
                     </execution>
@@ -359,6 +366,29 @@
                             <includes>
                                 <include>**/*CDIContainerTest.java</include>
                             </includes>
+                            <properties>
+                                <configurationParameters>
+                                    <!-- A container is looked up through the thread context class loader, which a parallel worker thread does not carry. -->
+                                    junit.jupiter.execution.parallel.enabled = false
+                                </configurationParameters>
+                            </properties>
+                        </configuration>
+                    </execution>
+
+                    <!-- A Jakarta EE server offers its own managed executor through the naming service, which is stubbed here, as the library picks its
+                         executor once per JVM and therefore cannot be shown both answers in one. -->
+                    <execution>
+                        <id>managed-executor-test</id>
+                        <goals>
+                            <goal>test</goal>
+                        </goals>
+                        <configuration>
+                            <includes>
+                                <include>**/*ManagedExecutorTest.java</include>
+                            </includes>
+                            <systemPropertyVariables>
+                                <java.naming.factory.initial>org.omnifaces.ai.service.StubInitialContextFactory</java.naming.factory.initial>
+                            </systemPropertyVariables>
                             <properties>
                                 <configurationParameters>
                                     <!-- A container is looked up through the thread context class loader, which a parallel worker thread does not carry. -->
