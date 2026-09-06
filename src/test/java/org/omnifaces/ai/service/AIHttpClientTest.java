@@ -55,7 +55,9 @@ import java.util.logging.LogRecord;
 import java.util.logging.Logger;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.ResourceLock;
 import org.omnifaces.ai.AIConfig;
+import org.omnifaces.ai.DeliberateFailures;
 import org.omnifaces.ai.exception.AIHttpException;
 import org.omnifaces.ai.exception.AIRateLimitExceededException;
 import org.omnifaces.ai.mime.MimeType;
@@ -486,6 +488,7 @@ class AIHttpClientTest {
      * The URI is logged without its query string, as a provider may carry the API key there.
      */
     @Test
+    @ResourceLock(DeliberateFailures.LOGGING_STATE)
     void logRequest_whenFinerIsOn_logsTheUriWithoutItsQueryString() {
         var service = (BaseAIService) AIConfig.of(OPENAI, "test-api-key").createService();
         var records = new ArrayList<LogRecord>();
@@ -505,6 +508,7 @@ class AIHttpClientTest {
      * Building the message costs more than it is worth when nobody reads it, so a request nobody logs gets no identity either.
      */
     @Test
+    @ResourceLock(DeliberateFailures.LOGGING_STATE)
     void logRequest_whenFinerIsOff_logsNothingAndHasNoIdentity() {
         var service = (BaseAIService) AIConfig.of(OPENAI, "test-api-key").createService();
         var records = new ArrayList<LogRecord>();
@@ -553,6 +557,7 @@ class AIHttpClientTest {
      * unexpected shape can be traced from the log alone.
      */
     @Test
+    @ResourceLock(DeliberateFailures.LOGGING_STATE)
     void processEvents_whenFinerIsOn_logsEveryEventAndEveryLineItIgnored() {
         var records = new ArrayList<LogRecord>();
         var future = new CompletableFuture<Void>();

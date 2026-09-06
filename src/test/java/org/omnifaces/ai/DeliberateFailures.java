@@ -29,6 +29,12 @@ import java.util.logging.Logger;
  */
 public final class DeliberateFailures {
 
+    /**
+     * Names the logging state which every test shares, for {@code @ResourceLock}. A test which raises a logger's level has to hold this, as the level is global
+     * and a test running beside it would otherwise restore the level from under it and lose the records it is asserting on.
+     */
+    public static final String LOGGING_STATE = "java.util.logging";
+
     private static final Map<String, Set<Predicate<LogRecord>>> DROPPED = new ConcurrentHashMap<>();
 
     private DeliberateFailures() {

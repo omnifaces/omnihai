@@ -38,6 +38,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.parallel.ResourceLock;
+import org.omnifaces.ai.DeliberateFailures;
 import org.omnifaces.ai.exception.AIException;
 import org.omnifaces.ai.exception.AIRateLimitExceededException;
 import org.omnifaces.ai.mime.MimeType;
@@ -249,6 +251,7 @@ class AIHttpClientLoopbackTest {
      * A request being followed at FINER states the answer and the headers it came with, so a provider answering an unexpected shape can be traced from the log.
      */
     @Test
+    @ResourceLock(DeliberateFailures.LOGGING_STATE)
     void whenFinerIsOn_logsTheAnswerAndItsHeaders() {
         server.answer(Answer.ofJson("{\"id\":\"resp-1\"}"));
         var records = new ArrayList<LogRecord>();
