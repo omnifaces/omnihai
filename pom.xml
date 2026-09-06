@@ -281,6 +281,7 @@
                             <excludes>
                                 <exclude>**/*VanillaTest.java</exclude>
                                 <exclude>**/*CDIContainerTest.java</exclude>
+                                <exclude>**/*NoTempFilesTest.java</exclude>
                             </excludes>
                         </configuration>
                     </execution>
@@ -364,6 +365,22 @@
                                     junit.jupiter.execution.parallel.enabled = false
                                 </configurationParameters>
                             </properties>
+                        </configuration>
+                    </execution>
+
+                    <!-- The temporary directory is not there here, which is the runtime a read-only file system offers, and which the in-memory fallbacks
+                         around FileHelper.tempFilesSupported() exist for. -->
+                    <execution>
+                        <id>no-temp-files-test</id>
+                        <goals>
+                            <goal>test</goal>
+                        </goals>
+                        <configuration>
+                            <includes>
+                                <include>**/*NoTempFilesTest.java</include>
+                            </includes>
+                            <!-- Set on the command line rather than as a system property, as the JDK reads it before a property set from within can take. -->
+                            <argLine>@{argLine} -Djava.io.tmpdir=${project.build.directory}/no-temp-files</argLine>
                         </configuration>
                     </execution>
 
