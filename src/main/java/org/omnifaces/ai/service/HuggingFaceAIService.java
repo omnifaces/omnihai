@@ -90,7 +90,11 @@ public class HuggingFaceAIService extends OpenAIService {
         return findModelModalities(this).map(modalities -> modalities.contains(modality)).orElseGet(() -> supportsModalityByModelName(modality));
     }
 
-    private boolean supportsModalityByModelName(AIModality modality) {
+    /**
+     * Reads the modalities from the model name, which is what is left when the listing cannot be obtained. The match is deliberately narrow: a name states a
+     * modality only where the model is named after it, so a wrong yes, which fails at the provider, is traded for a wrong no, which refuses gracefully.
+     */
+    boolean supportsModalityByModelName(AIModality modality) {
         var fullModelName = getModelName().toLowerCase(Locale.ROOT);
 
         return switch (modality) {

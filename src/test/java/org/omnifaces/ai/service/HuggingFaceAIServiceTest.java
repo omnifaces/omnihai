@@ -12,6 +12,7 @@
  */
 package org.omnifaces.ai.service;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.omnifaces.ai.AIModality.AUDIO_ANALYSIS;
@@ -26,7 +27,10 @@ import java.util.Set;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.omnifaces.ai.AIConfig;
+import org.omnifaces.ai.AIModality;
 import org.omnifaces.ai.DeliberateFailures;
 
 /**
@@ -85,6 +89,42 @@ class HuggingFaceAIServiceTest {
 
     private static HuggingFaceAIService newService(String model) {
         return new HuggingFaceAIService(AIConfig.of(HUGGINGFACE, "test-api-key").withModel(model).withEndpoint(UNSERVED_ENDPOINT));
+    }
+
+    // =================================================================================================================
+    // What the model name alone states, which is what answers while no listing can be obtained
+    // =================================================================================================================
+
+    /**
+     * Every arm of the fallback, including the two which the unserveable check answers before the fallback is reached, so that the two agree on what Hugging
+     * Face cannot serve.
+     */
+    @ParameterizedTest(name = "{0} on {1}")
+    @CsvSource(
+        {
+            "IMAGE_ANALYSIS,    meta-llama/Llama-3.2-11B,       true",
+            "IMAGE_ANALYSIS,    openai/whisper-large-v3,        true",
+            "IMAGE_GENERATION,  black-forest-labs/FLUX.1-image, true",
+            "IMAGE_GENERATION,  black-forest-labs/FLUX.1-dev,   false",
+            "AUDIO_ANALYSIS,    openai/whisper-large-v3,        true",
+            "AUDIO_ANALYSIS,    nvidia/parakeet-transcribe,     true",
+            "AUDIO_ANALYSIS,    meta-llama/Llama-3.2-11B,       false",
+            "VIDEO_ANALYSIS,    qwen/qwen2.5-video-7b,          true",
+            "VIDEO_ANALYSIS,    meta-llama/Llama-3.2-11B,       false",
+            "AUDIO_GENERATION,  parler-tts/parler-tts-mini,     false",
+            "VIDEO_GENERATION,  genmo/mochi-1-video,            false",
+        }
+    )
+    void supportsModalityByModelName_statesWhatTheNameStatesAndNothingMore(AIModality modality, String model, boolean expected) {
+        assertEquals(expected, newService(model).supportsModalityByModelName(modality));
+    }
+
+    /**
+     * The name is read case insensitively, as a routed model carries the vendor's own capitalization.
+     */
+    @Test
+    void supportsModalityByModelName_readsTheNameCaseInsensitively() {
+        assertTrue(newService("openai/Whisper-Large-V3").supportsModalityByModelName(AUDIO_ANALYSIS));
     }
 
 }

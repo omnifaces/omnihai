@@ -28,7 +28,10 @@ import java.util.Set;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.omnifaces.ai.AIConfig;
+import org.omnifaces.ai.AIModality;
 import org.omnifaces.ai.DeliberateFailures;
 
 /**
@@ -99,6 +102,44 @@ class OpenRouterAIServiceTest {
 
     private static OpenRouterAIService newService(String model) {
         return new OpenRouterAIService(AIConfig.of(OPENROUTER, "test-api-key").withModel(model).withEndpoint(UNSERVED_ENDPOINT));
+    }
+
+    // =================================================================================================================
+    // What the model name alone states, which is what answers while no listing can be obtained
+    // =================================================================================================================
+
+    /**
+     * Every arm of the fallback. OpenRouter serves audio and video generation, so unlike Hugging Face it states them from the name rather than refusing them.
+     */
+    @ParameterizedTest(name = "{0} on {1}")
+    @CsvSource(
+        {
+            "IMAGE_ANALYSIS,    openai/gpt-4o,                    true",
+            "IMAGE_ANALYSIS,    openai/sora-2,                    true",
+            "IMAGE_GENERATION,  google/gemini-2.5-flash-image,    true",
+            "IMAGE_GENERATION,  openai/gpt-4o,                    false",
+            "AUDIO_ANALYSIS,    openai/gpt-4o-audio-preview,      true",
+            "AUDIO_ANALYSIS,    openai/gpt-4o,                    false",
+            "AUDIO_GENERATION,  openai/gpt-4o-audio-preview,      true",
+            "AUDIO_GENERATION,  openai/gpt-4o-mini-tts,           true",
+            "AUDIO_GENERATION,  openai/gpt-4o,                    false",
+            "VIDEO_ANALYSIS,    qwen/qwen2.5-video-7b,            true",
+            "VIDEO_ANALYSIS,    openai/gpt-4o,                    false",
+            "VIDEO_GENERATION,  black-forest-labs/flux-3-video,   false",
+        }
+    )
+    void supportsModalityByModelName_statesWhatTheNameStatesAndNothingMore(AIModality modality, String model, boolean expected) {
+        assertEquals(expected, newService(model).supportsModalityByModelName(modality));
+    }
+
+    /**
+     * A video generator is not named after generating, and OpenRouter enumerates them under a listing of their own, so the name states nothing about it.
+     */
+    @Test
+    void supportsModalityByModelName_videoGeneration_isNeverStatedByTheName() {
+        for (var model : new String[] { "minimax/hailuo-3", "runway/gen-4.5", "black-forest-labs/flux-3-video", "openai/sora-2" }) {
+            assertFalse(newService(model).supportsModalityByModelName(VIDEO_GENERATION), model);
+        }
     }
 
 }
