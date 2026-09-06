@@ -13,6 +13,7 @@
 package org.omnifaces.ai.cdi;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -45,6 +46,9 @@ class AIServiceProducerCDINoELVanillaTest {
     @AI(provider = AIProvider.OPENAI, apiKey = "test-key", model = "#{config.model}")
     private AIService withELExpression;
 
+    @AI(provider = AIProvider.OPENAI, apiKey = "test-key", model = "${config:omnihai.test.model}")
+    private AIService withMicroProfileConfigExpression;
+
     @Test
     void cdiIsPresentButItsElBindingIsNot() {
         assertThrows(ClassNotFoundException.class, () -> Class.forName("jakarta.enterprise.inject.spi.el.ELAwareBeanManager"));
@@ -61,6 +65,15 @@ class AIServiceProducerCDINoELVanillaTest {
         var exception = assertThrows(UnsupportedOperationException.class, () -> produce("withELExpression"));
 
         assertTrue(exception.getMessage().contains("jakarta.enterprise.cdi-el-api"), exception.getMessage());
+    }
+
+    /**
+     * The resolver is picked by the syntax of the expression rather than by what the container offers, so a container without the EL binding still reads a
+     * MicroProfile Config expression.
+     */
+    @Test
+    void produce_microProfileConfigExpressionWithoutTheElBinding_isResolved() {
+        assertEquals("gpt-4o-mini", produce("withMicroProfileConfigExpression").getModelName());
     }
 
     private static AIService produce(String fieldName) {

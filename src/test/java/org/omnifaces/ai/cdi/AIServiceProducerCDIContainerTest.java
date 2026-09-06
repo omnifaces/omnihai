@@ -78,6 +78,15 @@ class AIServiceProducerCDIContainerTest {
     }
 
     /**
+     * An attribute holding a MicroProfile Config expression is read from the configuration rather than taken as the value, which is what an application states
+     * a key with rather than the key itself.
+     */
+    @Test
+    void inject_microProfileConfigExpression_isResolvedFromTheConfiguration() {
+        assertEquals("gpt-4o-mini", services.withConfigExpression.getModelName());
+    }
+
+    /**
      * A configuration which is equal is served the same instance, so an application injecting the same service in a hundred beans holds one.
      */
     @Test
@@ -180,6 +189,10 @@ class AIServiceProducerCDIContainerTest {
         @Inject
         @AI(apiKey = "test-api-key", model = "gpt-4o-mini")
         AIService withModel;
+
+        @Inject
+        @AI(apiKey = "test-api-key", model = "${config:omnihai.test.model}")
+        AIService withConfigExpression;
 
         @Inject
         @AI(apiKey = "test-api-key", maxAttempts = 3)
