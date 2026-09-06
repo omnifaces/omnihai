@@ -18,6 +18,7 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.logging.Level.ALL;
 import static java.util.logging.Level.FINER;
 import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.WARNING;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -437,7 +438,7 @@ class AIHttpClientTest {
         var attempts = new AtomicInteger();
         var cause = new AIRateLimitExceededException(URI.create("https://example.org"), "rate limited");
 
-        var future = AIHttpClient.handleFailureWithRetry(() -> {
+        var future = AIHttpClient.handleFailureWithRetry(1, () -> {
             attempts.incrementAndGet();
             return completedFuture("retried");
         }, 0, new CompletionException(cause));
@@ -449,7 +450,7 @@ class AIHttpClientTest {
     @Test
     void handleFailureWithRetry_afterTheLastAttempt_saysHowOftenItTried() {
         var future = AIHttpClient.handleFailureWithRetry(
-            () -> completedFuture("retried"), AIHttpClient.MAX_RETRIES, new IOException("connection reset")
+            1, () -> completedFuture("retried"), AIHttpClient.MAX_RETRIES, new IOException("connection reset")
         );
 
         var exception = assertThrows(CompletionException.class, future::join);
@@ -464,7 +465,7 @@ class AIHttpClientTest {
     void handleFailureWithRetry_failureWorthRetrying_triesAgain() {
         var attempts = new AtomicInteger();
 
-        var result = AIHttpClient.handleFailureWithRetry(() -> {
+        var result = AIHttpClient.handleFailureWithRetry(1, () -> {
             attempts.incrementAndGet();
             return completedFuture("retried");
         }, 0, new IOException("connection reset")).join();
@@ -475,9 +476,29 @@ class AIHttpClientTest {
 
     @Test
     void handleFailureWithRetry_failureWhichIsNotWorthRetrying_isAnsweredAsItIs() {
-        var future = AIHttpClient.handleFailureWithRetry(() -> completedFuture("retried"), 0, new IllegalStateException("broken"));
+        var future = AIHttpClient.handleFailureWithRetry(1, () -> completedFuture("retried"), 0, new IllegalStateException("broken"));
 
         assertTrue(future.isCompletedExceptionally());
+    }
+
+    /**
+     * A retry costs the caller another full request timeout, so it names the request and the delay rather than passing unseen.
+     */
+    @Test
+    @ResourceLock(DeliberateFailures.LOGGING_STATE)
+    void handleFailureWithRetry_failureWorthRetrying_announcesTheNextAttempt() {
+        var records = new ArrayList<LogRecord>();
+
+        whileLoggingAt(
+            WARNING, records, () -> AIHttpClient.handleFailureWithRetry(42, () -> completedFuture("retried"), 0, new IOException("connection reset"))
+        );
+
+        assertEquals(1, records.size());
+        assertEquals(WARNING, records.get(0).getLevel());
+        var message = records.get(0).getMessage();
+        assertTrue(message.contains("#42"), message);
+        assertTrue(message.contains("connection reset"), message);
+        assertTrue(message.contains(AIHttpClient.INITIAL_BACKOFF_MS + "ms"), message);
     }
 
     // =================================================================================================================

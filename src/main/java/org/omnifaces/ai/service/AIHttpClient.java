@@ -29,6 +29,7 @@ import static java.util.concurrent.CompletableFuture.supplyAsync;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.function.Function.identity;
 import static java.util.logging.Level.FINER;
+import static java.util.logging.Level.WARNING;
 import static java.util.stream.Stream.iterate;
 import static org.omnifaces.ai.exception.AIHttpException.fromStatusCode;
 import static org.omnifaces.ai.helper.FileHelper.closeQuietly;
@@ -350,7 +351,8 @@ final class AIHttpClient {
     )
     {
         return withRetry(
-            () -> client.sendAsync(request, ofInputStream()).thenCompose(response -> handleResponse(requestId, request, response, successHandler)), attempt
+            requestId, () -> client.sendAsync(request, ofInputStream()).thenCompose(response -> handleResponse(requestId, request, response, successHandler)),
+            attempt
         );
     }
 
@@ -493,11 +495,11 @@ final class AIHttpClient {
         }
     }
 
-    private static <R> CompletableFuture<R> withRetry(Supplier<CompletableFuture<R>> action, int attempt) {
-        return action.get().exceptionallyCompose(throwable -> handleFailureWithRetry(action, attempt, throwable));
+    private static <R> CompletableFuture<R> withRetry(int requestId, Supplier<CompletableFuture<R>> action, int attempt) {
+        return action.get().exceptionallyCompose(throwable -> handleFailureWithRetry(requestId, action, attempt, throwable));
     }
 
-    static <R> CompletableFuture<R> handleFailureWithRetry(Supplier<CompletableFuture<R>> action, int attempt, Throwable throwable) {
+    static <R> CompletableFuture<R> handleFailureWithRetry(int requestId, Supplier<CompletableFuture<R>> action, int attempt, Throwable throwable) {
         var cause = throwable instanceof CompletionException ce ? ce.getCause() : throwable;
 
         if (cause instanceof AIException) {
@@ -508,7 +510,10 @@ final class AIHttpClient {
             return failedFuture(new AIHttpException("Request failed (" + attempt + " retries)", cause));
         }
 
-        return supplyAsync(() -> withRetry(action, attempt + 1), delayedExecutor(INITIAL_BACKOFF_MS * (1L << attempt), MILLISECONDS)).thenCompose(identity());
+        var backoff = INITIAL_BACKOFF_MS * (1L << attempt);
+        logger.log(WARNING, () -> "Retrying #" + requestId + " in " + backoff + "ms after attempt " + (attempt + 1) + " of " + MAX_RETRIES + ": " + cause);
+
+        return supplyAsync(() -> withRetry(requestId, action, attempt + 1), delayedExecutor(backoff, MILLISECONDS)).thenCompose(identity());
     }
 
     /**
