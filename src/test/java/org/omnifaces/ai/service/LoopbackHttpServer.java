@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.zip.GZIPOutputStream;
 
 import com.sun.net.httpserver.HttpExchange;
@@ -96,6 +97,7 @@ final class LoopbackHttpServer implements AutoCloseable {
     private final HttpServer server;
     private final Queue<Answer> answers = new ArrayDeque<>();
     private final List<Request> requests = new CopyOnWriteArrayList<>();
+    private final AtomicInteger answered = new AtomicInteger();
     private Answer lastAnswer = Answer.ofJson("{}");
 
     static LoopbackHttpServer start() {
@@ -137,9 +139,9 @@ final class LoopbackHttpServer implements AutoCloseable {
     void awaitRequests(int count) {
         var deadline = System.nanoTime() + Duration.ofSeconds(5).toNanos();
 
-        while (requests.size() < count) {
+        while (answered.get() < count) {
             if (System.nanoTime() > deadline) {
-                throw new AssertionError("Expected " + count + " requests but got " + requests.size());
+                throw new AssertionError("Expected " + count + " requests but answered " + answered.get());
             }
 
             Thread.onSpinWait();
@@ -148,9 +150,12 @@ final class LoopbackHttpServer implements AutoCloseable {
 
     private void handle(HttpExchange exchange) throws IOException {
         try (exchange) {
-            var request = new Request(
-                exchange.getRequestMethod(), exchange.getRequestURI().getPath(), exchange.getRequestURI().getQuery(),
-                Map.copyOf(exchange.getRequestHeaders()), exchange.getRequestBody().readAllBytes()
+            // Recorded on arrival, so that a caller which was answered can read what it was answered about.
+            requests.add(
+                new Request(
+                    exchange.getRequestMethod(), exchange.getRequestURI().getPath(), exchange.getRequestURI().getQuery(),
+                    Map.copyOf(exchange.getRequestHeaders()), exchange.getRequestBody().readAllBytes()
+                )
             );
 
             var answer = answers.isEmpty() ? lastAnswer : answers.poll();
@@ -160,8 +165,8 @@ final class LoopbackHttpServer implements AutoCloseable {
             exchange.getResponseBody().write(answer.body());
             exchange.getResponseBody().flush();
 
-            // Recorded once answered, so that a test waiting on a request knows the caller was served rather than merely heard.
-            requests.add(request);
+            // Counted once served, so that a test waiting on a request sent beside its call knows the caller was served rather than merely heard.
+            answered.incrementAndGet();
         }
     }
 
