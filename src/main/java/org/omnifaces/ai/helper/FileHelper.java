@@ -60,6 +60,22 @@ public final class FileHelper {
     }
 
     /**
+     * Creates an empty temporary file, named after this library and the given name so that it can be told apart from another one which was left behind.
+     * <p>
+     * Every temporary file of this library is created here, so that one place decides how. The name is picked rather than stated, and the file is created in
+     * the same step under permissions which only its owner holds, which is what keeps a directory everyone may write to safe to use at all.
+     *
+     * @param name The name to tell the file apart by, which the library name and a unique part surround.
+     * @param extension The extension of the file, without a leading dot, as {@link org.omnifaces.ai.mime.MimeType#extension()} states one.
+     * @return The created temporary file, which the caller owns and deletes.
+     * @throws IOException If the file cannot be created.
+     * @since 1.7.2
+     */
+    public static Path newTempFile(String name, String extension) throws IOException {
+        return createTempFile(OmniHai.name() + "-" + name + "-", "." + extension);
+    }
+
+    /**
      * Checks that a file can be written at the given path and returns it. Anything which writes through a temporary file beside the target and renames it into
      * place needs the directory to be writable rather than the target itself, as a rename replaces the target rather than opening it, so that is what this
      * checks. The check is a best effort: the file system may still refuse the write afterwards.
@@ -166,7 +182,7 @@ public final class FileHelper {
 
         private static boolean checkTempFileSupport() {
             try {
-                cleanupFiles(createTempFile(OmniHai.name() + "-probe-", ".tmp"));
+                cleanupFiles(newTempFile("probe", "tmp"));
                 return true;
             }
             catch (Exception ignore) {

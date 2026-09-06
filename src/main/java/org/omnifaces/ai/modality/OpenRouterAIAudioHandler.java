@@ -16,6 +16,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.omnifaces.ai.helper.FileHelper.cleanupFiles;
 import static org.omnifaces.ai.helper.FileHelper.closeQuietly;
 import static org.omnifaces.ai.helper.FileHelper.newDeleteOnCloseInputStream;
+import static org.omnifaces.ai.helper.FileHelper.newTempFile;
 import static org.omnifaces.ai.helper.FileHelper.tempFilesSupported;
 import static org.omnifaces.ai.helper.JsonHelper.checkErrors;
 import static org.omnifaces.ai.helper.JsonHelper.findFirstNonBlankByPaths;
@@ -41,7 +42,6 @@ import jakarta.json.Json;
 import jakarta.json.JsonObject;
 
 import org.omnifaces.ai.AIService;
-import org.omnifaces.ai.OmniHai;
 import org.omnifaces.ai.exception.AIResponseException;
 import org.omnifaces.ai.helper.FileHelper;
 import org.omnifaces.ai.model.GenerateAudioOptions;
@@ -194,7 +194,7 @@ public class OpenRouterAIAudioHandler extends DefaultAIAudioHandler {
         Path audioContentTempFile = null;
 
         try {
-            audioContentTempFile = Files.createTempFile(OmniHai.name() + "-openrouter-audio-content-", ".pcm");
+            audioContentTempFile = newTempFile("openrouter-audio-content", "pcm");
 
             try (var audioContent = Files.newOutputStream(audioContentTempFile)) {
                 collectAudioContent(responseStream, chunk -> writeUnchecked(audioContent, chunk));

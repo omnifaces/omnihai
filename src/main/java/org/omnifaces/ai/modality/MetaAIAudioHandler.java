@@ -13,12 +13,12 @@
 package org.omnifaces.ai.modality;
 
 import static java.lang.System.arraycopy;
-import static java.nio.file.Files.createTempFile;
 import static java.nio.file.Files.newByteChannel;
 import static java.nio.file.StandardOpenOption.WRITE;
 import static java.util.Objects.requireNonNull;
 import static javax.sound.sampled.AudioFormat.Encoding.PCM_SIGNED;
 import static org.omnifaces.ai.helper.FileHelper.cleanupFiles;
+import static org.omnifaces.ai.helper.FileHelper.newTempFile;
 import static org.omnifaces.ai.helper.JsonHelper.checkErrors;
 import static org.omnifaces.ai.helper.JsonHelper.findFirstNonBlankByPaths;
 import static org.omnifaces.ai.modality.DefaultAITextHandler.DEFAULT_ERROR_MESSAGE_PATHS;
@@ -37,7 +37,6 @@ import jakarta.json.Json;
 import jakarta.json.JsonObject;
 
 import org.omnifaces.ai.AIService;
-import org.omnifaces.ai.OmniHai;
 import org.omnifaces.ai.exception.AIException;
 import org.omnifaces.ai.exception.AIResponseException;
 import org.omnifaces.ai.service.MetaAIService;
@@ -119,7 +118,7 @@ public class MetaAIAudioHandler extends DefaultAIAudioHandler {
         Path converted = null;
 
         try {
-            converted = createTempFile(OmniHai.name() + "-meta-asr-", ".wav");
+            converted = newTempFile("meta-asr", "wav");
 
             try (
                 var source = AudioSystem.getAudioInputStream(audio.toFile());
