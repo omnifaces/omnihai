@@ -15,6 +15,7 @@ package org.omnifaces.ai.helper;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -733,6 +734,29 @@ class JsonSchemaHelperTest {
         var schema = JsonSchemaHelper.buildJsonSchema(WriteOnlyBean.class);
 
         assertFalse(schema.getJsonObject("properties").containsKey("name"));
+    }
+
+    /**
+     * A map subtype may declare fewer type parameters than the map it implements, so the value type cannot be read off the property and the schema states that
+     * anything may be there rather than guessing.
+     */
+    @Test
+    void buildJsonSchema_mapSubtypeStatingOneTypeParameter_leavesTheValueTypeOpen() {
+        var schema = JsonSchemaHelper.buildJsonSchema(WithHeaders.class);
+        var headers = schema.getJsonObject("properties").getJsonObject("headers");
+
+        assertEquals("object", headers.getString("type"));
+        assertNotNull(headers.getJsonObject("additionalProperties"));
+    }
+
+    /** A map keyed by string alone, which is what an application writes where the key is never anything else. */
+    public static class Headers<V> extends java.util.HashMap<String, V> {
+
+        private static final long serialVersionUID = 1L;
+
+    }
+
+    public record WithHeaders(Headers<String> headers) {
     }
 
 }
