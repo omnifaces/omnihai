@@ -1907,7 +1907,9 @@ class ChatOptionsTest {
         assertNull(restored.getMaxTotalCost());
     }
 
-    // Accounting shared across derived instances -----------------------------------------------------------------------
+    // =================================================================================================================
+    // Accounting shared across derived instances
+    // =================================================================================================================
 
     /**
      * A {@code withXxx} method derives another view on the same conversation, so usage recorded through the derived instance is visible on the original. This
@@ -1973,6 +1975,112 @@ class ChatOptionsTest {
         options.recordUsage(new ChatUsage(10, 20, 0, 0));
 
         assertNull(options.copy().getLastUsage());
+    }
+
+    // =================================================================================================================
+    // JSON round trip - partially stated video options
+    // =================================================================================================================
+
+    /**
+     * Only the video options which differ from the defaults are written, so a replay states what the original call stated and nothing more.
+     */
+    @Test
+    void toJson_videoOptionsStatingOneFieldAlone_writesThatFieldAlone() {
+        var options = ChatOptions.newBuilder().withMemory().build();
+        options.recordMessage(Role.USER, "Describe it");
+        options.recordUploadedFile(new UploadedFile("file-1", TEST_MP4, AnalyzeVideoOptions.newBuilder().startOffset(Duration.ofSeconds(30)).build()));
+
+        var restored = ChatOptions.fromJson(options.toJson()).getHistory().get(0).uploadedFiles().get(0).videoOptions();
+
+        assertEquals(Duration.ofSeconds(30), restored.getStartOffset());
+        assertNull(restored.getEndOffset());
+        assertEquals(AnalyzeVideoOptions.DEFAULT_FPS, restored.getFps());
+    }
+
+    @Test
+    void toJson_videoOptionsStatingNothingBeyondTheDefaults_writesNone() {
+        var options = ChatOptions.newBuilder().withMemory().build();
+        options.recordMessage(Role.USER, "Describe it");
+        options.recordUploadedFile(new UploadedFile("file-1", TEST_MP4, AnalyzeVideoOptions.DEFAULT));
+
+        assertNull(ChatOptions.fromJson(options.toJson()).getHistory().get(0).uploadedFiles().get(0).videoOptions());
+    }
+
+    @Test
+    void toJson_uploadedFileWithoutVideoOptions_roundTripsWithoutThem() {
+        var options = ChatOptions.newBuilder().withMemory().build();
+        options.recordMessage(Role.USER, "Read it");
+        options.recordUploadedFile(new UploadedFile("file-1", TEST_PDF));
+
+        var restored = ChatOptions.fromJson(options.toJson()).getHistory().get(0).uploadedFiles().get(0);
+
+        assertEquals("file-1", restored.id());
+        assertNull(restored.videoOptions());
+    }
+
+    /**
+     * A window size without a history states an empty conversation of that size, which is what a caller replays a fresh conversation from.
+     */
+    @Test
+    void fromJson_maxHistoryWithoutHistory_restoresAnEmptyMemory() {
+        var restored = ChatOptions.fromJson("{\"maxHistory\":7}");
+
+        assertTrue(restored.hasMemory());
+        assertEquals(7, restored.getMaxHistory());
+        assertTrue(restored.getHistory().isEmpty());
+    }
+
+    // =================================================================================================================
+    // Builder - no maximum
+    // =================================================================================================================
+
+    /**
+     * A null maximum leaves the ceiling to the AI provider rather than stating one, so it is not rejected as a non-positive number.
+     */
+    @Test
+    void maxTokens_null_leavesTheCeilingToTheProvider() {
+        assertNull(ChatOptions.newBuilder().maxTokens(null).build().getMaxTokens());
+    }
+
+    // =================================================================================================================
+    // JSON round trip - partially stated fields
+    // =================================================================================================================
+
+    /**
+     * A field the caller never set is not written, and a field written as null is not read back as a value either.
+     */
+    @Test
+    void fromJson_explicitlyNullMaxTokens_leavesTheCeilingToTheProvider() {
+        assertNull(ChatOptions.fromJson("{\"maxTokens\":null}").getMaxTokens());
+    }
+
+    @Test
+    void toJson_videoOptionsStatingTheRateAlone_writesThatRateAlone() {
+        var options = ChatOptions.newBuilder().withMemory().build();
+        options.recordMessage(Role.USER, "Describe it");
+        options.recordUploadedFile(new UploadedFile("file-1", TEST_MP4, AnalyzeVideoOptions.newBuilder().fps(2).build()));
+
+        var restored = ChatOptions.fromJson(options.toJson()).getHistory().get(0).uploadedFiles().get(0).videoOptions();
+
+        assertEquals(2, restored.getFps());
+        assertNull(restored.getStartOffset());
+        assertNull(restored.getEndOffset());
+    }
+
+    // =================================================================================================================
+    // recordUploadedFile without a user message
+    // =================================================================================================================
+
+    /**
+     * An uploaded file belongs to the message which sent it, so there has to be one to attach it to.
+     */
+    @Test
+    void recordUploadedFile_historyWithoutAUserMessage_throws() {
+        var options = ChatOptions.newBuilder().withMemory().build();
+        options.recordMessage(Role.ASSISTANT, "How can I help?");
+        var uploadedFile = new UploadedFile("file-1", TEST_PDF);
+
+        assertThrows(IllegalStateException.class, () -> options.recordUploadedFile(uploadedFile));
     }
 
 }

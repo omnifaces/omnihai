@@ -22,6 +22,8 @@ import static org.omnifaces.ai.AIProvider.OPENROUTER;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.UncheckedIOException;
 import java.util.Base64;
 import java.util.List;
 
@@ -161,6 +163,89 @@ class OpenRouterAIAudioHandlerTest {
 
     private static AIService newService() {
         return AIConfig.of(OPENROUTER, "test-api-key").withModel("openai/gpt-audio-mini").createService();
+    }
+
+    /**
+     * The end marker and a data line carrying nothing are both skipped rather than collected as audio.
+     */
+    @Test
+    void parseAudioContent_endMarkerAndEmptyDataLines_areSkipped() throws IOException {
+        var base64 = Base64.getEncoder().encodeToString(new byte[8]);
+        var responseStream = new ByteArrayInputStream(
+            ("data:\n\ndata: " + newAudioEvent(base64) + "\n\ndata: [DONE]\n\ndata: " + newAudioEvent(base64) + "\n").getBytes(UTF_8)
+        );
+
+        var audioContent = handler.parseAudioContent(responseStream).readAllBytes();
+
+        assertEquals(44 + 16, audioContent.length, "the two audio events are collected and nothing else is");
+    }
+
+    @Test
+    void parseAudioContent_unreadableStream_saysSo() {
+        var responseStream = new InputStream() {
+
+            @Override
+            public int read() throws IOException {
+                throw new IOException("connection reset");
+            }
+
+        };
+
+        assertThrows(AIResponseException.class, () -> handler.parseAudioContentInMemory(responseStream));
+    }
+
+    /**
+     * A handler which states no path to the audio has nothing to collect, and says which method to implement.
+     */
+    @Test
+    void parseAudioContent_withoutAnyStatedPath_namesTheMethod() {
+        var pathless = new OpenRouterAIAudioHandler() {
+
+            @Override
+            protected List<String> getAudioResponseContentPaths() {
+                return List.of();
+            }
+
+        };
+        var responseStream = new ByteArrayInputStream("data: [DONE]\n".getBytes(UTF_8));
+
+        assertThrows(IllegalStateException.class, () -> pathless.parseAudioContent(responseStream));
+    }
+
+    /**
+     * Content which does not decode is reported as an unusable answer whichever route collected it.
+     */
+    @Test
+    void parseAudioContent_contentWhichDoesNotDecode_saysSo() {
+        var inMemory = undecodableStream();
+        var viaTempFile = undecodableStream();
+
+        assertThrows(AIResponseException.class, () -> handler.parseAudioContentInMemory(inMemory));
+        assertThrows(AIResponseException.class, () -> handler.parseAudioContentViaTempFile(viaTempFile));
+    }
+
+    /**
+     * A chunk which cannot be written to the temp file is reported as the write failure it is, rather than as the failure to read the response which the catch
+     * around the collecting travels through.
+     */
+    @Test
+    void writeUnchecked_chunkWhichCannotBeWritten_saysItCouldNotWriteIt() {
+        var full = new OutputStream() {
+
+            @Override
+            public void write(int b) throws IOException {
+                throw new IOException("no space left on device");
+            }
+
+        };
+
+        var exception = assertThrows(UncheckedIOException.class, () -> OpenRouterAIAudioHandler.writeUnchecked(full, new byte[] { 1, 2, 3 }));
+
+        assertTrue(exception.getMessage().contains("temp file"), exception.getMessage());
+    }
+
+    private static ByteArrayInputStream undecodableStream() {
+        return new ByteArrayInputStream("data: {\"choices\":[{\"delta\":{\"audio\":{\"data\":\"!!!\"}}}]}\n\n".getBytes(UTF_8));
     }
 
 }

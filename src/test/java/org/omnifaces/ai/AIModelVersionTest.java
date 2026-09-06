@@ -679,4 +679,28 @@ class AIModelVersionTest {
         assertTrue(v1.ne()); // not equal to any of nothing = true
     }
 
+    // =================================================================================================================
+    // Model names without a version
+    // =================================================================================================================
+
+    /**
+     * A model named without a single letter has no prefix to compare, so the whole name stands in for it and only an identical name matches.
+     */
+    @Test
+    void gte_modelNameWithoutLetters_comparesByTheWholeName() {
+        assertTrue(AIModelVersion.of("123", 2).gte(AIModelVersion.of("123", 1)));
+        assertFalse(AIModelVersion.of("123", 2).gte(AIModelVersion.of("456", 1)));
+    }
+
+    /**
+     * A floor is stated per model family, so a version is compared against the one naming its own family and the families it does not belong to are skipped.
+     */
+    @Test
+    void lte_skipsTheFloorsOfOtherModelFamilies() {
+        var version = AIModelVersion.of("claude-sonnet", 4, 5);
+
+        assertTrue(version.lte(AIModelVersion.of("gpt", 9), AIModelVersion.of("claude-sonnet", 5)));
+        assertFalse(version.lte(AIModelVersion.of("gpt", 9), AIModelVersion.of("claude-sonnet", 4, 1)));
+    }
+
 }

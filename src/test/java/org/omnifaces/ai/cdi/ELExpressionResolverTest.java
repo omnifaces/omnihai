@@ -19,9 +19,6 @@ import static org.mockito.Mockito.when;
 
 import java.util.Map;
 
-import jakarta.el.ELContext;
-import jakarta.el.ELResolver;
-import jakarta.el.PropertyNotWritableException;
 import jakarta.enterprise.inject.spi.el.ELAwareBeanManager;
 
 import org.junit.jupiter.api.Test;
@@ -263,59 +260,11 @@ class ELExpressionResolverTest {
 
     private static ELAwareBeanManager mockBeanManager(Map<String, ?> beans) {
         var beanManager = mock(ELAwareBeanManager.class);
-        when(beanManager.getELResolver()).thenReturn(new TestBeanELResolver(beans));
+        when(beanManager.getELResolver()).thenReturn(new StubBeanELResolver(beans));
         return beanManager;
     }
 
-    // =================================================================================================================
-    // Test support classes
-    // =================================================================================================================
-
-    /**
-     * EL resolver that resolves top-level bean names from a map. Nested property access (e.g. {@code config.apiKey}) is handled by the built-in
-     * {@code MapELResolver} when the bean value is a {@code Map}, or by {@code BeanELResolver} when it is a POJO.
-     */
-    private static class TestBeanELResolver extends ELResolver {
-
-        private final Map<String, ?> beans;
-
-        TestBeanELResolver(Map<String, ?> beans) {
-            this.beans = beans;
-        }
-
-        @Override
-        public Object getValue(ELContext context, Object base, Object property) {
-            if (base == null && property != null && beans.containsKey(property.toString())) {
-                context.setPropertyResolved(true);
-                return beans.get(property.toString());
-            }
-
-            return null;
-        }
-
-        @Override
-        public Class<?> getType(ELContext context, Object base, Object property) {
-            return null;
-        }
-
-        @Override
-        public void setValue(ELContext context, Object base, Object property, Object value) {
-            throw new PropertyNotWritableException();
-        }
-
-        @Override
-        public boolean isReadOnly(ELContext context, Object base, Object property) {
-            return true;
-        }
-
-        @Override
-        public Class<?> getCommonPropertyType(ELContext context, Object base) {
-            return null;
-        }
-
-    }
-
-    /** Bean whose property access throws, for testing error handling in ELExpressionResolver. */
+    /** Stands in for a bean whose getter blows up, so that a failing expression is left as it was rather than swallowed. */
     public static class FailingBean {
 
         public Object getValue() {

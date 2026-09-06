@@ -30,6 +30,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.io.OutputStream;
 import java.io.Serializable;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
@@ -411,6 +412,55 @@ class VideoGenerationTest {
     }
 
     /** Source which answers each poll with the next scripted job, staying on the last one, and each download with fixed content. */
+    // =================================================================================================================
+    // failureReason / writeTo(OutputStream) / toString
+    // =================================================================================================================
+
+    @Test
+    void failureReason_carriesWhatTheProviderStated() {
+        var job = new Job("job-1", Status.FAILED, null, null, "content policy");
+
+        assertEquals("content policy", new VideoGeneration(job, OPTIONS, new RecordingSource()).failureReason());
+    }
+
+    @Test
+    void completion_terminalJob_isAlreadyComplete() throws Exception {
+        var source = new RecordingSource();
+        var video = new VideoGeneration(new Job("job-1", Status.COMPLETED, null, null, null), OPTIONS, source);
+
+        assertSame(video, video.completion().get(5, SECONDS));
+        assertEquals(0, source.polls, "a terminal job cannot change, so awaiting it may not poll");
+    }
+
+    /**
+     * A download which cannot be written out names the stream it failed on rather than the job, as the job itself succeeded.
+     */
+    @Test
+    void writeTo_failingOutputStream_isReportedAsAnIoFailure() {
+        var video = new VideoGeneration(new Job("job-1", Status.COMPLETED, null, null, null), OPTIONS, new RecordingSource());
+
+        var output = new OutputStream() {
+
+            @Override
+            public void write(int b) throws IOException {
+                throw new IOException("disk full");
+            }
+
+        };
+
+        assertThrows(UncheckedIOException.class, () -> video.writeTo(output));
+    }
+
+    /**
+     * The job id and its status are what a caller looks up the job by, so both belong in the description.
+     */
+    @Test
+    void toString_namesTheJobAndItsStatus() {
+        var video = new VideoGeneration(new Job("job-1", Status.RUNNING, null, null, null), OPTIONS, new RecordingSource());
+
+        assertEquals("VideoGeneration[job-1, RUNNING]", video.toString());
+    }
+
     private static class RecordingSource implements Source {
 
         private final Deque<Job> scriptedJobs;

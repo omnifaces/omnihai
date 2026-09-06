@@ -12,6 +12,7 @@
  */
 package org.omnifaces.ai.service;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -25,6 +26,7 @@ import static org.mockito.Mockito.when;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.URI;
@@ -40,6 +42,8 @@ import org.junit.jupiter.api.Test;
 import org.mockito.stubbing.Answer;
 import org.omnifaces.ai.AIService;
 import org.omnifaces.ai.exception.AIBadRequestException;
+import org.omnifaces.ai.exception.AIException;
+import org.omnifaces.ai.exception.AIRateLimitExceededException;
 import org.omnifaces.ai.exception.AIServiceUnavailableException;
 import org.omnifaces.ai.exception.AIStreamAbortedException;
 import org.omnifaces.ai.model.ChatInput;
@@ -235,6 +239,205 @@ class RetryingAIServiceTest {
         }
 
         return false;
+    }
+
+    // =================================================================================================================
+    // Builder validation
+    // =================================================================================================================
+
+    /**
+     * The attempt count includes the first try, so a count below one would mean not calling the AI at all.
+     */
+    @Test
+    void maxAttempts_belowOne_isRejected() {
+        var builder = RetryingAIService.newBuilder(mock(AIService.class));
+
+        assertThrows(IllegalArgumentException.class, () -> builder.maxAttempts(0));
+    }
+
+    /**
+     * A multiplier below one would shorten each wait rather than lengthen it, which is the opposite of backing off.
+     */
+    @Test
+    void backoffMultiplier_belowOne_isRejected() {
+        var builder = RetryingAIService.newBuilder(mock(AIService.class));
+
+        assertThrows(IllegalArgumentException.class, () -> builder.backoffMultiplier(0.5));
+        assertDoesNotThrow(() -> builder.backoffMultiplier(1));
+    }
+
+    @Test
+    void maxDuration_negative_isRejected() {
+        var builder = RetryingAIService.newBuilder(mock(AIService.class));
+
+        var negative = Duration.ofSeconds(-1);
+
+        assertThrows(IllegalArgumentException.class, () -> builder.maxDuration(negative));
+    }
+
+    /**
+     * An unlimited budget is stated by leaving it out rather than by a number standing in for forever.
+     */
+    @Test
+    void maxDuration_null_meansUnlimited() {
+        assertDoesNotThrow(() -> RetryingAIService.newBuilder(mock(AIService.class)).maxDuration(null));
+    }
+
+    @Test
+    void retryOn_null_isRejected() {
+        var builder = RetryingAIService.newBuilder(mock(AIService.class));
+
+        assertThrows(NullPointerException.class, () -> builder.retryOn(null));
+    }
+
+    /**
+     * A budget which has run out stops the retrying even when attempts are left, as the caller is already waiting longer than it allowed.
+     */
+    @Test
+    void retrying_pastTheTimeBudget_stopsEvenWithAttemptsLeft() {
+        var wrapped = mock(AIService.class);
+        when(wrapped.chat("hi")).thenThrow(unavailable());
+
+        var service = fast(wrapped).maxAttempts(5).maxDuration(Duration.ZERO).build();
+
+        assertThrows(AIServiceUnavailableException.class, () -> service.chat("hi"));
+        verify(wrapped, times(1)).chat("hi");
+    }
+
+    // =================================================================================================================
+    // Backing off between attempts
+    // =================================================================================================================
+
+    /**
+     * A budget which still has room lets the retrying go on, so a limit is a ceiling rather than a switch which turns retrying off.
+     */
+    @Test
+    void retrying_withinTheTimeBudget_keepsGoing() {
+        var wrapped = mock(AIService.class);
+        when(wrapped.chat("hi")).thenThrow(unavailable()).thenReturn("ok");
+
+        var service = fast(wrapped).maxDuration(Duration.ofMinutes(1)).build();
+
+        assertEquals("ok", service.chat("hi"));
+        verify(wrapped, times(2)).chat("hi");
+    }
+
+    /**
+     * A retry waits before it tries again, so a provider which is briefly overloaded is not hit with the next attempt at once.
+     */
+    @Test
+    void backoff_betweenAttempts_waitsTheConfiguredDuration() {
+        var wrapped = mock(AIService.class);
+        when(wrapped.chat("hi")).thenThrow(unavailable()).thenReturn("ok");
+
+        var service = RetryingAIService.newBuilder(wrapped)
+            .initialBackoff(Duration.ofMillis(20)).maxBackoff(Duration.ofMillis(20)).jitter(false).build();
+
+        var startNanos = System.nanoTime();
+
+        assertEquals("ok", service.chat("hi"));
+        assertTrue(Duration.ofNanos(System.nanoTime() - startNanos).compareTo(Duration.ofMillis(20)) >= 0);
+    }
+
+    /**
+     * Jitter spreads the waits of callers which failed at the same moment, so it picks somewhere up to the wait rather than the wait itself.
+     */
+    @Test
+    void backoff_withJitter_waitsAtMostTheCappedDuration() {
+        var wrapped = mock(AIService.class);
+        when(wrapped.chat("hi")).thenThrow(unavailable()).thenReturn("ok");
+
+        var service = RetryingAIService.newBuilder(wrapped)
+            .initialBackoff(Duration.ofMillis(2)).maxBackoff(Duration.ofSeconds(1)).jitter(true).build();
+
+        var startNanos = System.nanoTime();
+
+        assertEquals("ok", service.chat("hi"));
+        assertTrue(Duration.ofNanos(System.nanoTime() - startNanos).compareTo(Duration.ofSeconds(1)) < 0);
+    }
+
+    /**
+     * A caller which is being interrupted wants to stop, so the wait is given up on and the interrupt is passed on rather than swallowed.
+     */
+    @Test
+    void backoff_whenTheCallerIsInterrupted_givesUpAndKeepsTheInterrupt() {
+        var wrapped = mock(AIService.class);
+        when(wrapped.chat("hi")).thenThrow(unavailable());
+
+        var service = RetryingAIService.newBuilder(wrapped).initialBackoff(Duration.ofMinutes(1)).maxBackoff(Duration.ofMinutes(1)).jitter(false).build();
+
+        Thread.currentThread().interrupt();
+
+        try {
+            var exception = assertThrows(AIException.class, () -> service.chat("hi"));
+
+            assertTrue(exception.getMessage().contains("interrupted"), exception.getMessage());
+            assertTrue(Thread.currentThread().isInterrupted());
+        }
+        finally {
+            Thread.interrupted();
+        }
+    }
+
+    // =================================================================================================================
+    // The default policy on which failures are worth retrying
+    // =================================================================================================================
+
+    /**
+     * A failure of the connection itself is worth retrying wherever it sits in the chain, as the next attempt may well get through.
+     */
+    @Test
+    void defaultRetryPredicate_rateLimit_isRetried() {
+        assertTrue(RetryingAIService.DEFAULT_RETRY_ON.test(new AIRateLimitExceededException(ENDPOINT, "rate limited")));
+    }
+
+    @Test
+    void defaultRetryPredicate_ioExceptionAnywhereInTheChain_isRetried() {
+        assertTrue(RetryingAIService.DEFAULT_RETRY_ON.test(new IllegalStateException("wrapper", new IOException("connection reset"))));
+    }
+
+    /**
+     * A chain which points back at itself is walked once rather than forever.
+     */
+    @Test
+    void defaultRetryPredicate_selfReferentialCause_terminates() {
+        assertFalse(RetryingAIService.DEFAULT_RETRY_ON.test(new SelfCausingException()));
+    }
+
+    private static final class SelfCausingException extends RuntimeException {
+
+        private static final long serialVersionUID = 1L;
+
+        @Override
+        public synchronized Throwable getCause() {
+            return this;
+        }
+
+    }
+
+    /**
+     * An attempt can fail before it returns a future at all, e.g. when building the payload uploads an attachment and that upload fails. That still counts as a
+     * failed attempt, so it is retried.
+     */
+    @Test
+    void asyncRetriesWhenAttemptFailsBeforeReturningAFuture() throws Exception {
+        var wrapped = mock(AIService.class);
+        when(wrapped.chatAsync(any(ChatInput.class), any(ChatOptions.class)))
+            .thenThrow(unavailable())
+            .thenReturn(CompletableFuture.completedFuture("ok"));
+
+        assertEquals("ok", fast(wrapped).build().chatAsync(INPUT, OPTIONS).get());
+    }
+
+    @Test
+    void retryOn_ownPredicate_decidesWhichFailureIsRetried() {
+        var wrapped = mock(AIService.class);
+        when(wrapped.chat("hi")).thenThrow(new AIBadRequestException(ENDPOINT, "bad")).thenReturn("ok");
+
+        var service = fast(wrapped).retryOn(AIBadRequestException.class::isInstance).build();
+
+        assertEquals("ok", service.chat("hi"));
+        verify(wrapped, times(2)).chat("hi");
     }
 
 }

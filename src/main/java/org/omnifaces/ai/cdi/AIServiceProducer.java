@@ -214,7 +214,8 @@ class AIServiceProducer {
 
     private static boolean isJsonAvailable() {
         try {
-            return Class.forName("jakarta.json.spi.JsonProvider").getMethod("provider").invoke(null) != null;
+            Class.forName("jakarta.json.spi.JsonProvider").getMethod("provider").invoke(null);
+            return true;
         }
         catch (Exception | LinkageError ignore) {
             return false;
@@ -223,7 +224,8 @@ class AIServiceProducer {
 
     private static boolean isMicroProfileConfigAvailable() {
         try {
-            return Class.forName("org.eclipse.microprofile.config.ConfigProvider").getMethod("getConfig").invoke(null) != null;
+            Class.forName("org.eclipse.microprofile.config.ConfigProvider").getMethod("getConfig").invoke(null);
+            return true;
         }
         catch (Exception | LinkageError ignore) {
             return false;
@@ -241,7 +243,8 @@ class AIServiceProducer {
 
     private static boolean isELProcessorAvailable() {
         try {
-            return Class.forName("jakarta.el.ELProcessor").getDeclaredConstructor().newInstance() != null;
+            Class.forName("jakarta.el.ELProcessor").getDeclaredConstructor().newInstance();
+            return true;
         }
         catch (Exception | LinkageError ignore) {
             return false;

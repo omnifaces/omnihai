@@ -16,6 +16,7 @@ import static java.util.Collections.emptyList;
 import static java.util.Collections.emptyMap;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -29,19 +30,27 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
+import java.io.UncheckedIOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Base64;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import javax.imageio.ImageIO;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.omnifaces.ai.mime.MimeType;
 import org.omnifaces.ai.model.ChatInput.Attachment;
 import org.omnifaces.ai.model.ChatInput.Message;
 import org.omnifaces.ai.model.ChatInput.Message.Role;
 
 class ChatInputTest {
+
+    @TempDir
+    private Path tempDir;
 
     private static final MimeType TEST_PNG = new MimeType() {
 
@@ -405,6 +414,146 @@ class ChatInputTest {
         assertEquals(0, attachment.content().length);
         assertNotNull(attachment.toBase64());
         assertNotNull(attachment.toDataUri());
+    }
+
+    // =================================================================================================================
+    // Attachment - byte[] versus path backed
+    // =================================================================================================================
+
+    /**
+     * An attachment reports the length of what it carries, whether that is held in memory or still on disk.
+     */
+    @Test
+    void size_followsWhereTheContentLives() throws IOException {
+        var file = Files.write(tempDir.resolve("test.png"), new byte[] { 1, 2, 3 });
+
+        assertEquals(3, new Attachment(new byte[] { 1, 2, 3 }, TEST_PNG, "test.png", emptyMap()).size());
+        assertEquals(3, new Attachment(file).size());
+    }
+
+    @Test
+    void toBase64_pathBackedAttachment_readsTheFile() throws IOException {
+        var file = Files.write(tempDir.resolve("test.png"), new byte[] { 1, 2, 3 });
+
+        assertEquals(Base64.getEncoder().encodeToString(new byte[] { 1, 2, 3 }), new Attachment(file).toBase64());
+    }
+
+    /**
+     * A path backed attachment reads its file when it is asked for the content, which is not when it was attached, so the file may be gone by then.
+     */
+    @Test
+    void toBase64_pathWhichWentAway_namesTheFileItCouldNotRead() throws IOException {
+        var file = Files.write(tempDir.resolve("vanishing.png"), new byte[] { 1, 2, 3 });
+        var attachment = new Attachment(file);
+        Files.delete(file);
+
+        var exception = assertThrows(UncheckedIOException.class, attachment::toBase64);
+        assertTrue(exception.getMessage().contains("vanishing.png"));
+    }
+
+    /**
+     * A path is not serializable, so it travels as its string form and comes back as a path again.
+     */
+    @Test
+    void serialization_pathBackedAttachment_restoresTheSource() throws Exception {
+        var file = Files.write(tempDir.resolve("test.png"), new byte[] { 1, 2, 3 });
+
+        var bytes = new ByteArrayOutputStream();
+
+        try (var output = new ObjectOutputStream(bytes)) {
+            output.writeObject(new Attachment(file));
+        }
+
+        try (var input = new ObjectInputStream(new ByteArrayInputStream(bytes.toByteArray()))) {
+            assertEquals(file, ((Attachment) input.readObject()).source());
+        }
+    }
+
+    /**
+     * Metadata is handed to the AI provider as request fields, so an entry without a name or without a value is dropped rather than sent empty.
+     */
+    @Test
+    void metadata_blankNameOrValue_isDropped() {
+        var metadata = new HashMap<String, String>();
+        metadata.put("kept", "value");
+        metadata.put(" ", "value without a name");
+        metadata.put("name without a value", " ");
+
+        var attachment = new Attachment(new byte[0], TEST_PNG, "test.png", metadata);
+
+        assertEquals(Map.of("kept", "value"), attachment.metadata());
+    }
+
+    // =================================================================================================================
+    // Attachment - toString
+    // =================================================================================================================
+
+    /**
+     * An attachment is filed by what it carries: an image joins the images so it can be inlined, anything else joins the files so it can be uploaded.
+     */
+    @Test
+    void attach_filesTheAttachmentByItsMimeType() {
+        var input = ChatInput.newBuilder()
+            .message("Look")
+            .attach(new Attachment(new byte[0], TEST_PNG, "test.png", emptyMap()), new Attachment(new byte[0], TEST_PDF, "test.pdf", emptyMap()))
+            .build();
+
+        assertEquals(1, input.getImages().size());
+        assertEquals(1, input.getFiles().size());
+    }
+
+    @Test
+    void toString_byteBackedAttachment_namesTheContentAsBytes() {
+        var attachment = new Attachment(new byte[] { 1, 2, 3 }, TEST_PNG, "test.png", emptyMap());
+
+        assertEquals("Attachment[fileName=test.png, mimeType=image/png, contentLength=3, source=byte[]]", attachment.toString());
+    }
+
+    @Test
+    void toString_pathBackedAttachment_namesTheSource() throws IOException {
+        var file = Files.write(tempDir.resolve("test.png"), new byte[] { 1, 2, 3 });
+
+        assertTrue(new Attachment(file).toString().contains("source=" + file));
+    }
+
+    @Test
+    void toString_withMetadata_namesIt() {
+        var attachment = new Attachment(new byte[0], TEST_PNG, "test.png", Map.of("purpose", "avatar"));
+
+        assertTrue(attachment.toString().contains("metadata={purpose=avatar}"));
+    }
+
+    @Test
+    void toString_withoutMetadata_omitsIt() {
+        assertFalse(new Attachment(new byte[0], TEST_PNG, "test.png", emptyMap()).toString().contains("metadata"));
+    }
+
+    /**
+     * Video options which state nothing beyond the defaults tell the reader nothing either, so they stay out of the description.
+     */
+    @Test
+    void toString_withNonDefaultVideoOptions_namesThem() {
+        var attachment = new Attachment(new byte[0], TEST_MP4, "test.mp4", emptyMap());
+
+        assertFalse(attachment.withVideoOptions(AnalyzeVideoOptions.DEFAULT).toString().contains("videoOptions"));
+        assertTrue(attachment.withVideoOptions(AnalyzeVideoOptions.newBuilder().fps(2).build()).toString().contains("videoOptions"));
+    }
+
+    /**
+     * An image attached by path is read and sanitized just as one attached by content is, so that what reaches the AI does not depend on how it was handed
+     * over.
+     */
+    @Test
+    void attach_imageByPath_isReadAndSanitized() throws IOException {
+        var image = new BufferedImage(2, 2, BufferedImage.TYPE_INT_ARGB);
+        var bytes = new ByteArrayOutputStream();
+        ImageIO.write(image, "PNG", bytes);
+        var file = Files.write(tempDir.resolve("image.png"), bytes.toByteArray());
+
+        var input = ChatInput.newBuilder().message("Look").attach(file).build();
+
+        assertEquals(1, input.getImages().size());
+        assertTrue(input.getImages().get(0).size() > 0);
     }
 
 }

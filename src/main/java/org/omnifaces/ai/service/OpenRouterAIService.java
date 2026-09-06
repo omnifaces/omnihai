@@ -95,7 +95,7 @@ public class OpenRouterAIService extends OpenAIService {
      * @param modality The modality to check.
      * @return Whether the model name suggests the given modality.
      */
-    private boolean supportsModalityByModelName(AIModality modality) {
+    boolean supportsModalityByModelName(AIModality modality) {
         var fullModelName = getModelName().toLowerCase(Locale.ROOT);
 
         return switch (modality) {

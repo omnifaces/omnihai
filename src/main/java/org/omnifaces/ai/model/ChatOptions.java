@@ -85,13 +85,13 @@ public class ChatOptions implements Serializable {
     public static final ReasoningEffort DEFAULT_REASONING_EFFORT = ReasoningEffort.AUTO;
 
     /** Default chat options with temperature of {@value #DEFAULT_TEMPERATURE}. */
-    public static final ChatOptions DEFAULT = ChatOptions.newBuilder().build();
+    public static final ChatOptions DEFAULT = ChatOptions.newBuilder().immutable().build();
 
     /** Creative chat with higher temperature of {@value #CREATIVE_TEMPERATURE}. */
-    public static final ChatOptions CREATIVE = ChatOptions.newBuilder().temperature(CREATIVE_TEMPERATURE).build();
+    public static final ChatOptions CREATIVE = ChatOptions.newBuilder().immutable().temperature(CREATIVE_TEMPERATURE).build();
 
     /** Deterministic chat with zero temperature. */
-    public static final ChatOptions DETERMINISTIC = ChatOptions.newBuilder().temperature(DETERMINISTIC_TEMPERATURE).build();
+    public static final ChatOptions DETERMINISTIC = ChatOptions.newBuilder().immutable().temperature(DETERMINISTIC_TEMPERATURE).build();
 
     // --- JSON keys, shared by toJson() and fromJson() so that a rename cannot break the round trip ---
 
@@ -122,12 +122,6 @@ public class ChatOptions implements Serializable {
     private static final String CONTENT_KEY = "content";
     private static final String ID_KEY = "id";
     private static final String MIME_TYPE_KEY = "mimeType";
-
-    static {
-        DEFAULT.immutable = true;
-        CREATIVE.immutable = true;
-        DETERMINISTIC.immutable = true;
-    }
 
     /**
      * Controls how much internal reasoning (a.k.a. "thinking" or "extended thought") the AI model performs before producing its visible answer, on providers
@@ -226,7 +220,7 @@ public class ChatOptions implements Serializable {
     /** The token usage and cumulative cost, shared with the instances derived from this one via a {@code withXxx} method. */
     private transient volatile Accounting accounting = new Accounting();
     /** Whether this instance is a shared default constant and therefore immutable. */
-    private boolean immutable;
+    private final boolean immutable;
 
     /**
      * The runtime accounting of a conversation: the usage of its most recent call and the cumulative cost of all of them.
@@ -346,6 +340,7 @@ public class ChatOptions implements Serializable {
         var memoryEnabled = builder.maxHistory > 0 || builder.history != null;
         this.maxHistory = resolveMaxHistory(builder.maxHistory, memoryEnabled);
         this.history = memoryEnabled ? new ArrayList<>() : null;
+        this.immutable = builder.immutable;
 
         if (memoryEnabled && builder.history != null) {
             history.addAll(builder.history);
@@ -384,6 +379,7 @@ public class ChatOptions implements Serializable {
         this.history = history;
         this.maxHistory = maxHistory;
         this.accounting = accounting;
+        this.immutable = false;
     }
 
     private ChatOptions(ChatOptions source) {
@@ -398,6 +394,8 @@ public class ChatOptions implements Serializable {
         this.maxTotalCost = source.maxTotalCost;
         this.history = source.history;
         this.maxHistory = source.maxHistory;
+        this.accounting = new Accounting();
+        this.immutable = false;
     }
 
     /**
@@ -765,7 +763,7 @@ public class ChatOptions implements Serializable {
         var totalCost = accounting.getTotalCost();
 
         if (maxTotalCost != null && totalCost.compareTo(maxTotalCost) >= 0) {
-            throw new AIBudgetExceededException(totalCost, maxTotalCost, pricing != null ? pricing.currency() : null);
+            throw new AIBudgetExceededException(totalCost, maxTotalCost, pricing.currency());
         }
     }
 
@@ -1266,8 +1264,19 @@ public class ChatOptions implements Serializable {
         private BigDecimal maxTotalCost;
         private int maxHistory;
         private List<Message> history;
+        private boolean immutable;
 
         private Builder() {
+        }
+
+        /**
+         * Marks the instance under construction as a shared default constant, which rejects every mutating operation.
+         *
+         * @return This builder instance for chaining.
+         */
+        private Builder immutable() {
+            this.immutable = true;
+            return this;
         }
 
         /**

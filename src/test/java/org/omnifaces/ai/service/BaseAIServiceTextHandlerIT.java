@@ -244,7 +244,7 @@ abstract class BaseAIServiceTextHandlerIT extends AIServiceIT {
         assertAll(
             () -> assertTrue(response.contains("TSLA"), "response contains 'TSLA'"),
             () -> assertTrue(response.contains("$") || response.contains("USD"), "response contains '$' or 'USD'"),
-            () -> assertTrue(Pattern.compile("\\d+\\.\\d{2}").matcher(response).find(), "response contains #0.00")
+            () -> assertTrue(Pattern.compile("\\d\\.\\d{2}").matcher(response).find(), "response contains #0.00")
         );
     }
 
@@ -255,7 +255,7 @@ abstract class BaseAIServiceTextHandlerIT extends AIServiceIT {
         }
 
         var miami = new Location("US", null, "Miami");
-        var response = service.webSearch("What is the current weather? High/Low?", miami);
+        var response = service.webSearch("What is the weather today? What are the high and the low?", miami);
         log(response);
         assertAll(
             () -> assertTrue(response.contains("Miami") || response.contains("MI"), "response contains 'Miami' or 'MI'"),
@@ -293,7 +293,8 @@ abstract class BaseAIServiceTextHandlerIT extends AIServiceIT {
 
         var low = ChatOptions.newBuilder().reasoningEffort(ReasoningEffort.LOW).build();
         var high = ChatOptions.newBuilder().reasoningEffort(ReasoningEffort.HIGH).build();
-        var prompt = "Think carefully step by step, then answer: what is the 10th Fibonacci number? Do not output anything other than the final number.";
+        var prompt = "Think carefully step by step, then answer: in how many distinct ways can 87 cents be made from US coins of 1, 5, 10 and 25 cents? "
+            + "Do not output anything other than the final number.";
 
         service.chat(prompt, low);
         service.chat(prompt, high);
@@ -303,17 +304,19 @@ abstract class BaseAIServiceTextHandlerIT extends AIServiceIT {
         log("low usage: " + lowUsage);
         log("high usage: " + highUsage);
 
-        // outputTokens is the portable signal. OpenAI rolls reasoning tokens into output_tokens; Anthropic rolls thinking tokens into output_tokens; Google's
-        // parseChatUsage adjusts candidatesTokenCount to include thoughtsTokenCount. So outputTokens reliably grows with effort across all three providers.
+        assertNotNull(lowUsage, "usage must be recorded for LOW");
+        assertNotNull(highUsage, "usage must be recorded for HIGH");
+
+        // A provider which breaks the reasoning out is asked for it directly. Elsewhere outputTokens carries it: OpenAI rolls reasoning tokens into
+        // output_tokens, Anthropic rolls thinking tokens into output_tokens, and Google's parseChatUsage adds thoughtsTokenCount to candidatesTokenCount.
+        var signal = supportsReasoningTokens() ? "reasoningTokens" : "outputTokens";
+        var lowTokens = supportsReasoningTokens() ? lowUsage.reasoningTokens() : lowUsage.outputTokens();
+        var highTokens = supportsReasoningTokens() ? highUsage.reasoningTokens() : highUsage.outputTokens();
+
         assertAll(
-            () -> assertNotNull(lowUsage),
-            () -> assertNotNull(highUsage),
-            () -> assertTrue(lowUsage.outputTokens() > 0, "LOW outputTokens must be > 0: " + lowUsage.outputTokens()),
-            () -> assertTrue(highUsage.outputTokens() > 0, "HIGH outputTokens must be > 0: " + highUsage.outputTokens()),
-            () -> assertTrue(
-                highUsage.outputTokens() > lowUsage.outputTokens(),
-                "HIGH outputTokens (" + highUsage.outputTokens() + ") must exceed LOW (" + lowUsage.outputTokens() + ")"
-            )
+            () -> assertTrue(lowTokens > 0, "LOW " + signal + " must be > 0: " + lowTokens),
+            () -> assertTrue(highTokens > 0, "HIGH " + signal + " must be > 0: " + highTokens),
+            () -> assertTrue(highTokens > lowTokens, "HIGH " + signal + " (" + highTokens + ") must exceed LOW (" + lowTokens + ")")
         );
     }
 

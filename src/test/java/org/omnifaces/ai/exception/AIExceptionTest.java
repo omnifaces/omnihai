@@ -14,6 +14,7 @@ package org.omnifaces.ai.exception;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletionException;
@@ -22,6 +23,23 @@ import java.util.concurrent.ExecutionException;
 import org.junit.jupiter.api.Test;
 
 class AIExceptionTest {
+
+    @Test
+    void tokenLimitExceeded_namesTheLimitItRanInto() {
+        assertEquals("max tokens reached", new AITokenLimitExceededException().getMessage());
+    }
+
+    /**
+     * The tool the AI wanted to call next is carried separately from the message, so that a caller can raise the limit for that tool alone.
+     */
+    @Test
+    void toolIteration_carriesTheToolItWantedToCallNext() {
+        var exception = new AIToolIterationException(3, "getOrderStatus");
+
+        assertEquals("getOrderStatus", exception.getRequestedTool());
+        assertTrue(exception.getMessage().contains("3"));
+        assertTrue(exception.getMessage().contains("getOrderStatus"));
+    }
 
     @Test
     void asyncRequestFailed_unwrapsTheCompletionException() {

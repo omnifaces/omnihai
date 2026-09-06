@@ -166,7 +166,7 @@ public enum AIProvider {
     /**
      * Meta AI: Muse Spark, accessed via the OpenAI-compatible Meta Model API, and Muse Voice Transcribe, accessed via the Meta ASR API.
      * <p>
-     * Defaults currently to model {@code muse-spark-1.2} at endpoint {@code https://api.meta.ai/v1}. Transcription needs model
+     * Defaults currently to model {@code muse-spark-1.3} at endpoint {@code https://api.meta.ai/v1}. Transcription needs model
      * {@code muse-voice-transcribe-1.0}, as Muse Spark takes no audio input.
      *
      * @see MetaAIService
@@ -177,7 +177,7 @@ public enum AIProvider {
      * @see <a href="https://dev.meta.ai/docs/models">Available Meta AI Models</a>
      */
     META(
-        "Meta AI", MetaAIService.class, true, "muse-spark-1.2", "https://api.meta.ai/v1", OpenAITextHandler.class, OpenAIImageHandler.class,
+        "Meta AI", MetaAIService.class, true, "muse-spark-1.3", "https://api.meta.ai/v1", OpenAITextHandler.class, OpenAIImageHandler.class,
         MetaAIAudioHandler.class
     ),
 

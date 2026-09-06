@@ -12,6 +12,9 @@
  */
 package org.omnifaces.ai.service;
 
+import static org.omnifaces.ai.helper.FileHelper.cleanupFiles;
+import static org.omnifaces.ai.helper.FileHelper.tempFilesSupported;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -158,14 +161,37 @@ public class MetaAIService extends OpenAIService {
 
     @Override
     public CompletableFuture<String> transcribeAsync(byte[] audio) throws AIException {
-        return transcribeMetaAsync(audioHandler.buildTranscribeContent(audio));
+        return transcribeMetaAsync(newTranscribeAttachment(audioHandler.buildTranscribeContent(audio)));
     }
 
     /**
-     * The audio is read into memory as a whole, as the conversion into the format which the ASR endpoint accepts needs it there anyway.
+     * The audio is converted into a temporary WAV and streamed from there, so that a recording of any length costs a buffer rather than three copies of itself.
+     * The temporary file is deleted once the request is done, whether it succeeded or not. A runtime which permits no temporary file converts in memory
+     * instead.
      */
     @Override
     public CompletableFuture<String> transcribeAsync(Path audio) throws AIException {
+        if (!tempFilesSupported()) {
+            return transcribeInMemoryAsync(audio);
+        }
+
+        var converted = audioHandler.buildTranscribeContent(audio);
+
+        return transcribeMetaAsync(newTranscribeAttachment(converted)).whenComplete((transcript, failure) -> {
+            if (!converted.equals(audio)) {
+                cleanupFiles(converted);
+            }
+        });
+    }
+
+    /**
+     * Transcribes the audio at the given path with the whole of it in memory, which is what a runtime permitting no temporary file leaves.
+     *
+     * @param audio The audio file to transcribe.
+     * @return The transcription of the audio.
+     * @throws AIException If the audio cannot be read.
+     */
+    CompletableFuture<String> transcribeInMemoryAsync(Path audio) {
         try {
             return transcribeAsync(Files.readAllBytes(audio));
         }
@@ -193,14 +219,26 @@ public class MetaAIService extends OpenAIService {
      * @return The audio attachment of a transcribe request.
      */
     Attachment newTranscribeAttachment(byte[] audio) {
-        var request = Map.of(TRANSCRIBE_REQUEST_PART_NAME, audioHandler.buildTranscribePayload(this).toString());
         var mimeType = MimeType.guessMimeType(audio);
-        return new Attachment(audio, mimeType, "audio." + mimeType.extension(), request);
+        return new Attachment(audio, mimeType, "audio." + mimeType.extension(), newTranscribeRequestPart());
     }
 
-    private CompletableFuture<String> transcribeMetaAsync(byte[] audio) {
-        return HTTP_CLIENT.upload(this, getTranscribePath(), newTranscribeAttachment(audio), TRANSCRIBE_FILE_PART_NAME)
-            .thenApply(audioHandler::parseTranscribeResponse);
+    /**
+     * Builds the audio attachment of a transcribe request from a file, which is streamed rather than read into memory.
+     *
+     * @param audio The audio file, in the format which {@link AIAudioHandler#buildTranscribeContent(Path)} converted it to.
+     * @return The audio attachment of a transcribe request.
+     */
+    Attachment newTranscribeAttachment(Path audio) {
+        return new Attachment(audio, newTranscribeRequestPart());
+    }
+
+    private Map<String, String> newTranscribeRequestPart() {
+        return Map.of(TRANSCRIBE_REQUEST_PART_NAME, audioHandler.buildTranscribePayload(this).toString());
+    }
+
+    private CompletableFuture<String> transcribeMetaAsync(Attachment audio) {
+        return HTTP_CLIENT.upload(this, getTranscribePath(), audio, TRANSCRIBE_FILE_PART_NAME).thenApply(audioHandler::parseTranscribeResponse);
     }
 
 }

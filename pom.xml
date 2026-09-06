@@ -8,7 +8,7 @@
 
     <groupId>org.omnifaces</groupId>
     <artifactId>omnihai</artifactId>
-    <version>1.7.1</version>
+    <version>1.7.2</version>
     <packaging>jar</packaging>
 
     <name>OmniHai</name>
@@ -136,6 +136,18 @@
             <scope>test</scope>
         </dependency>
         <dependency>
+            <groupId>org.eclipse.microprofile.context-propagation</groupId>
+            <artifactId>microprofile-context-propagation-api</artifactId>
+            <version>1.3</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.jboss.weld</groupId>
+            <artifactId>weld-junit5</artifactId>
+            <version>5.0.3.Final</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
             <groupId>io.smallrye.config</groupId>
             <artifactId>smallrye-config</artifactId>
             <version>3.18.1</version>
@@ -260,7 +272,7 @@
                 </executions>
             </plugin>
 
-            <!-- Configure the unit tests (*Test.java). -->
+            <!-- Configure the unit tests (*Test.java) and the plain Java SE unit tests (*VanillaTest.java). -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
@@ -268,6 +280,184 @@
                 <configuration>
                     <skipTests>${skipUTs}</skipTests>
                 </configuration>
+                <executions>
+                    <execution>
+                        <id>default-test</id>
+                        <configuration>
+                            <excludes>
+                                <exclude>**/*VanillaTest.java</exclude>
+                                <exclude>**/*CDIContainerTest.java</exclude>
+                                <exclude>**/*NoTempFilesTest.java</exclude>
+                                <exclude>**/*ManagedExecutorTest.java</exclude>
+                            </excludes>
+                        </configuration>
+                    </execution>
+
+                    <!-- The optional APIs are off the runtime classpath here, which is what makes the guards around them testable as guards. -->
+                    <execution>
+                        <id>vanilla-test</id>
+                        <goals>
+                            <goal>test</goal>
+                        </goals>
+                        <configuration>
+                            <includes>
+                                <include>**/*VanillaTest.java</include>
+                            </includes>
+                            <excludes>
+                                <exclude>**/*CDIOnlyVanillaTest.java</exclude>
+                                <exclude>**/*CDINoELVanillaTest.java</exclude>
+                                <exclude>**/*NoJsonVanillaTest.java</exclude>
+                            </excludes>
+                            <classpathDependencyExcludes>
+                                <classpathDependencyExclude>jakarta.enterprise:jakarta.enterprise.cdi-api</classpathDependencyExclude>
+                                <classpathDependencyExclude>jakarta.enterprise:jakarta.enterprise.cdi-el-api</classpathDependencyExclude>
+                                <classpathDependencyExclude>jakarta.el:jakarta.el-api</classpathDependencyExclude>
+                                <classpathDependencyExclude>org.glassfish.expressly:expressly</classpathDependencyExclude>
+                                <classpathDependencyExclude>org.eclipse.microprofile.config:microprofile-config-api</classpathDependencyExclude>
+                                <classpathDependencyExclude>io.smallrye.config:smallrye-config</classpathDependencyExclude>
+                            </classpathDependencyExcludes>
+                        </configuration>
+                    </execution>
+
+                    <!-- CDI is on the runtime classpath here, but the EL and MicroProfile Config implementations are not, which is the runtime a bare CDI
+                         container offers. -->
+                    <execution>
+                        <id>cdi-only-test</id>
+                        <goals>
+                            <goal>test</goal>
+                        </goals>
+                        <configuration>
+                            <includes>
+                                <include>**/*CDIOnlyVanillaTest.java</include>
+                            </includes>
+                            <classpathDependencyExcludes>
+                                <classpathDependencyExclude>org.glassfish.expressly:expressly</classpathDependencyExclude>
+                                <classpathDependencyExclude>org.eclipse.microprofile.config:microprofile-config-api</classpathDependencyExclude>
+                                <classpathDependencyExclude>io.smallrye.config:smallrye-config</classpathDependencyExclude>
+                            </classpathDependencyExcludes>
+                        </configuration>
+                    </execution>
+
+                    <!-- CDI is on the runtime classpath here, but the EL binding it offers an expression is not, which is the runtime a CDI container
+                         without EL support offers. -->
+                    <execution>
+                        <id>cdi-no-el-test</id>
+                        <goals>
+                            <goal>test</goal>
+                        </goals>
+                        <configuration>
+                            <includes>
+                                <include>**/*CDINoELVanillaTest.java</include>
+                            </includes>
+                            <classpathDependencyExcludes>
+                                <classpathDependencyExclude>jakarta.enterprise:jakarta.enterprise.cdi-el-api</classpathDependencyExclude>
+                            </classpathDependencyExcludes>
+                        </configuration>
+                    </execution>
+
+                    <!-- A CDI container is booted here, which is what makes the annotations testable as annotations rather than as producer method arguments.
+                         It runs in a fork of its own because ExecutorServiceHelper picks its executor once per JVM, on whether a container was up by then. -->
+                    <execution>
+                        <id>cdi-container-test</id>
+                        <goals>
+                            <goal>test</goal>
+                        </goals>
+                        <configuration>
+                            <includes>
+                                <include>**/*CDIContainerTest.java</include>
+                            </includes>
+                            <properties>
+                                <configurationParameters>
+                                    <!-- A container is looked up through the thread context class loader, which a parallel worker thread does not carry. -->
+                                    junit.jupiter.execution.parallel.enabled = false
+                                </configurationParameters>
+                            </properties>
+                        </configuration>
+                    </execution>
+
+                    <!-- A Jakarta EE server offers its own managed executor through the naming service, which is stubbed here, as the library picks its
+                         executor once per JVM and therefore cannot be shown both answers in one. -->
+                    <execution>
+                        <id>managed-executor-test</id>
+                        <goals>
+                            <goal>test</goal>
+                        </goals>
+                        <configuration>
+                            <includes>
+                                <include>**/*ManagedExecutorTest.java</include>
+                            </includes>
+                            <systemPropertyVariables>
+                                <java.naming.factory.initial>org.omnifaces.ai.service.StubInitialContextFactory</java.naming.factory.initial>
+                            </systemPropertyVariables>
+                            <properties>
+                                <configurationParameters>
+                                    <!-- A container is looked up through the thread context class loader, which a parallel worker thread does not carry. -->
+                                    junit.jupiter.execution.parallel.enabled = false
+                                </configurationParameters>
+                            </properties>
+                        </configuration>
+                    </execution>
+
+                    <!-- The temporary directory is not there here, which is the runtime a read-only file system offers, and which the in-memory fallbacks
+                         around FileHelper.tempFilesSupported() exist for. -->
+                    <execution>
+                        <id>no-temp-files-test</id>
+                        <goals>
+                            <goal>test</goal>
+                        </goals>
+                        <configuration>
+                            <includes>
+                                <include>**/*NoTempFilesTest.java</include>
+                            </includes>
+                            <!-- Set on the command line rather than as a system property, as the JDK reads it before a property set from within can take. -->
+                            <argLine>@{argLine} -Djava.io.tmpdir=${project.build.directory}/no-temp-files</argLine>
+                        </configuration>
+                    </execution>
+
+                    <!-- JSON-P is off the runtime classpath here, which is the one dependency the produced services cannot do without. -->
+                    <execution>
+                        <id>no-json-test</id>
+                        <goals>
+                            <goal>test</goal>
+                        </goals>
+                        <configuration>
+                            <includes>
+                                <include>**/*NoJsonVanillaTest.java</include>
+                            </includes>
+                            <classpathDependencyExcludes>
+                                <classpathDependencyExclude>jakarta.json:jakarta.json-api</classpathDependencyExclude>
+                                <classpathDependencyExclude>org.eclipse.parsson:parsson</classpathDependencyExclude>
+                            </classpathDependencyExcludes>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Configure the code coverage report which the Sonar analysis reads. -->
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>0.8.15</version>
+                <configuration>
+                    <skip>${skipUTs}</skip>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>prepare-agent</id>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                    </execution>
+
+                    <!-- The Sonar analysis runs up to package, so the report has to be there before verify. -->
+                    <execution>
+                        <id>report</id>
+                        <phase>test</phase>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
 
             <!-- Configure the integration tests (*IT.java). -->
@@ -369,6 +559,26 @@
     </build>
 
     <profiles>
+
+        <!-- Left out on 17 because of a Javadoc bug it carries: it warns that a record component carries no comment where the record documents its components
+             itself, which 18 fixed. The rule therefore holds from the first Java without that bug. -->
+        <profile>
+            <id>javadoc-warnings-are-errors</id>
+            <activation>
+                <jdk>[21,)</jdk>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-javadoc-plugin</artifactId>
+                        <configuration>
+                            <failOnWarnings>true</failOnWarnings>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
 
         <!-- Release deploy: mvn clean deploy -P release -->
         <profile>

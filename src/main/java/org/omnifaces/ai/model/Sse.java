@@ -22,7 +22,7 @@ import java.io.Serializable;
 public final class Sse {
 
     private Sse() {
-        // Hide constructor.
+        throw new AssertionError();
     }
 
     /**

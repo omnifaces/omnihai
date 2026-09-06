@@ -17,6 +17,7 @@ import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 import static org.omnifaces.ai.helper.FileHelper.cleanupFiles;
 import static org.omnifaces.ai.helper.FileHelper.closeQuietly;
 import static org.omnifaces.ai.helper.FileHelper.newDeleteOnCloseInputStream;
+import static org.omnifaces.ai.helper.FileHelper.newTempFile;
 import static org.omnifaces.ai.helper.FileHelper.tempFilesSupported;
 import static org.omnifaces.ai.helper.JsonHelper.checkErrors;
 import static org.omnifaces.ai.helper.JsonHelper.findFirstNonBlankByPaths;
@@ -38,7 +39,6 @@ import jakarta.json.Json;
 import jakarta.json.JsonObject;
 
 import org.omnifaces.ai.AIService;
-import org.omnifaces.ai.OmniHai;
 import org.omnifaces.ai.exception.AIResponseException;
 import org.omnifaces.ai.helper.FileHelper;
 import org.omnifaces.ai.model.GenerateAudioOptions;
@@ -164,7 +164,7 @@ public class GoogleAIAudioHandler extends DefaultAIAudioHandler {
         Path audioContentTempFile = null;
 
         try {
-            var source = responseJsonTempFile = Files.createTempFile(OmniHai.name() + "-gemini-audio-response-", ".json");
+            var source = responseJsonTempFile = newTempFile("gemini-audio-response", "json");
             Files.copy(responseStream, responseJsonTempFile, REPLACE_EXISTING);
             checkErrors(responseJsonTempFile, getAudioResponseErrorMessagePaths());
             var paths = getAudioResponseContentPaths();
@@ -177,7 +177,7 @@ public class GoogleAIAudioHandler extends DefaultAIAudioHandler {
                         .orElseThrow(() -> new AIResponseException("No audio content found at paths " + paths, source))
                 )
             ) {
-                audioContentTempFile = Files.createTempFile(OmniHai.name() + "-gemini-audio-content-", ".pcm");
+                audioContentTempFile = newTempFile("gemini-audio-content", "pcm");
                 Files.copy(audioContent, audioContentTempFile, REPLACE_EXISTING);
             }
 

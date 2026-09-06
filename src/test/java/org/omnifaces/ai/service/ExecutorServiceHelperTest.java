@@ -19,28 +19,20 @@ import static org.mockito.Mockito.verify;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.omnifaces.ai.DeliberateFailures;
 
 class ExecutorServiceHelperTest {
 
-    private static final Logger SERVICE_LOGGER = Logger.getLogger(ExecutorServiceHelper.class.getPackageName());
-
-    private Level savedLevel;
-
-    @BeforeEach
-    void suppressLogs() {
-        savedLevel = SERVICE_LOGGER.getLevel();
-        SERVICE_LOGGER.setLevel(Level.OFF);
-    }
-
-    @AfterEach
-    void restoreLogs() {
-        SERVICE_LOGGER.setLevel(savedLevel);
+    /**
+     * A task which fails is reported at WARNING with its stack trace, which these tests provoke on purpose. Only that message is dropped: switching the level
+     * of the whole package off would silence every test running beside this one, whose records are none of this one's business.
+     */
+    @BeforeAll
+    static void dropTheWarningsOfTheDeliberatelyFailingTasks() {
+        DeliberateFailures.dropMessagesContaining(ExecutorServiceHelper.class.getPackageName(), "Async task failed");
     }
 
     // =================================================================================================================

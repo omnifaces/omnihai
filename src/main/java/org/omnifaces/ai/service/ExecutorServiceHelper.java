@@ -39,17 +39,13 @@ final class ExecutorServiceHelper {
     private static final Logger logger = Logger.getLogger(ExecutorServiceHelper.class.getPackageName());
 
     private static ExecutorService executorService;
-    private static boolean managedExecutorService;
 
     static {
         if (isCDIAvailable()) {
             executorService = ExecutorServiceManager.getCurrentInstance().getManagedExecutorService();
         }
 
-        if (executorService != null) {
-            managedExecutorService = true;
-        }
-        else {
+        if (executorService == null) {
             executorService = newCachedThreadPool(runnable -> {
                 var thread = new Thread(runnable, "omnihai.executorService");
                 thread.setDaemon(true);
@@ -62,7 +58,8 @@ final class ExecutorServiceHelper {
 
     private static boolean isCDIAvailable() {
         try {
-            return Class.forName("jakarta.enterprise.inject.spi.CDI").getMethod("current").invoke(null) != null;
+            Class.forName("jakarta.enterprise.inject.spi.CDI").getMethod("current").invoke(null);
+            return true;
         }
         catch (Exception | LinkageError ignore) {
             return false;
@@ -102,10 +99,6 @@ final class ExecutorServiceHelper {
      * Attempts to orderly shut down the unmanaged executor service. If it's still not shut down after 5 seconds, then terminate it.
      */
     private static void destroy() {
-        if (managedExecutorService || executorService == null) {
-            throw new IllegalStateException();
-        }
-
         executorService.shutdown();
 
         try {

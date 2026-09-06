@@ -18,11 +18,15 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.omnifaces.ai.AIModality.AUDIO_ANALYSIS;
+import static org.omnifaces.ai.AIModality.AUDIO_GENERATION;
 import static org.omnifaces.ai.AIModality.IMAGE_ANALYSIS;
+import static org.omnifaces.ai.AIModality.IMAGE_GENERATION;
+import static org.omnifaces.ai.AIModality.VIDEO_GENERATION;
 import static org.omnifaces.ai.AIProvider.META;
 
 import java.net.URI;
 import java.nio.file.Path;
+import java.util.Set;
 
 import org.junit.jupiter.api.Test;
 import org.omnifaces.ai.AIConfig;
@@ -96,6 +100,41 @@ class MetaAIServiceTest {
 
     private static MetaAIService newService(String model) {
         return (MetaAIService) AIConfig.of(META, API_KEY).withModel(model).createService();
+    }
+
+    // =================================================================================================================
+    // Capabilities
+    // =================================================================================================================
+
+    @Test
+    void supportsModality_servesNoGeneration() {
+        var service = newService(CHAT_MODEL);
+
+        assertFalse(service.supportsModality(IMAGE_GENERATION));
+        assertFalse(service.supportsModality(AUDIO_GENERATION));
+        assertFalse(service.supportsModality(VIDEO_GENERATION));
+    }
+
+    @Test
+    void capabilities_whichAreApiBoundRatherThanVersionBound_areServedWhateverTheModel() {
+        var service = newService(CHAT_MODEL);
+
+        assertTrue(service.supportsFileAttachments());
+        assertTrue(service.supportsStructuredOutput());
+        assertTrue(service.supportsReasoningEffort());
+        assertTrue(service.supportsOpenAIResponsesApi());
+    }
+
+    /**
+     * Meta AI serves neither of these OpenAI endpoints. Transcription is served by the ASR endpoint which {@link MetaAIService#transcribeAsync(byte[])}
+     * addresses whatever this answers.
+     */
+    @Test
+    void moderationAndTranscription_areNotServedByAnOpenAICompatibleEndpoint() {
+        var service = newService(TRANSCRIBE_MODEL);
+
+        assertFalse(service.supportsOpenAIModerationCapability(Set.of("hate")));
+        assertFalse(service.supportsOpenAITranscriptionCapability());
     }
 
 }

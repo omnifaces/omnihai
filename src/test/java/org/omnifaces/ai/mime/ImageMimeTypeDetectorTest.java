@@ -12,6 +12,7 @@
  */
 package org.omnifaces.ai.mime;
 
+import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -247,6 +248,47 @@ class ImageMimeTypeDetectorTest {
         }
 
         return content;
+    }
+
+    // =================================================================================================================
+    // SVG - recognized by its markup rather than by magic bytes
+    // =================================================================================================================
+
+    /**
+     * An SVG may open with the XML declaration and name the SVG namespace before it reaches its own tag, so the namespace identifies it just as the tag does.
+     */
+    @Test
+    void guessImageMimeType_svgNamedByItsNamespaceAlone() {
+        var content = "<?xml version=\"1.0\"?><g xmlns=\"http://www.w3.org/2000/svg\"></g>".getBytes(US_ASCII);
+
+        assertEquals("image/svg+xml", ImageMimeTypeDetector.guessImageMimeType(content).orElseThrow().value());
+    }
+
+    @Test
+    void guessImageMimeType_xmlWhichIsNotAnSvg_isNotRecognizedAsAnImage() {
+        var content = "<?xml version=\"1.0\"?><html><body/></html>".getBytes(US_ASCII);
+
+        assertTrue(ImageMimeTypeDetector.guessImageMimeType(content).isEmpty());
+    }
+
+    /**
+     * Markup may be indented, so the opening angle bracket is looked for past any leading whitespace rather than at the first byte alone.
+     */
+    @Test
+    void guessImageMimeType_svgBehindLeadingWhitespace() {
+        var content = " \t\r\n<svg xmlns=\"x\"></svg>".getBytes(US_ASCII);
+
+        assertEquals("image/svg+xml", ImageMimeTypeDetector.guessImageMimeType(content).orElseThrow().value());
+    }
+
+    @Test
+    void guessImageMimeType_whitespaceOnly_isNotRecognizedAsAnImage() {
+        assertTrue(ImageMimeTypeDetector.guessImageMimeType("    ".getBytes(US_ASCII)).isEmpty());
+    }
+
+    @Test
+    void guessImageMimeType_textWhichDoesNotOpenAsMarkup_isNotRecognizedAsAnImage() {
+        assertTrue(ImageMimeTypeDetector.guessImageMimeType("plain text".getBytes(US_ASCII)).isEmpty());
     }
 
 }

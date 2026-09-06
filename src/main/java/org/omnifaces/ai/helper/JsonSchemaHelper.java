@@ -116,7 +116,8 @@ public final class JsonSchemaHelper {
     private static final Map<Class<?>, Function<JsonValue, Object>> PARSERS = new HashMap<>();
 
     static {
-        register(List.of(String.class, char.class, Character.class), "string", v -> ((JsonString) v).getString());
+        register(List.of(String.class), "string", v -> ((JsonString) v).getString());
+        register(List.of(char.class, Character.class), "string", v -> ((JsonString) v).getString().charAt(0));
         register(List.of(boolean.class, Boolean.class), "boolean", v -> v.getValueType() == JsonValue.ValueType.TRUE);
         register(List.of(int.class, Integer.class), "integer", v -> ((JsonNumber) v).intValue());
         register(List.of(long.class, Long.class), "integer", v -> ((JsonNumber) v).longValue());
@@ -306,10 +307,6 @@ public final class JsonSchemaHelper {
             return (T) PARSERS.get(rawType).apply(value);
         }
 
-        if (rawType == char.class || rawType == Character.class) {
-            return (T) (Character) ((JsonString) value).getString().charAt(0);
-        }
-
         if (rawType.isEnum()) {
             return (T) Enum.valueOf((Class<Enum>) rawType, ((JsonString) value).getString());
         }
@@ -427,6 +424,10 @@ public final class JsonSchemaHelper {
     private static Class<?> getRawType(Type genericType) {
         if (genericType instanceof Class<?> clazz) {
             return clazz;
+        }
+
+        if (genericType instanceof ParameterizedType type) {
+            return (Class<?>) type.getRawType();
         }
 
         if (genericType instanceof GenericArrayType genericArray) {

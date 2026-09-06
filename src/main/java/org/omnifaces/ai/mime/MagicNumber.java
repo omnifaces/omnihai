@@ -18,14 +18,22 @@ import java.util.Arrays;
  * The magic bytes by which a MIME type is recognized: a prefix at a fixed offset, optionally narrowed by a submagic further into the content for the types
  * which share a container magic such as RIFF or FTYP.
  *
- * @param offset The offset within the content at which the magic is expected.
- * @param magic The magic bytes.
- * @param subOffset The offset within the content at which the submagic is expected.
- * @param subMagic The submagic bytes, or {@code null} when the magic alone identifies the type.
  * @author Bauke Scholtz
  * @since 1.7.1
  */
-final record MagicNumber(int offset, byte[] magic, int subOffset, byte[] subMagic) {
+final class MagicNumber {
+
+    /** The offset within the content at which the magic is expected. */
+    final int offset;
+
+    /** The magic bytes. */
+    final byte[] magic;
+
+    /** The offset within the content at which the submagic is expected. */
+    final int subOffset;
+
+    /** The submagic bytes, or {@code null} when the magic alone identifies the type. */
+    final byte[] subMagic;
 
     /**
      * Creates a magic number which is identified by its magic bytes alone.
@@ -35,6 +43,21 @@ final record MagicNumber(int offset, byte[] magic, int subOffset, byte[] subMagi
      */
     MagicNumber(int offset, byte[] magic) {
         this(offset, magic, 0, null);
+    }
+
+    /**
+     * Creates a magic number which is narrowed by a submagic further into the content.
+     *
+     * @param offset The offset within the content at which the magic is expected.
+     * @param magic The magic bytes.
+     * @param subOffset The offset within the content at which the submagic is expected.
+     * @param subMagic The submagic bytes, or {@code null} when the magic alone identifies the type.
+     */
+    MagicNumber(int offset, byte[] magic, int subOffset, byte[] subMagic) {
+        this.offset = offset;
+        this.magic = magic;
+        this.subOffset = subOffset;
+        this.subMagic = subMagic;
     }
 
     /**

@@ -96,7 +96,7 @@ public class GenerateVideoOptions implements Serializable {
      * <li>{@code "1024x1024"} - Square video
      * </ul>
      *
-     * @return The video size string.
+     * @return The video size string; never {@code null}.
      */
     public String getSize() {
         return size;
@@ -112,7 +112,7 @@ public class GenerateVideoOptions implements Serializable {
      * <li>{@code "1:1"} - Square video
      * </ul>
      *
-     * @return The video aspect ratio string.
+     * @return The video aspect ratio string; never {@code null}.
      */
     public String getAspectRatio() {
         return aspectRatio;
@@ -129,7 +129,7 @@ public class GenerateVideoOptions implements Serializable {
      * <li>{@code "1080p"} - Full high definition, slowest and most expensive
      * </ul>
      *
-     * @return The video resolution string.
+     * @return The video resolution string; never {@code null}.
      */
     public String getResolution() {
         return resolution;
@@ -149,7 +149,7 @@ public class GenerateVideoOptions implements Serializable {
      * Gets the interval to wait between two consecutive job status polls of {@link VideoGeneration#completion()}. Defaults to
      * {@value #DEFAULT_POLL_INTERVAL_SECONDS} seconds.
      *
-     * @return The poll interval.
+     * @return The poll interval; never {@code null}.
      */
     public Duration getPollInterval() {
         return pollInterval;
@@ -159,7 +159,7 @@ public class GenerateVideoOptions implements Serializable {
      * Gets the maximum time to wait for the job to reach a terminal status, after which {@link VideoGeneration#completion()} fails rather than polls on.
      * Defaults to {@value #DEFAULT_MAX_WAIT_MINUTES} minutes. Raise it for an AI provider or resolution which takes longer than that.
      *
-     * @return The maximum wait.
+     * @return The maximum wait; never {@code null}.
      */
     public Duration getMaxWait() {
         return maxWait;

@@ -831,4 +831,65 @@ class AIConfigTest {
 
     }
 
+    // =================================================================================================================
+    // Provider names and construction failures
+    // =================================================================================================================
+
+    /**
+     * A provider is presented to the reader by its own spelling rather than by its enum name; the custom one has no name to present, as it stands for whatever
+     * the caller supplies.
+     */
+    @Test
+    void getName_namesEveryProviderButTheCustomOne() {
+        for (var provider : AIProvider.values()) {
+            if (provider == AIProvider.CUSTOM) {
+                assertNull(provider.getName());
+            }
+            else {
+                assertNotNull(provider.getName(), provider.name());
+            }
+        }
+    }
+
+    /**
+     * A provider whose configuration is incomplete cannot build its service, and says which provider it was rather than surfacing a reflection failure.
+     */
+    @Test
+    void createService_builtInProviderWithIncompleteConfiguration_namesTheProvider() {
+        var config = AIConfig.of(AIProvider.AZURE, "test-key");
+
+        var exception = assertThrows(IllegalStateException.class, config::createService);
+        assertTrue(exception.getMessage().contains("AZURE"));
+    }
+
+    @Test
+    void createService_customClassWhoseConstructorFails_namesTheClass() {
+        var config = new AIConfig(FailingService.class.getName(), "test-key", null, null, null, null, emptyMap());
+
+        var exception = assertThrows(IllegalStateException.class, config::createService);
+        assertTrue(exception.getMessage().contains(FailingService.class.getName()));
+    }
+
+    /** Stands in for a custom service whose construction cannot succeed. */
+    public static class FailingService extends org.omnifaces.ai.service.BaseAIService {
+
+        private static final long serialVersionUID = 1L;
+
+        public FailingService(AIConfig config) {
+            super(config);
+            throw new IllegalStateException("cannot construct");
+        }
+
+        @Override
+        public boolean supportsModality(AIModality modality) {
+            return false;
+        }
+
+        @Override
+        protected String getChatPath(boolean streaming) {
+            return "chat";
+        }
+
+    }
+
 }

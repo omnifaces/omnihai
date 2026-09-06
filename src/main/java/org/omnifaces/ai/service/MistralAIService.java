@@ -155,7 +155,7 @@ public class MistralAIService extends OpenAIService {
      */
     private boolean isAtLeast(AIModelVersion datedFloor, AIModelVersion semanticFloor) {
         var version = getModelVersion();
-        return version.majorVersion() >= MIN_DATED_MAJOR_VERSION ? version.gte(datedFloor) : version.gte(semanticFloor);
+        return version.gte(version.majorVersion() >= MIN_DATED_MAJOR_VERSION ? datedFloor : semanticFloor);
     }
 
 }

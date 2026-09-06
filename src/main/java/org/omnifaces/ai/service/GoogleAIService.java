@@ -73,7 +73,9 @@ public class GoogleAIService extends BaseAIService {
     private static final String FILE_STATE_FAILED = "FAILED";
     private static final String FILE_ERROR_MESSAGE_PATH = "error.message";
 
-    private static final Duration INITIAL_UPLOADED_FILE_POLL_INTERVAL = Duration.ofSeconds(2);
+    // A small file is processed in well under a second, so the first wait is what its caller mostly pays, while a file which takes minutes reaches the ceiling
+    // whatever the first wait was.
+    private static final Duration INITIAL_UPLOADED_FILE_POLL_INTERVAL = Duration.ofMillis(500);
     private static final Duration MAX_UPLOADED_FILE_POLL_INTERVAL = Duration.ofSeconds(15);
     private static final double UPLOADED_FILE_POLL_BACKOFF_MULTIPLIER = 1.5;
 
@@ -104,7 +106,6 @@ public class GoogleAIService extends BaseAIService {
             case AUDIO_GENERATION -> currentModelVersion.gte(GEMINI_2_5) || fullModelName.contains("tts");
             case VIDEO_ANALYSIS -> currentModelVersion.gte(GEMINI_1_5);
             case VIDEO_GENERATION -> fullModelName.startsWith(VEO_MODEL_NAME);
-            default -> false;
         };
     }
 
@@ -223,7 +224,7 @@ public class GoogleAIService extends BaseAIService {
         return HTTP_CLIENT.get(this, filePath).join();
     }
 
-    private static boolean isStillProcessing(String filePath, JsonObject file) {
+    static boolean isStillProcessing(String filePath, JsonObject file) {
         if (file == null) {
             return true; // State unknown, so it must be polled.
         }
@@ -240,7 +241,7 @@ public class GoogleAIService extends BaseAIService {
         return !FILE_STATE_ACTIVE.equals(state);
     }
 
-    private static Duration nextPollInterval(Duration pollInterval) {
+    static Duration nextPollInterval(Duration pollInterval) {
         var next = Duration.ofMillis((long) (pollInterval.toMillis() * UPLOADED_FILE_POLL_BACKOFF_MULTIPLIER));
         return next.compareTo(MAX_UPLOADED_FILE_POLL_INTERVAL) > 0 ? MAX_UPLOADED_FILE_POLL_INTERVAL : next;
     }

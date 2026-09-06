@@ -484,7 +484,7 @@ public class ToolCallingAIService extends AIServiceWrapper {
     }
 
     private static String toText(JsonValue value) {
-        if (value == null || value.getValueType() == ValueType.NULL) {
+        if (value.getValueType() == ValueType.NULL) {
             return "";
         }
 

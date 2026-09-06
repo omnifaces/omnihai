@@ -327,4 +327,14 @@ class AudioVideoMimeTypeDetectorTest {
         assertTrue(mimeType.isVideo(), "images are detected before audio and video, so an image detector may not claim an MP4");
     }
 
+    /**
+     * The brand which narrows the FTYP magic to one of the types sharing it sits at offset eight, so content stopping short of it stays the container default.
+     */
+    @Test
+    void guessAudioVideoMimeType_ftypMagicWithoutABrand_staysMp4() {
+        var content = new byte[] { 0, 0, 0, 0, 'f', 't', 'y', 'p', 'm', 'p' };
+
+        assertEquals("video/mp4", AudioVideoMimeTypeDetector.guessAudioVideoMimeType(content).orElseThrow().value());
+    }
+
 }

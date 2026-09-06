@@ -16,6 +16,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.omnifaces.ai.helper.FileHelper.cleanupFiles;
 import static org.omnifaces.ai.helper.FileHelper.closeQuietly;
 import static org.omnifaces.ai.helper.FileHelper.newDeleteOnCloseInputStream;
+import static org.omnifaces.ai.helper.FileHelper.newTempFile;
 import static org.omnifaces.ai.helper.FileHelper.tempFilesSupported;
 import static org.omnifaces.ai.helper.JsonHelper.checkErrors;
 import static org.omnifaces.ai.helper.JsonHelper.findFirstNonBlankByPaths;
@@ -41,7 +42,6 @@ import jakarta.json.Json;
 import jakarta.json.JsonObject;
 
 import org.omnifaces.ai.AIService;
-import org.omnifaces.ai.OmniHai;
 import org.omnifaces.ai.exception.AIResponseException;
 import org.omnifaces.ai.helper.FileHelper;
 import org.omnifaces.ai.model.GenerateAudioOptions;
@@ -194,10 +194,10 @@ public class OpenRouterAIAudioHandler extends DefaultAIAudioHandler {
         Path audioContentTempFile = null;
 
         try {
-            audioContentTempFile = Files.createTempFile(OmniHai.name() + "-openrouter-audio-content-", ".pcm");
+            audioContentTempFile = newTempFile("openrouter-audio-content", "pcm");
 
             try (var audioContent = Files.newOutputStream(audioContentTempFile)) {
-                collectAudioContent(responseStream, chunk -> writeQuietly(audioContent, chunk));
+                collectAudioContent(responseStream, chunk -> writeUnchecked(audioContent, chunk));
             }
 
             var pcmContentLength = Files.size(audioContentTempFile);
@@ -264,7 +264,11 @@ public class OpenRouterAIAudioHandler extends DefaultAIAudioHandler {
         }
     }
 
-    private static void writeQuietly(OutputStream output, byte[] chunk) {
+    /**
+     * Writes one decoded audio chunk to the temp file, reporting a failure as unchecked so that it travels past the catch which reports a failure to read the
+     * response body, and is reported as the write failure it is.
+     */
+    static void writeUnchecked(OutputStream output, byte[] chunk) {
         try {
             output.write(chunk);
         }

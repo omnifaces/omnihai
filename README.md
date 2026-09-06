@@ -39,7 +39,7 @@ That is the only hard requirement. CDI, EL and MP Config are optional and only n
 <dependency>
     <groupId>org.omnifaces</groupId>
     <artifactId>omnihai</artifactId>
-    <version>1.7.1</version>
+    <version>1.7.2</version>
 </dependency>
 ```
 That's all for Jakarta EE / MicroProfile runtimes. No additional dependencies needed.
@@ -137,7 +137,7 @@ MicroProfile Config expressions additionally need `io.smallrye.config:smallrye-c
 | Google AI | gemini-3.7-flash | [Yes](https://aistudio.google.com/app/api-keys) | [List](https://ai.google.dev/gemini-api/docs/models) |
 | xAI | grok-4.6 | [Yes](https://console.x.ai) | [List](https://docs.x.ai/developers/models) |
 | Mistral | mistral-medium-3-5 | [Yes](https://admin.mistral.ai/organization/api-keys) | [List](https://docs.mistral.ai/models) |
-| Meta AI | muse-spark-1.2 | [Yes](https://dev.meta.ai/api-keys) | [List](https://dev.meta.ai/docs/models) |
+| Meta AI | muse-spark-1.3 | [Yes](https://dev.meta.ai/api-keys) | [List](https://dev.meta.ai/docs/models) |
 | Azure OpenAI | gpt-5.6-terra | [Yes](https://portal.azure.com) | [List](https://ai.azure.com/catalog) |
 | OpenRouter | deepseek/deepseek-v4-pro | [Yes](https://openrouter.ai/workspaces/default/keys) | [List](https://openrouter.ai/models) |
 | Hugging Face | google/gemma-4-31B-it | [Yes](https://huggingface.co/settings/tokens) | [List](https://huggingface.co/models) |
