@@ -25,6 +25,7 @@ import static org.omnifaces.ai.model.Sse.Event.Type.EVENT;
 
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 import java.util.function.Consumer;
 
 import jakarta.json.Json;
@@ -64,6 +65,9 @@ public class AnthropicAITextHandler extends DefaultAITextHandler {
 
     private static final AIModelVersion CLAUDE_3 = AIModelVersion.of("claude", 3);
     private static final AIModelVersion CLAUDE_4_6 = AIModelVersion.of("claude", 4, 6);
+    private static final AIModelVersion CLAUDE_FABLE_5 = AIModelVersion.of("claude-fable", 5);
+    private static final AIModelVersion CLAUDE_OPUS_5_5 = AIModelVersion.of("claude-opus", 5, 5);
+    private static final AIModelVersion CLAUDE_SONNET_5_5 = AIModelVersion.of("claude-sonnet", 5, 5);
 
     private static final int DEFAULT_MAX_TOKENS_CLAUDE_3_0 = 4096;
     private static final int DEFAULT_MAX_TOKENS_CLAUDE_3_X = 8192;
@@ -270,8 +274,10 @@ public class AnthropicAITextHandler extends DefaultAITextHandler {
 
     /**
      * Adds adaptive thinking config for models that reject {@code thinking.budget_tokens}. Maps the requested reasoning effort to {@code output_config.effort};
-     * {@link ReasoningEffort#NONE} disables thinking, {@link ReasoningEffort#AUTO} omits the field so the model applies its own default. Sampling parameters
-     * are intentionally not emitted, as these models reject them.
+     * {@link ReasoningEffort#NONE} turns thinking off with the {@code thinking.type} the model takes for it, {@link ReasoningEffort#AUTO} omits the field so
+     * the model applies its own default. Sampling parameters are intentionally not emitted, as these models reject them. Expects
+     * {@link #getEffectiveReasoningEffort(AIService, ChatOptions)} to never yield {@link ReasoningEffort#NONE} when {@link #getThinkingOffType(AIService)} is
+     * empty.
      *
      * @param service The visiting AI service.
      * @param payload The payload builder.
@@ -282,7 +288,7 @@ public class AnthropicAITextHandler extends DefaultAITextHandler {
         var effort = getEffectiveReasoningEffort(service, options);
 
         switch (effort) {
-            case NONE -> payload.add("thinking", Json.createObjectBuilder().add("type", "disabled"));
+            case NONE -> payload.add("thinking", Json.createObjectBuilder().add("type", getThinkingOffType(service).orElseThrow()));
             case LOW, MEDIUM, HIGH, XHIGH -> {
                 payload.add("thinking", Json.createObjectBuilder().add("type", "adaptive"));
                 payload.add("output_config", Json.createObjectBuilder().add("effort", effort.name().toLowerCase(Locale.ROOT)));
@@ -290,6 +296,30 @@ public class AnthropicAITextHandler extends DefaultAITextHandler {
             default -> {
                 /* AUTO, and any level added later: omit thinking, so that the model applies its own adaptive default. */ }
         }
+    }
+
+    /**
+     * Returns the {@code thinking.type} with which the model turns thinking off. When empty, the model cannot turn thinking off, and
+     * {@link ReasoningEffort#NONE} falls back to {@link ReasoningEffort#LOW}.
+     *
+     * @implNote The default implementation returns {@code between_tools} for Claude Sonnet 5.5 and later, empty for Claude Fable and for Claude Opus 5.5 and
+     * later, and {@code disabled} for any other model.
+     * @param service The visiting AI service.
+     * @return The {@code thinking.type} which turns thinking off, if the model can turn it off.
+     * @since 1.7.3
+     */
+    protected Optional<String> getThinkingOffType(AIService service) {
+        var currentModelVersion = service.getModelVersion();
+
+        if (currentModelVersion.gte(CLAUDE_SONNET_5_5)) {
+            return Optional.of("between_tools");
+        }
+
+        if (currentModelVersion.gte(CLAUDE_FABLE_5, CLAUDE_OPUS_5_5)) {
+            return Optional.empty();
+        }
+
+        return Optional.of("disabled");
     }
 
     /**
@@ -322,7 +352,8 @@ public class AnthropicAITextHandler extends DefaultAITextHandler {
 
     /**
      * Returns the reasoning effort the server will effectively apply, after accounting for model capability. Anthropic natively supports all levels (including
-     * {@code xhigh}), so no capping is needed; an unsupported model resolves to {@link ReasoningEffort#NONE}.
+     * {@code xhigh}), so no capping is needed; an unsupported model resolves to {@link ReasoningEffort#NONE}, and {@link ReasoningEffort#NONE} on a model which
+     * cannot turn thinking off resolves to {@link ReasoningEffort#LOW}.
      *
      * @param service The visiting AI service.
      * @param options The chat options.
@@ -330,7 +361,12 @@ public class AnthropicAITextHandler extends DefaultAITextHandler {
      * @since 1.5
      */
     protected ReasoningEffort getEffectiveReasoningEffort(AIService service, ChatOptions options) {
-        return service.supportsReasoningEffort() ? options.getReasoningEffort() : ReasoningEffort.NONE;
+        if (!service.supportsReasoningEffort()) {
+            return ReasoningEffort.NONE;
+        }
+
+        var effort = options.getReasoningEffort();
+        return effort == ReasoningEffort.NONE && getThinkingOffType(service).isEmpty() ? ReasoningEffort.LOW : effort;
     }
 
     /**

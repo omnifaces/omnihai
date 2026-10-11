@@ -27,6 +27,7 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.List;
 
 import javax.imageio.ImageIO;
 
@@ -59,6 +60,10 @@ class AnthropicAITextHandlerTest {
     private static final String CLAUDE_3_7 = "claude-3-7-sonnet-20250219";
     private static final String CLAUDE_SONNET_4_5 = "claude-sonnet-4-5";
     private static final String CLAUDE_OPUS_4_7 = "claude-opus-4-7";
+    private static final String CLAUDE_SONNET_5_5 = "claude-sonnet-5-5";
+    private static final String CLAUDE_OPUS_5_5 = "claude-opus-5-5";
+    private static final String CLAUDE_FABLE_5 = "claude-fable-5";
+    private static final String CLAUDE_FABLE_5_1 = "claude-fable-5-1";
 
     private final AnthropicAITextHandler handler = new AnthropicAITextHandler();
 
@@ -258,6 +263,37 @@ class AnthropicAITextHandlerTest {
         var payload = payload(CLAUDE_OPUS_4_7, ChatOptions.newBuilder().reasoningEffort(ReasoningEffort.NONE).build());
 
         assertEquals("disabled", payload.getJsonObject("thinking").getString("type"));
+    }
+
+    @Test
+    void buildChatPayload_thinkingDisabledOnTheOtherClaude5Models_statesItDisabled() {
+        for (var model : List.of("claude-sonnet-5", "claude-opus-5", "claude-haiku-5-5")) {
+            var payload = payload(model, ChatOptions.newBuilder().reasoningEffort(ReasoningEffort.NONE).build());
+
+            assertEquals("disabled", payload.getJsonObject("thinking").getString("type"), model);
+            assertFalse(payload.containsKey("output_config"), model);
+        }
+    }
+
+    @Test
+    void buildChatPayload_thinkingDisabledOnAModelTurningItOffBetweenTools_statesThatType() {
+        var payload = payload(CLAUDE_SONNET_5_5, ChatOptions.newBuilder().reasoningEffort(ReasoningEffort.NONE).build());
+
+        assertEquals("between_tools", payload.getJsonObject("thinking").getString("type"));
+        assertFalse(payload.containsKey("output_config"));
+    }
+
+    /**
+     * A model which cannot turn thinking off rejects every way of asking for that, so it is asked for the least thinking it takes.
+     */
+    @Test
+    void buildChatPayload_thinkingDisabledOnAModelWhichCannotTurnItOff_statesTheLowestEffort() {
+        for (var model : List.of(CLAUDE_OPUS_5_5, CLAUDE_FABLE_5, CLAUDE_FABLE_5_1)) {
+            var payload = payload(model, ChatOptions.newBuilder().reasoningEffort(ReasoningEffort.NONE).build());
+
+            assertEquals("adaptive", payload.getJsonObject("thinking").getString("type"), model);
+            assertEquals("low", payload.getJsonObject("output_config").getString("effort"), model);
+        }
     }
 
     /**
