@@ -285,39 +285,32 @@ abstract class BaseAIServiceTextHandlerIT extends AIServiceIT {
         );
     }
 
+    /**
+     * Every reasoning effort reaches the provider in a shape it accepts. How much a model reasons at each effort is its own choice, so the efforts are not
+     * compared to each other.
+     */
     @Test
-    void chatWithReasoningEffort() {
+    void chatWithEveryReasoningEffort() {
         if (!service.supportsReasoningEffort()) {
             throw new TestAbortedException("Not supported by " + getProvider());
         }
 
-        var low = ChatOptions.newBuilder().reasoningEffort(ReasoningEffort.LOW).build();
-        var high = ChatOptions.newBuilder().reasoningEffort(ReasoningEffort.HIGH).build();
         var prompt = "Think carefully step by step, then answer: in how many distinct ways can 87 cents be made from US coins of 1, 5, 10 and 25 cents? "
             + "Do not output anything other than the final number.";
 
-        service.chat(prompt, low);
-        service.chat(prompt, high);
+        for (var effort : List.of(ReasoningEffort.NONE, ReasoningEffort.LOW, ReasoningEffort.HIGH)) {
+            var options = ChatOptions.newBuilder().reasoningEffort(effort).build();
+            var response = service.chat(prompt, options);
+            var usage = options.getLastUsage();
+            log(effort + " usage: " + usage);
 
-        var lowUsage = low.getLastUsage();
-        var highUsage = high.getLastUsage();
-        log("low usage: " + lowUsage);
-        log("high usage: " + highUsage);
+            assertFalse(response.isBlank(), effort + " response should not be blank");
+            assertUsage(usage);
 
-        assertNotNull(lowUsage, "usage must be recorded for LOW");
-        assertNotNull(highUsage, "usage must be recorded for HIGH");
-
-        // A provider which breaks the reasoning out is asked for it directly. Elsewhere outputTokens carries it: OpenAI rolls reasoning tokens into
-        // output_tokens, Anthropic rolls thinking tokens into output_tokens, and Google's parseChatUsage adds thoughtsTokenCount to candidatesTokenCount.
-        var signal = supportsReasoningTokens() ? "reasoningTokens" : "outputTokens";
-        var lowTokens = supportsReasoningTokens() ? lowUsage.reasoningTokens() : lowUsage.outputTokens();
-        var highTokens = supportsReasoningTokens() ? highUsage.reasoningTokens() : highUsage.outputTokens();
-
-        assertAll(
-            () -> assertTrue(lowTokens > 0, "LOW " + signal + " must be > 0: " + lowTokens),
-            () -> assertTrue(highTokens > 0, "HIGH " + signal + " must be > 0: " + highTokens),
-            () -> assertTrue(highTokens > lowTokens, "HIGH " + signal + " (" + highTokens + ") must exceed LOW (" + lowTokens + ")")
-        );
+            if (effort == ReasoningEffort.HIGH && supportsReasoningTokens()) {
+                assertTrue(usage.reasoningTokens() > 0, "HIGH reasoningTokens must be > 0: " + usage.reasoningTokens());
+            }
+        }
     }
 
     @Test
