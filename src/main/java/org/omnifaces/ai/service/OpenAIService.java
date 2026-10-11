@@ -72,6 +72,7 @@ public class OpenAIService extends BaseAIService {
     private static final AIModelVersion GPT_4 = AIModelVersion.of("gpt", 4);
     private static final AIModelVersion GPT_5 = AIModelVersion.of("gpt", 5);
     private static final AIModelVersion GPT_5_1 = AIModelVersion.of("gpt", 5, 1);
+    private static final AIModelVersion GPT_6_1 = AIModelVersion.of("gpt", 6, 1);
     private static final AIModelVersion DALL_E = AIModelVersion.of("dall-e");
 
     /**
@@ -174,12 +175,14 @@ public class OpenAIService extends BaseAIService {
      * {@link org.omnifaces.ai.model.ChatOptions.ReasoningEffort#LOW}, and {@link org.omnifaces.ai.model.ChatOptions.ReasoningEffort#AUTO} falls back to
      * {@link org.omnifaces.ai.model.ChatOptions.ReasoningEffort#MEDIUM}.
      *
-     * @implNote The default implementation returns true if {@link #getModelVersion()} is at least {@code GPT-5.1}.
+     * @implNote The default implementation returns true if {@link #getModelVersion()} is at least {@code GPT-5.1} and below {@code GPT-6.1}, and the model is
+     * not an {@code astra} model.
      * @return Whether this OpenAI based service implementation accepts {@code none} as reasoning effort.
      * @since 1.7
      */
     public boolean supportsOpenAIReasoningEffortNone() {
-        return getModelVersion().gte(GPT_5_1);
+        var currentModelVersion = getModelVersion();
+        return currentModelVersion.gte(GPT_5_1) && currentModelVersion.lt(GPT_6_1) && !getModelName().toLowerCase(Locale.ROOT).contains("astra");
     }
 
     @Override
