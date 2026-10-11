@@ -59,6 +59,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.ResourceLock;
 import org.omnifaces.ai.AIConfig;
 import org.omnifaces.ai.DeliberateFailures;
+import org.omnifaces.ai.exception.AIException;
 import org.omnifaces.ai.exception.AIHttpException;
 import org.omnifaces.ai.exception.AIRateLimitExceededException;
 import org.omnifaces.ai.mime.MimeType;
@@ -403,6 +404,17 @@ class AIHttpClientTest {
         return new ByteArrayInputStream(content.getBytes(UTF_8));
     }
 
+    private static InputStream failingStream(IOException failure) {
+        return new InputStream() {
+
+            @Override
+            public int read() throws IOException {
+                throw failure;
+            }
+
+        };
+    }
+
     // =================================================================================================================
     // Turning a response into a result
     // =================================================================================================================
@@ -424,6 +436,38 @@ class AIHttpClientTest {
         var response = newResponse(200, stream("body"));
 
         assertEquals("handled", AIHttpClient.handleResponse(1, newRequest(), response, ignored -> completedFuture("handled")).join());
+    }
+
+    /**
+     * The HTTP client may hand a response to the calling thread, whose body read then answers an interrupt. The caller gets told it was interrupted, and the
+     * interrupt is passed on rather than swallowed.
+     */
+    @Test
+    void handleResponse_bodyReadInterrupted_saysSoAndKeepsTheInterrupt() {
+        var response = newResponse(500, failingStream(new IOException(new InterruptedException())));
+
+        try {
+            var exception = assertThrows(
+                AIException.class, () -> AIHttpClient.handleResponse(1, newRequest(), response, ignored -> completedFuture("unreachable"))
+            );
+            assertTrue(exception.getMessage().contains("Interrupted"));
+            assertTrue(Thread.currentThread().isInterrupted());
+        }
+        finally {
+            Thread.interrupted();
+        }
+    }
+
+    @Test
+    void handleResponse_bodyReadFailed_saysItCannotReadTheBody() {
+        var response = newResponse(500, failingStream(new IOException("reset")));
+
+        assertEquals(
+            "Cannot read response body",
+            assertThrows(AIException.class, () -> AIHttpClient.handleResponse(1, newRequest(), response, ignored -> completedFuture("unreachable")))
+                .getMessage()
+        );
+        assertFalse(Thread.currentThread().isInterrupted());
     }
 
     // =================================================================================================================

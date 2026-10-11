@@ -491,6 +491,11 @@ final class AIHttpClient {
             return new String(is.readAllBytes(), UTF_8);
         }
         catch (IOException e) {
+            if (e.getCause() instanceof InterruptedException) {
+                Thread.currentThread().interrupt();
+                throw new AIException("Interrupted while reading response body", e);
+            }
+
             throw new AIException("Cannot read response body", e);
         }
     }
