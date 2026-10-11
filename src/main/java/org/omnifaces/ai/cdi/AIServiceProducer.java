@@ -184,7 +184,7 @@ class AIServiceProducer {
             if (!isMicroProfileConfigAvailable()) {
                 throw new UnsupportedOperationException(
                     "You need a runtime implementation of microprofile-config-api in order for MP config resolution in @AI attributes to work."
-                        + " E.g. io.smallrye.config:smallrye-config:3.18.1 or simply a MicroProfile-compatible runtime such as Quarkus"
+                        + " E.g. io.smallrye.config:smallrye-config or simply a MicroProfile-compatible runtime such as Quarkus"
                 );
             }
 

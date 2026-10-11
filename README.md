@@ -67,7 +67,7 @@ On a bare servlet container such as Tomcat, add JSON-P and optionally CDI / MP C
 <dependency>
     <groupId>io.smallrye.config</groupId>
     <artifactId>smallrye-config</artifactId>
-    <version>3.18.1</version>
+    <version>4.0.0</version>
 </dependency>
 ```
 
