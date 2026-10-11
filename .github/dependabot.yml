@@ -20,6 +20,12 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    # The provided APIs pin the minimum supported platform, so they are raised by hand together with the baseline.
+    ignore:
+      - dependency-name: "jakarta.json:jakarta.json-api"
+      - dependency-name: "jakarta.enterprise:*"
+      - dependency-name: "jakarta.el:jakarta.el-api"
+      - dependency-name: "org.eclipse.microprofile.config:microprofile-config-api"
 
   # The action versions are pinned in the workflow, so they go stale unless something raises them.
   - package-ecosystem: github-actions
