@@ -38,11 +38,13 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.UncheckedIOException;
 import java.net.ConnectException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpRequest.BodyPublisher;
 import java.net.http.HttpResponse;
+import java.net.http.HttpTimeoutException;
 import java.time.Duration;
 import java.util.Locale;
 import java.util.Objects;
@@ -50,6 +52,7 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
@@ -116,7 +119,8 @@ final class AIHttpClient {
      * Creates a new HTTP client instance with custom timeouts.
      *
      * @param connectTimeout The connection timeout
-     * @param requestTimeout The request timeout
+     * @param requestTimeout The request timeout, which applies to receiving the response headers and, once more, to receiving a response body which is read as
+     * a whole
      * @return A new HTTP client instance
      */
     public static AIHttpClient newInstance(Duration connectTimeout, Duration requestTimeout) {
@@ -159,7 +163,7 @@ final class AIHttpClient {
      */
     static InputStream decompressDownloadIfNeeded(HttpResponse<InputStream> response) {
         if (response.statusCode() >= MIN_REDIRECT_STATUS_CODE) {
-            throw new AIHttpException(response.uri(), response.statusCode(), readBody(response));
+            throw new AIHttpException(response.uri(), response.statusCode(), readErrorBody(response));
         }
 
         return decompressIfNeeded(response);
@@ -364,7 +368,7 @@ final class AIHttpClient {
         var statusCode = response.statusCode();
 
         if (statusCode >= AIBadRequestException.STATUS_CODE) {
-            return failedFuture(fromStatusCode(request.uri(), statusCode, readBody(response)));
+            return failedFuture(fromStatusCode(request.uri(), statusCode, readErrorBody(response)));
         }
 
         return successHandler.apply(response);
@@ -486,7 +490,51 @@ final class AIHttpClient {
         }
     }
 
+    /**
+     * Reads the response body within the timeout of its request, which the HTTP client applies to the response headers alone. A body which stalls past that
+     * timeout is closed, and reported as a retryable {@link HttpTimeoutException}.
+     */
     private static String readBody(HttpResponse<InputStream> response) {
+        var timeout = response.request().timeout();
+
+        if (timeout.isEmpty()) {
+            return readBodyFully(response);
+        }
+
+        // The delayed task cannot be unscheduled and stays queued for the whole timeout, so it may hold the body only until the read is done.
+        var unread = new AtomicReference<>(response.body());
+        delayedExecutor(timeout.get().toMillis(), MILLISECONDS).execute(() -> closeQuietly(unread.getAndSet(null)));
+
+        try {
+            return readBodyFully(response);
+        }
+        catch (AIException e) {
+            if (unread.get() == null) {
+                var timeoutException = new HttpTimeoutException("Response body timed out after " + timeout.get());
+                timeoutException.initCause(e);
+                throw new UncheckedIOException(timeoutException);
+            }
+
+            throw e;
+        }
+        finally {
+            unread.set(null);
+        }
+    }
+
+    /**
+     * Reads the body of a response which already failed by its status. That status is definitive, so a body which stalls is described by its timeout.
+     */
+    private static String readErrorBody(HttpResponse<InputStream> response) {
+        try {
+            return readBody(response);
+        }
+        catch (UncheckedIOException e) {
+            return e.getCause().getMessage();
+        }
+    }
+
+    private static String readBodyFully(HttpResponse<InputStream> response) {
         try (var is = decompressIfNeeded(response)) {
             return new String(is.readAllBytes(), UTF_8);
         }
@@ -505,7 +553,8 @@ final class AIHttpClient {
     }
 
     static <R> CompletableFuture<R> handleFailureWithRetry(int requestId, Supplier<CompletableFuture<R>> action, int attempt, Throwable throwable) {
-        var cause = throwable instanceof CompletionException ce ? ce.getCause() : throwable;
+        var completionCause = throwable instanceof CompletionException ce ? ce.getCause() : throwable;
+        var cause = completionCause instanceof UncheckedIOException uioe ? uioe.getCause() : completionCause;
 
         if (cause instanceof AIException) {
             return failedFuture(cause);
