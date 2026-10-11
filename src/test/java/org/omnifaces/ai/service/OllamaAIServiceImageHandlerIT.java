@@ -25,6 +25,14 @@ class OllamaAIServiceImageHandlerIT extends BaseAIServiceImageHandlerIT {
         return AIProvider.OLLAMA;
     }
 
+    /**
+     * gemma4 answers that the shape in the test image is a hexagon, so image analysis needs a model which recognizes it.
+     */
+    @Override
+    protected String getModel() {
+        return "gemma3";
+    }
+
     @Override
     protected String getApiKeyEnvName() {
         return API_KEY_ENV_NAME;
