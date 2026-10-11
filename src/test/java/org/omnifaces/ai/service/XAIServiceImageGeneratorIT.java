@@ -32,7 +32,7 @@ class XAIServiceImageGeneratorIT extends BaseAIServiceImageGeneratorIT {
 
     @Override
     protected String getModel() {
-        return "grok-imagine-image";
+        return "grok-imagine-image-2.0";
     }
 
 }

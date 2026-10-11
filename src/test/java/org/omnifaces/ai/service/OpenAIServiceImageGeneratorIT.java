@@ -32,7 +32,7 @@ class OpenAIServiceImageGeneratorIT extends BaseAIServiceImageGeneratorIT {
 
     @Override
     protected String getModel() {
-        return "gpt-image-1-mini";
+        return "gpt-image-2.5-flare";
     }
 
 }

@@ -32,7 +32,7 @@ class GoogleAIServiceAudioGeneratorIT extends BaseAIServiceAudioGeneratorIT {
 
     @Override
     protected String getModel() {
-        return "gemini-2.5-flash-preview-tts";
+        return "gemini-3.8-flash-tts";
     }
 
 }

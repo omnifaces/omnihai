@@ -32,7 +32,7 @@ class GoogleAIServiceImageGeneratorIT extends BaseAIServiceImageGeneratorIT {
 
     @Override
     protected String getModel() {
-        return "gemini-2.5-flash-image";
+        return "gemini-3.1-flash-image";
     }
 
 }
