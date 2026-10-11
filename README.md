@@ -132,13 +132,13 @@ MicroProfile Config expressions additionally need `io.smallrye.config:smallrye-c
 
 | Provider | Default Model | API Key Required | Available Models |
 |----------|---------------|------------------|------------------|
-| OpenAI | gpt-5.6-terra | [Yes](https://platform.openai.com/api-keys) | [List](https://developers.openai.com/api/docs/models) |
-| Anthropic | claude-sonnet-5 | [Yes](https://platform.claude.com/settings/keys) | [List](https://platform.claude.com/docs/en/about-claude/models/overview) |
-| Google AI | gemini-3.7-flash | [Yes](https://aistudio.google.com/app/api-keys) | [List](https://ai.google.dev/gemini-api/docs/models) |
-| xAI | grok-4.6 | [Yes](https://console.x.ai) | [List](https://docs.x.ai/developers/models) |
+| OpenAI | gpt-6.1-sol | [Yes](https://platform.openai.com/api-keys) | [List](https://developers.openai.com/api/docs/models) |
+| Anthropic | claude-sonnet-5-5 | [Yes](https://platform.claude.com/settings/keys) | [List](https://platform.claude.com/docs/en/about-claude/models/overview) |
+| Google AI | gemini-3.8-flash | [Yes](https://aistudio.google.com/app/api-keys) | [List](https://ai.google.dev/gemini-api/docs/models) |
+| xAI | grok-4.7 | [Yes](https://console.x.ai) | [List](https://docs.x.ai/developers/models) |
 | Mistral | mistral-medium-3-5 | [Yes](https://admin.mistral.ai/organization/api-keys) | [List](https://docs.mistral.ai/models) |
 | Meta AI | muse-spark-1.3 | [Yes](https://dev.meta.ai/api-keys) | [List](https://dev.meta.ai/docs/models) |
-| Azure OpenAI | gpt-5.6-terra | [Yes](https://portal.azure.com) | [List](https://ai.azure.com/catalog) |
+| Azure OpenAI | gpt-6.1-sol | [Yes](https://portal.azure.com) | [List](https://ai.azure.com/catalog) |
 | OpenRouter | deepseek/deepseek-v4-pro | [Yes](https://openrouter.ai/workspaces/default/keys) | [List](https://openrouter.ai/models) |
 | Hugging Face | google/gemma-4-31B-it | [Yes](https://huggingface.co/settings/tokens) | [List](https://huggingface.co/models) |
 | Ollama | gemma4 | No (localhost) | [List](https://ollama.com/library) |

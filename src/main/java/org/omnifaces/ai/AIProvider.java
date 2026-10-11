@@ -81,7 +81,7 @@ public enum AIProvider {
     /**
      * OpenAI: GPT, GPT mini, GPT nano, etc.
      * <p>
-     * Defaults currently to model {@code gpt-5.6-terra} at endpoint {@code https://api.openai.com/v1}.
+     * Defaults currently to model {@code gpt-6.1-sol} at endpoint {@code https://api.openai.com/v1}.
      *
      * @see OpenAIService
      * @see OpenAITextHandler
@@ -91,14 +91,14 @@ public enum AIProvider {
      * @see <a href="https://developers.openai.com/api/docs/models">Available OpenAI Models</a>
      */
     OPENAI(
-        "OpenAI", OpenAIService.class, true, "gpt-5.6-terra", "https://api.openai.com/v1", OpenAITextHandler.class, OpenAIImageHandler.class,
+        "OpenAI", OpenAIService.class, true, "gpt-6.1-sol", "https://api.openai.com/v1", OpenAITextHandler.class, OpenAIImageHandler.class,
         OpenAIAudioHandler.class
     ),
 
     /**
      * Anthropic: Claude Opus, Claude Sonnet, Claude Haiku, etc.
      * <p>
-     * Defaults currently to model {@code claude-sonnet-5} at endpoint {@code https://api.anthropic.com/v1}.
+     * Defaults currently to model {@code claude-sonnet-5-5} at endpoint {@code https://api.anthropic.com/v1}.
      *
      * @see AnthropicAIService
      * @see AnthropicAITextHandler
@@ -108,13 +108,13 @@ public enum AIProvider {
      * @see <a href="https://platform.claude.com/docs/en/about-claude/models/overview">Available Anthropic AI Models</a>
      */
     ANTHROPIC(
-        "Anthropic", AnthropicAIService.class, true, "claude-sonnet-5", "https://api.anthropic.com/v1", AnthropicAITextHandler.class
+        "Anthropic", AnthropicAIService.class, true, "claude-sonnet-5-5", "https://api.anthropic.com/v1", AnthropicAITextHandler.class
     ),
 
     /**
      * Google AI: Gemini Pro, Gemini Flash, Gemini Flash Lite, etc.
      * <p>
-     * Defaults currently to model {@code gemini-3.7-flash} at endpoint {@code https://generativelanguage.googleapis.com/v1beta}.
+     * Defaults currently to model {@code gemini-3.8-flash} at endpoint {@code https://generativelanguage.googleapis.com/v1beta}.
      *
      * @see GoogleAIService
      * @see GoogleAITextHandler
@@ -125,14 +125,14 @@ public enum AIProvider {
      * @see <a href="https://ai.google.dev/gemini-api/docs/models">Available Google AI Models</a>
      */
     GOOGLE(
-        "Google AI", GoogleAIService.class, true, "gemini-3.7-flash", "https://generativelanguage.googleapis.com/v1beta", GoogleAITextHandler.class,
+        "Google AI", GoogleAIService.class, true, "gemini-3.8-flash", "https://generativelanguage.googleapis.com/v1beta", GoogleAITextHandler.class,
         GoogleAIImageHandler.class, GoogleAIAudioHandler.class, GoogleAIVideoHandler.class
     ),
 
     /**
      * xAI: Grok Fast Reasoning, Grok Non Reasoning, Grok Code, etc.
      * <p>
-     * Defaults currently to model {@code grok-4.6} at endpoint {@code https://api.x.ai/v1}.
+     * Defaults currently to model {@code grok-4.7} at endpoint {@code https://api.x.ai/v1}.
      *
      * @see XAIService
      * @see OpenAITextHandler
@@ -143,7 +143,7 @@ public enum AIProvider {
      * @see <a href="https://docs.x.ai/developers/models">Available xAI Models</a>
      */
     XAI(
-        "xAI", XAIService.class, true, "grok-4.6", "https://api.x.ai/v1", OpenAITextHandler.class, XAIImageHandler.class, DefaultAIAudioHandler.class,
+        "xAI", XAIService.class, true, "grok-4.7", "https://api.x.ai/v1", OpenAITextHandler.class, XAIImageHandler.class, DefaultAIAudioHandler.class,
         XAIVideoHandler.class
     ),
 
@@ -184,7 +184,7 @@ public enum AIProvider {
     /**
      * Azure OpenAI: Aggregates a broad range of AI models via a unified OpenAI-compatible API.
      * <p>
-     * Defaults currently to model {@code gpt-5.6-terra} at endpoint {@code https://{org.omnifaces.ai.AZURE_RESOURCE}.openai.azure.com/openai/v1}.
+     * Defaults currently to model {@code gpt-6.1-sol} at endpoint {@code https://{org.omnifaces.ai.AZURE_RESOURCE}.openai.azure.com/openai/v1}.
      *
      * @see AzureAIService
      * @see AzureAITextHandler
@@ -194,7 +194,7 @@ public enum AIProvider {
      * @see <a href="https://ai.azure.com/catalog">Available Azure OpenAI Models</a>
      */
     AZURE(
-        "Azure OpenAI", AzureAIService.class, true, "gpt-5.6-terra", "https://{org.omnifaces.ai.AZURE_RESOURCE}.openai.azure.com/openai/v1",
+        "Azure OpenAI", AzureAIService.class, true, "gpt-6.1-sol", "https://{org.omnifaces.ai.AZURE_RESOURCE}.openai.azure.com/openai/v1",
         AzureAITextHandler.class, OpenAIImageHandler.class
     ),
 
