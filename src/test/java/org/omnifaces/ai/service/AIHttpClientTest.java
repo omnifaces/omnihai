@@ -24,6 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -34,6 +35,7 @@ import static org.omnifaces.ai.service.BaseAIService.HTTP_CLIENT;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.UncheckedIOException;
 import java.net.ConnectException;
 import java.net.URI;
 import java.net.http.HttpClient.Redirect;
@@ -41,12 +43,15 @@ import java.net.http.HttpHeaders;
 import java.net.http.HttpRequest;
 import java.net.http.HttpRequest.BodyPublishers;
 import java.net.http.HttpResponse;
+import java.net.http.HttpTimeoutException;
 import java.nio.ByteBuffer;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Flow;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
@@ -59,6 +64,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.ResourceLock;
 import org.omnifaces.ai.AIConfig;
 import org.omnifaces.ai.DeliberateFailures;
+import org.omnifaces.ai.exception.AIAuthenticationException;
 import org.omnifaces.ai.exception.AIException;
 import org.omnifaces.ai.exception.AIHttpException;
 import org.omnifaces.ai.exception.AIRateLimitExceededException;
@@ -70,6 +76,8 @@ import org.omnifaces.ai.model.Sse.Event.Type;
 class AIHttpClientTest {
 
     private static final int BODY_TIMEOUT_SECONDS = 5;
+    private static final Duration STALL_TIMEOUT = Duration.ofMillis(200);
+    private static final Duration TEST_TIMEOUT = Duration.ofSeconds(30);
 
     // =================================================================================================================
     // isRetryable - null / non-IOException
@@ -217,6 +225,22 @@ class AIHttpClientTest {
             super.close();
         }
 
+    }
+
+    /**
+     * The status of a redirect is definitive, so a body which stalls after it still throws that status.
+     */
+    @Test
+    void download_ofARedirectWhoseBodyStalls_stillThrowsItsStatus() {
+        var response = newResponse(302, stallingStream());
+        when(response.request()).thenReturn(newRequest(STALL_TIMEOUT));
+
+        var exception = assertTimeoutPreemptively(
+            TEST_TIMEOUT, () -> assertThrows(AIHttpException.class, () -> AIHttpClient.decompressDownloadIfNeeded(response))
+        );
+
+        assertEquals(302, exception.getStatusCode());
+        assertTrue(exception.getResponseBody().contains("timed out"), exception.getResponseBody());
     }
 
     @Test
@@ -404,6 +428,33 @@ class AIHttpClientTest {
         return new ByteArrayInputStream(content.getBytes(UTF_8));
     }
 
+    /** Stream which stalls until it is closed, as a response body does whose provider stopped sending halfway. */
+    private static InputStream stallingStream() {
+        var closed = new CountDownLatch(1);
+
+        return new InputStream() {
+
+            @Override
+            public int read() throws IOException {
+                try {
+                    closed.await();
+                }
+                catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    throw new IOException(e);
+                }
+
+                throw new IOException("closed");
+            }
+
+            @Override
+            public void close() {
+                closed.countDown();
+            }
+
+        };
+    }
+
     private static InputStream failingStream(IOException failure) {
         return new InputStream() {
 
@@ -429,6 +480,21 @@ class AIHttpClientTest {
 
         assertTrue(future.isCompletedExceptionally());
         assertInstanceOf(AIRateLimitExceededException.class, assertThrows(CompletionException.class, future::join).getCause());
+    }
+
+    /**
+     * The status of a failed response is definitive, so a body which stalls after it still answers the exception naming that status.
+     */
+    @Test
+    void handleResponse_errorStatusWhoseBodyStalls_stillAnswersTheMatchingException() {
+        var response = newResponse(401, stallingStream());
+        when(response.request()).thenReturn(newRequest(STALL_TIMEOUT));
+
+        var future = assertTimeoutPreemptively(
+            TEST_TIMEOUT, () -> AIHttpClient.handleResponse(1, newRequest(), response, ignored -> completedFuture("unreachable"))
+        );
+
+        assertInstanceOf(AIAuthenticationException.class, assertThrows(CompletionException.class, future::join).getCause());
     }
 
     @Test
@@ -500,6 +566,20 @@ class AIHttpClientTest {
         var exception = assertThrows(CompletionException.class, future::join);
         assertInstanceOf(AIHttpException.class, exception.getCause());
         assertTrue(exception.getCause().getMessage().contains("retries"), exception.getCause().getMessage());
+    }
+
+    /**
+     * A response body which timed out is reported by a body extractor, which cannot throw a checked exception, so it arrives wrapped, and ends up as the same
+     * cause a response which timed out does.
+     */
+    @Test
+    void handleFailureWithRetry_responseBodyTimedOut_endsUpAsTheTimeoutItself() {
+        var timeout = new HttpTimeoutException("Response body timed out after PT1M");
+        var future = AIHttpClient.handleFailureWithRetry(
+            1, () -> completedFuture("retried"), AIHttpClient.MAX_RETRIES, new CompletionException(new UncheckedIOException(timeout))
+        );
+
+        assertSame(timeout, assertThrows(CompletionException.class, future::join).getCause().getCause());
     }
 
     /**
@@ -676,6 +756,10 @@ class AIHttpClientTest {
         return HttpRequest.newBuilder(URI.create("https://example.org/v1/chat")).GET().build();
     }
 
+    private static HttpRequest newRequest(Duration timeout) {
+        return HttpRequest.newBuilder(URI.create("https://example.org/v1/chat")).timeout(timeout).GET().build();
+    }
+
     @SuppressWarnings("unchecked")
     private static HttpResponse<InputStream> newResponse(int statusCode, InputStream body) {
         HttpResponse<InputStream> response = mock(HttpResponse.class);
@@ -683,6 +767,7 @@ class AIHttpClientTest {
         when(response.body()).thenReturn(body);
         when(response.headers()).thenReturn(HttpHeaders.of(Map.of(), (name, value) -> true));
         when(response.uri()).thenReturn(URI.create("https://vidgen.x.ai/abc/video.mp4"));
+        when(response.request()).thenReturn(newRequest());
         return response;
     }
 

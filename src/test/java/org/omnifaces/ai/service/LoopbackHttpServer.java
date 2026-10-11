@@ -43,20 +43,32 @@ import com.sun.net.httpserver.HttpServer;
 final class LoopbackHttpServer implements AutoCloseable {
 
     /**
-     * What the server answers: the status, the headers beside the length, the body, and the length it announces, which is the body's own unless a test states a
-     * longer one to cut the answer short.
+     * What the server answers: the status, the headers beside the length, the body, the length it announces, which is the body's own unless a test states a
+     * longer one to cut the answer short, and whether the connection then stays open until the server closes.
      */
-    record Answer(int status, Map<String, String> headers, byte[] body, int declaredLength) {
+    record Answer(int status, Map<String, String> headers, byte[] body, int declaredLength, boolean stalls) {
 
         Answer(int status, Map<String, String> headers, byte[] body) {
-            this(status, headers, body, body.length);
+            this(status, headers, body, body.length, false);
         }
 
         /**
          * An answer which announces more than it carries, which is what a connection dropped halfway looks like.
          */
         static Answer ofCutOffJson() {
-            return new Answer(200, Map.of("Content-Type", "application/json"), "{\"id\":".getBytes(UTF_8), 1024);
+            return cutOffJson(false);
+        }
+
+        /**
+         * An answer which announces more than it carries and keeps the connection open until the server closes, which is what a provider stalling halfway looks
+         * like.
+         */
+        static Answer ofStalledJson() {
+            return cutOffJson(true);
+        }
+
+        private static Answer cutOffJson(boolean stalls) {
+            return new Answer(200, Map.of("Content-Type", "application/json"), "{\"id\":".getBytes(UTF_8), 1024, stalls);
         }
 
         static Answer ofJson(String json) {
@@ -102,6 +114,7 @@ final class LoopbackHttpServer implements AutoCloseable {
     private final List<Request> requests = new CopyOnWriteArrayList<>();
     private final AtomicInteger answered = new AtomicInteger();
     private final AtomicBoolean holding = new AtomicBoolean();
+    private final CountDownLatch closed = new CountDownLatch(1);
     private CountDownLatch arrived;
     private CountDownLatch held;
     private Answer lastAnswer = Answer.ofJson("{}");
@@ -185,7 +198,9 @@ final class LoopbackHttpServer implements AutoCloseable {
     }
 
     private void handle(HttpExchange exchange) throws IOException, InterruptedException {
-        try (exchange) {
+        var stalled = false;
+
+        try {
             // Recorded on arrival, so that a caller which was answered can read what it was answered about.
             requests.add(
                 new Request(
@@ -209,13 +224,43 @@ final class LoopbackHttpServer implements AutoCloseable {
             exchange.getResponseBody().write(answer.body());
             exchange.getResponseBody().flush();
 
+            if (answer.stalls()) {
+                closeOnceServerCloses(exchange);
+                stalled = true;
+            }
+
             // Counted once served, so that a test waiting on a request sent beside its call knows the caller was served rather than merely heard.
             answered.incrementAndGet();
         }
+        finally {
+            if (!stalled) {
+                exchange.close();
+            }
+        }
+    }
+
+    /**
+     * Keeps a stalled answer open on a thread of its own, so that the server goes on serving the requests after it.
+     */
+    private void closeOnceServerCloses(HttpExchange exchange) {
+        var thread = new Thread(() -> {
+            try {
+                closed.await();
+            }
+            catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+            finally {
+                exchange.close();
+            }
+        });
+        thread.setDaemon(true);
+        thread.start();
     }
 
     @Override
     public void close() {
+        closed.countDown();
         server.stop(0);
     }
 

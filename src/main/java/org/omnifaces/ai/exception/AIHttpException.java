@@ -117,9 +117,9 @@ public class AIHttpException extends AIException {
     }
 
     /**
-     * Returns the HTTP response body.
+     * Returns the HTTP response body. When the body did not arrive within the request timeout, this describes that timeout, as the status alone is definitive.
      *
-     * @return The HTTP response body.
+     * @return The HTTP response body, or a description of the timeout within which it did not arrive.
      */
     public String getResponseBody() {
         return responseBody;

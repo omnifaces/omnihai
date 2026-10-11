@@ -18,12 +18,14 @@ import static java.util.logging.Level.FINER;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.omnifaces.ai.service.BaseAIService.HTTP_CLIENT;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletionException;
@@ -245,6 +247,21 @@ class AIHttpClientLoopbackTest {
         var future = HTTP_CLIENT.post(service, "responses", PAYLOAD);
 
         assertTrue(assertThrows(CompletionException.class, future::join).getCause().getMessage().contains("read response body"));
+    }
+
+    /**
+     * The request timeout covers the response headers alone, so a body which stalls after them has to be given up on by the client itself, and is then tried
+     * again as a timeout is.
+     */
+    @Test
+    void answerWhichStallsHalfway_timesOutAndIsTriedAgain() {
+        server.answer(Answer.ofStalledJson(), Answer.ofJson("{\"id\":\"resp-1\"}"));
+        var client = AIHttpClient.newInstance(Duration.ofSeconds(5), Duration.ofSeconds(1));
+
+        var answer = assertTimeoutPreemptively(Duration.ofSeconds(30), () -> client.post(service, "responses", PAYLOAD).join());
+
+        assertEquals("resp-1", answer.getString("id"));
+        assertEquals(2, server.requestCount());
     }
 
     /**
