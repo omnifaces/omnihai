@@ -108,17 +108,22 @@ class OpenAITextHandlerTest {
     void getEffectiveReasoningEffort_modelRejectingNone_fallsBackToTheLowestItAccepts() {
         assertEquals(ReasoningEffort.LOW, effectiveReasoningEffort(newService(META, "muse-spark-1.2"), ReasoningEffort.NONE));
         assertEquals(ReasoningEffort.LOW, effectiveReasoningEffort(newService(OPENAI, "gpt-5"), ReasoningEffort.NONE));
+        assertEquals(ReasoningEffort.LOW, effectiveReasoningEffort(newService(OPENAI, "gpt-6-astra"), ReasoningEffort.NONE));
+        assertEquals(ReasoningEffort.LOW, effectiveReasoningEffort(newService(OPENAI, "gpt-6.1-sol"), ReasoningEffort.NONE));
     }
 
     @Test
     void getEffectiveReasoningEffort_modelRejectingNone_appliesTheProviderDefaultOnAuto() {
         assertEquals(ReasoningEffort.MEDIUM, effectiveReasoningEffort(newService(META, "muse-spark-1.2"), ReasoningEffort.AUTO));
         assertEquals(ReasoningEffort.MEDIUM, effectiveReasoningEffort(newService(OPENAI, "gpt-5"), ReasoningEffort.AUTO));
+        assertEquals(ReasoningEffort.MEDIUM, effectiveReasoningEffort(newService(OPENAI, "gpt-6-astra"), ReasoningEffort.AUTO));
+        assertEquals(ReasoningEffort.MEDIUM, effectiveReasoningEffort(newService(OPENAI, "gpt-6.1-sol"), ReasoningEffort.AUTO));
     }
 
     @Test
     void getEffectiveReasoningEffort_modelAcceptingNone_appliesItAsRequested() {
         assertEquals(ReasoningEffort.NONE, effectiveReasoningEffort(newService(), ReasoningEffort.NONE));
+        assertEquals(ReasoningEffort.NONE, effectiveReasoningEffort(newService(OPENAI, "gpt-6-sol"), ReasoningEffort.NONE));
     }
 
     // =================================================================================================================
