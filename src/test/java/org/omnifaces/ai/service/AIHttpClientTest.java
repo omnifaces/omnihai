@@ -664,14 +664,47 @@ class AIHttpClientTest {
         assertTrue(records.isEmpty());
     }
 
+    /**
+     * Test classes run concurrently and log to the same package logger, so only what the calling thread logs while the action runs belongs to the action.
+     */
+    @Test
+    @ResourceLock(DeliberateFailures.LOGGING_STATE)
+    void whileLoggingAt_capturesOnlyWhatTheCallingThreadLogs() {
+        var logger = Logger.getLogger(AIHttpClient.class.getPackageName());
+        var records = new ArrayList<LogRecord>();
+
+        whileLoggingAt(FINER, records, () -> {
+            var otherThread = new Thread(() -> logger.finer("logged by another test class"));
+            otherThread.start();
+            joinQuietly(otherThread);
+            logger.finer("logged by the action");
+            return null;
+        });
+
+        assertEquals(List.of("logged by the action"), records.stream().map(LogRecord::getMessage).toList());
+    }
+
+    private static void joinQuietly(Thread thread) {
+        try {
+            thread.join();
+        }
+        catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException(e);
+        }
+    }
+
     private static <R> R whileLoggingAt(Level level, List<LogRecord> records, Supplier<R> action) {
         var logger = Logger.getLogger(AIHttpClient.class.getPackageName());
         var originalLevel = logger.getLevel();
+        var callingThreadId = Thread.currentThread().getId();
         var handler = new Handler() {
 
             @Override
             public void publish(LogRecord logRecord) {
-                records.add(logRecord);
+                if (logRecord.getLongThreadID() == callingThreadId) {
+                    records.add(logRecord);
+                }
             }
 
             @Override
