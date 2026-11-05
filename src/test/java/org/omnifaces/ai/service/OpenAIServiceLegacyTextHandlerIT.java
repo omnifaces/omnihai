@@ -13,15 +13,37 @@
 package org.omnifaces.ai.service;
 
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
+import org.omnifaces.ai.AIConfig;
 import org.omnifaces.ai.AIProvider;
+import org.omnifaces.ai.AIService;
+import org.omnifaces.ai.AIStrategy;
 
 /**
- * This test uses a model which does NOT support OpenAI responses API and hence uses the legacy chat/completions fallback.
+ * This test runs OpenAI through the legacy {@code chat/completions} fallback, which OpenAI only selects for models older than GPT-4. OpenAI serves no such
+ * model anymore, so the test forces the fallback on a current model via {@link LegacyOpenAIService}.
  */
 @EnabledIfEnvironmentVariable(named = OpenAIServiceLegacyTextHandlerIT.API_KEY_ENV_NAME, matches = ".+")
 class OpenAIServiceLegacyTextHandlerIT extends BaseAIServiceTextHandlerIT {
 
     protected static final String API_KEY_ENV_NAME = "OPENAI_API_KEY";
+
+    /**
+     * An {@link OpenAIService} which never uses the OpenAI {@code responses} API.
+     */
+    public static class LegacyOpenAIService extends OpenAIService {
+
+        private static final long serialVersionUID = 1L;
+
+        public LegacyOpenAIService(AIConfig config) {
+            super(config);
+        }
+
+        @Override
+        public boolean supportsOpenAIResponsesApi() {
+            return false;
+        }
+
+    }
 
     @Override
     protected AIProvider getProvider() {
@@ -35,7 +57,20 @@ class OpenAIServiceLegacyTextHandlerIT extends BaseAIServiceTextHandlerIT {
 
     @Override
     protected String getModel() {
-        return "gpt-3.5-turbo-0125";
+        return "gpt-4.1";
+    }
+
+    @Override
+    protected AIService createService(String model) {
+        var openai = getProvider();
+        var strategy = new AIStrategy(
+            openai.getDefaultTextHandler(), openai.getDefaultImageHandler(), openai.getDefaultAudioHandler(), openai.getDefaultVideoHandler()
+        );
+        return AIConfig.of(LegacyOpenAIService.class, System.getenv(API_KEY_ENV_NAME))
+            .withModel(model)
+            .withEndpoint(openai.getDefaultEndpoint())
+            .withStrategy(strategy)
+            .createService();
     }
 
     @Override
