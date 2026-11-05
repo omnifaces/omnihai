@@ -39,7 +39,7 @@ That is the only hard requirement. CDI, EL and MP Config are optional and only n
 <dependency>
     <groupId>org.omnifaces</groupId>
     <artifactId>omnihai</artifactId>
-    <version>1.7.3</version>
+    <version>1.7.4</version>
 </dependency>
 ```
 That's all for Jakarta EE / MicroProfile runtimes. No additional dependencies needed.
