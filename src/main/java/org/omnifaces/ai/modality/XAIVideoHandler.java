@@ -74,10 +74,8 @@ public class XAIVideoHandler extends DefaultAIVideoHandler {
 
     @Override
     public VideoGeneration.Job parseVideoGeneration(JsonObject responseJson, String jobId) throws AIResponseException {
-        var status = findFirstNonBlankByPath(responseJson, "status")
-            .orElseThrow(() -> new AIResponseException("No video generation job status found", responseJson));
         return new VideoGeneration.Job(
-            jobId, parseVideoStatus(status, responseJson), null, findFirstNonBlankByPath(responseJson, "video.url").orElse(null),
+            jobId, parseVideoStatus(responseJson), null, findFirstNonBlankByPath(responseJson, "video.url").orElse(null),
             findFirstNonBlankByPath(responseJson, "error.message").orElse(null)
         );
     }

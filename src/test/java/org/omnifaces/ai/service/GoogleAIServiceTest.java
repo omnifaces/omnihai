@@ -170,9 +170,10 @@ class GoogleAIServiceTest {
     }
 
     @Test
-    void supportsModality_videoGeneration_isTheVeoModelsAlone() {
+    void supportsModality_videoGeneration_isTheOmniModelsAlone() {
         assertFalse(newService("gemini-3.7-flash").supportsModality(VIDEO_GENERATION));
-        assertTrue(newService("veo-3.0-generate-001").supportsModality(VIDEO_GENERATION));
+        assertFalse(newService("veo-3.1-generate-preview").supportsModality(VIDEO_GENERATION), "Veo is not served by the Gemini API");
+        assertTrue(newService("gemini-omni-1.1-flash").supportsModality(VIDEO_GENERATION));
     }
 
     @Test
@@ -228,15 +229,15 @@ class GoogleAIServiceTest {
     }
 
     /**
-     * A long-running operation is polled on the path the provider handed out, which the model is not part of.
+     * An interaction is addressed outside the model, as it states the model in its payload.
      */
     @Test
-    void resolveURI_operationPath_isAddressedAsItIsBesideTheApiKey() {
+    void resolveURI_interactionPath_isAddressedAsItIsBesideTheApiKey() {
         var service = newService(MODEL);
 
-        assertEquals(BASE + "operations/abc123?key=" + API_KEY, service.resolveURI("operations/abc123").toString());
-        assertEquals(BASE + "models/veo-3.0/operations/abc123?key=" + API_KEY, service.resolveURI("models/veo-3.0/operations/abc123").toString());
-        assertEquals(BASE + "operations/abc123?alt=json&key=" + API_KEY, service.resolveURI("operations/abc123?alt=json").toString());
+        assertEquals(BASE + "interactions?key=" + API_KEY, service.resolveURI("interactions").toString());
+        assertEquals(BASE + "interactions/abc123?key=" + API_KEY, service.resolveURI("interactions/abc123").toString());
+        assertEquals(BASE + "interactions/abc123?alt=json&key=" + API_KEY, service.resolveURI("interactions/abc123?alt=json").toString());
     }
 
     /**
@@ -251,7 +252,7 @@ class GoogleAIServiceTest {
 
     @Test
     void resolveURI_absoluteUriOfTheEndpointItself_carriesTheApiKey() {
-        assertEquals(BASE + "operations/abc123?key=" + API_KEY, newService(MODEL).resolveURI(BASE + "operations/abc123").toString());
+        assertEquals(BASE + "files/abc123?key=" + API_KEY, newService(MODEL).resolveURI(BASE + "files/abc123").toString());
     }
 
     @Test

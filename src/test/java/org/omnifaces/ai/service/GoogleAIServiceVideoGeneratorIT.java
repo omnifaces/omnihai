@@ -33,12 +33,12 @@ class GoogleAIServiceVideoGeneratorIT extends BaseAIServiceVideoGeneratorIT {
 
     @Override
     protected String getModel() {
-        return "veo-3.1-generate-preview";
+        return "gemini-omni-1.1-flash";
     }
 
     @Override
     protected GenerateVideoOptions getOptions() {
-        return GenerateVideoOptions.newBuilder().resolution("720p").seconds(4).build();
+        return GenerateVideoOptions.newBuilder().resolution("360p").build();
     }
 
 }

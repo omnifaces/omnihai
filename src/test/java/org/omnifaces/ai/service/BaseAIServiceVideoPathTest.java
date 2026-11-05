@@ -36,6 +36,7 @@ class BaseAIServiceVideoPathTest {
 
     private static final String API_KEY = "test-api-key";
     private static final String JOB_ID = "job-1";
+    private static final String GOOGLE_VIDEO_MODEL = "gemini-omni-1.1-flash";
 
     // =================================================================================================================
     // Submit, poll and download paths
@@ -59,14 +60,11 @@ class BaseAIServiceVideoPathTest {
     }
 
     @Test
-    void google_pollsTheOperationTheJobIdNames() {
-        var service = newService(GOOGLE, "veo-3.1-generate-preview");
+    void google_pollsTheInteractionBelowThePathItSubmitsTo() {
+        var service = newService(GOOGLE, GOOGLE_VIDEO_MODEL);
 
-        assertEquals("predictLongRunning", service.getGenerateVideoPath());
-        assertEquals(
-            "models/veo-3.1-generate-preview/operations/abc", service.getVideoGenerationPath("models/veo-3.1-generate-preview/operations/abc"),
-            "the job id is the operation name, so a revived job may not append it to the submit path"
-        );
+        assertEquals("interactions", service.getGenerateVideoPath());
+        assertEquals("interactions/" + JOB_ID, service.getVideoGenerationPath(JOB_ID));
     }
 
     // =================================================================================================================
@@ -74,22 +72,22 @@ class BaseAIServiceVideoPathTest {
     // =================================================================================================================
 
     @Test
-    void google_resolvesTheSubmitPathBelowTheModel() {
-        var uri = newService(GOOGLE, "veo-3.1-generate-preview").resolveURI("predictLongRunning");
+    void google_resolvesTheSubmitPathOutsideTheModel() {
+        var uri = newService(GOOGLE, GOOGLE_VIDEO_MODEL).resolveURI("interactions");
 
-        assertEquals("https://generativelanguage.googleapis.com/v1beta/models/veo-3.1-generate-preview:predictLongRunning?key=" + API_KEY, uri.toString());
+        assertEquals("https://generativelanguage.googleapis.com/v1beta/interactions?key=" + API_KEY, uri.toString());
     }
 
     @Test
-    void google_resolvesAnOperationPathVerbatim() {
-        var uri = newService(GOOGLE, "veo-3.1-generate-preview").resolveURI("models/veo-3.1-generate-preview/operations/abc");
+    void google_resolvesThePollPathOutsideTheModel() {
+        var uri = newService(GOOGLE, GOOGLE_VIDEO_MODEL).resolveURI("interactions/" + JOB_ID);
 
-        assertEquals("https://generativelanguage.googleapis.com/v1beta/models/veo-3.1-generate-preview/operations/abc?key=" + API_KEY, uri.toString());
+        assertEquals("https://generativelanguage.googleapis.com/v1beta/interactions/" + JOB_ID + "?key=" + API_KEY, uri.toString());
     }
 
     @Test
     void google_withholdsTheApiKeyFromAForeignUri() {
-        var uri = newService(GOOGLE, "veo-3.1-generate-preview").resolveURI("https://evil.example/video.mp4");
+        var uri = newService(GOOGLE, GOOGLE_VIDEO_MODEL).resolveURI("https://evil.example/video.mp4");
 
         assertEquals("https://evil.example/video.mp4", uri.toString());
         assertFalse(uri.toString().contains(API_KEY), "a URI the AI provider names elsewhere may never carry the API key");
@@ -118,7 +116,7 @@ class BaseAIServiceVideoPathTest {
 
     @Test
     void videoGeneration_isPublishedByTheVideoModelsOnly() {
-        assertTrue(newService(GOOGLE, "veo-3.1-generate-preview").supportsModality(VIDEO_GENERATION));
+        assertTrue(newService(GOOGLE, GOOGLE_VIDEO_MODEL).supportsModality(VIDEO_GENERATION));
         assertFalse(newService(GOOGLE, "gemini-3.5-flash").supportsModality(VIDEO_GENERATION));
         assertTrue(newService(XAI, "grok-imagine-video-1.5").supportsModality(VIDEO_GENERATION));
         assertFalse(newService(XAI, "grok-4.5").supportsModality(VIDEO_GENERATION));

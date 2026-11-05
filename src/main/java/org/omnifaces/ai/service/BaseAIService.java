@@ -22,6 +22,9 @@ import static java.util.logging.Level.WARNING;
 import static org.omnifaces.ai.AIConfig.PROPERTY_API_KEY;
 import static org.omnifaces.ai.AIConfig.PROPERTY_ENDPOINT;
 import static org.omnifaces.ai.AIConfig.PROPERTY_MODEL;
+import static org.omnifaces.ai.helper.DataUriHelper.decodeDataUri;
+import static org.omnifaces.ai.helper.DataUriHelper.isDataUri;
+import static org.omnifaces.ai.helper.DataUriHelper.redactDataUri;
 import static org.omnifaces.ai.helper.JsonHelper.findFirstNonBlankByPath;
 import static org.omnifaces.ai.helper.JsonSchemaHelper.fromJson;
 import static org.omnifaces.ai.helper.TextHelper.isBlank;
@@ -31,6 +34,7 @@ import static org.omnifaces.ai.model.ChatOptions.DETERMINISTIC;
 import static org.omnifaces.ai.model.ChatOptions.DETERMINISTIC_TEMPERATURE;
 import static org.omnifaces.ai.service.ExecutorServiceHelper.delayedExecutor;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
@@ -903,7 +907,25 @@ public abstract class BaseAIService implements AIService, Source {
 
     @Override
     public InputStream downloadVideo(VideoGeneration.Job job) {
-        return joinAsync(HTTP_CLIENT.download(this, ofNullable(job.contentPath()).orElseGet(() -> getVideoGenerationContentPath(job.id()))));
+        var contentPath = ofNullable(job.contentPath()).orElseGet(() -> getVideoGenerationContentPath(job.id()));
+
+        if (isDataUri(contentPath)) {
+            return decodeInlineVideo(contentPath);
+        }
+
+        return joinAsync(HTTP_CLIENT.download(this, contentPath));
+    }
+
+    /**
+     * An AI provider which returns the generated video inline states it as a Base64 {@code data:} URI in the content path of the job.
+     */
+    private static InputStream decodeInlineVideo(String dataUri) {
+        try {
+            return new ByteArrayInputStream(decodeDataUri(dataUri));
+        }
+        catch (IllegalArgumentException e) {
+            throw new AIResponseException("Cannot decode inline generated video", redactDataUri(dataUri), e);
+        }
     }
 
     @Override

@@ -60,8 +60,8 @@ public class GoogleAIService extends BaseAIService {
     private static final long serialVersionUID = 1L;
 
     private static final AIModelVersion GEMINI_1_5 = AIModelVersion.of("gemini", 1, 5);
-    private static final String VEO_MODEL_NAME = "veo";
-    private static final String OPERATIONS_PATH_PREFIX = "operations/";
+    private static final String OMNI_MODEL_NAME = "-omni";
+    private static final String INTERACTIONS_PATH = "interactions";
     private static final String ABSOLUTE_URI_PREFIX = "https://";
     private static final AIModelVersion GEMINI_2 = AIModelVersion.of("gemini", 2);
     private static final AIModelVersion GEMINI_2_5 = AIModelVersion.of("gemini", 2, 5);
@@ -105,7 +105,7 @@ public class GoogleAIService extends BaseAIService {
             case AUDIO_ANALYSIS -> currentModelVersion.gte(GEMINI_1_5);
             case AUDIO_GENERATION -> currentModelVersion.gte(GEMINI_2_5) || fullModelName.contains("tts");
             case VIDEO_ANALYSIS -> currentModelVersion.gte(GEMINI_1_5);
-            case VIDEO_GENERATION -> fullModelName.startsWith(VEO_MODEL_NAME);
+            case VIDEO_GENERATION -> fullModelName.contains(OMNI_MODEL_NAME);
         };
     }
 
@@ -145,26 +145,30 @@ public class GoogleAIService extends BaseAIService {
 
     @Override
     protected URI resolveURI(String path) {
-        if (path.startsWith(OPERATIONS_PATH_PREFIX) || path.contains("/" + OPERATIONS_PATH_PREFIX) || path.startsWith(ABSOLUTE_URI_PREFIX)) {
+        if (path.startsWith(ABSOLUTE_URI_PREFIX)) {
             var uri = super.resolveURI(path);
 
             if (!isSameOrigin(uri)) {
                 return uri;
             }
 
-            return super.resolveURI(path + (path.contains("?") ? "&" : "?") + format("key=%s", apiKey));
+            return resolveWithApiKey(path);
         }
         else if (path.equals(getFilesPath())) {
             return super.resolveURI("../upload/v1beta/" + format("%s?key=%s", getFilesPath(), apiKey));
         }
-        else if (path.startsWith(getFilesPath() + "/")) {
-            return super.resolveURI(format("%s?key=%s", path, apiKey));
+        else if (path.startsWith(getFilesPath() + "/") || path.equals(INTERACTIONS_PATH) || path.startsWith(INTERACTIONS_PATH + "/")) {
+            return resolveWithApiKey(path);
         }
         else {
             var parts = path.split("\\?", 2);
             var query = parts.length > 1 ? ("&" + parts[1]) : "";
             return super.resolveURI(format("models/%s:%s?key=%s%s", model, parts[0], apiKey, query));
         }
+    }
+
+    private URI resolveWithApiKey(String path) {
+        return super.resolveURI(path + (path.contains("?") ? "&" : "?") + format("key=%s", apiKey));
     }
 
     /**
@@ -262,20 +266,11 @@ public class GoogleAIService extends BaseAIService {
     }
 
     /**
-     * Returns {@code predictLongRunning}, as Veo is submitted as a long running operation.
+     * Returns {@code interactions}, as Gemini Omni is submitted as an interaction, whose path does not contain the model.
      */
     @Override
     protected String getGenerateVideoPath() {
-        return "predictLongRunning";
-    }
-
-    /**
-     * Returns the job id unchanged, as the id which Google assigns a video generation job is the name of the operation to poll it at, rather than a segment
-     * below the path it was submitted to.
-     */
-    @Override
-    protected String getVideoGenerationPath(String jobId) {
-        return jobId;
+        return INTERACTIONS_PATH;
     }
 
 }

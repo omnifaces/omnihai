@@ -36,6 +36,7 @@ import org.junit.jupiter.api.Test;
 import org.omnifaces.ai.AIConfig;
 import org.omnifaces.ai.DeliberateFailures;
 import org.omnifaces.ai.exception.AIException;
+import org.omnifaces.ai.exception.AIResponseException;
 import org.omnifaces.ai.mime.MimeType;
 import org.omnifaces.ai.model.ChatInput;
 import org.omnifaces.ai.model.ChatInput.Attachment;
@@ -299,6 +300,34 @@ class BaseAIServiceLoopbackTest {
         }
 
         assertEquals("/v1/videos/job-1/content", server.lastRequest().path());
+    }
+
+    /**
+     * A provider which returns the video inline hands it out as a {@code data:} URI, which is decoded without a request.
+     */
+    @Test
+    void downloadVideo_ofInlineContent_isDecodedWithoutARequest() throws IOException {
+        var dataUri = "data:video/mp4;base64," + Base64.getEncoder().encodeToString("the video".getBytes(UTF_8));
+
+        try (var content = service.downloadVideo(new Job("job-1", Status.COMPLETED, null, dataUri, null))) {
+            assertEquals("the video", new String(content.readAllBytes(), UTF_8));
+        }
+
+        assertEquals(0, server.requestCount());
+    }
+
+    @Test
+    void downloadVideo_ofInlineContentWhichIsNotBase64_throwsResponseException() {
+        var job = new Job("job-1", Status.COMPLETED, null, "data:video/mp4,the video", null);
+
+        assertThrows(AIResponseException.class, () -> service.downloadVideo(job));
+    }
+
+    @Test
+    void downloadVideo_ofInlineContentWithBrokenBase64_throwsResponseException() {
+        var job = new Job("job-1", Status.COMPLETED, null, "data:video/mp4;base64,not base64!", null);
+
+        assertThrows(AIResponseException.class, () -> service.downloadVideo(job));
     }
 
     @Test

@@ -16,12 +16,15 @@ import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 import static java.util.Objects.requireNonNull;
 import static java.util.Optional.ofNullable;
 import static java.util.concurrent.CompletableFuture.completedFuture;
+import static org.omnifaces.ai.helper.DataUriHelper.isDataUri;
+import static org.omnifaces.ai.helper.DataUriHelper.redactDataUri;
 import static org.omnifaces.ai.helper.FileHelper.cleanupFiles;
 import static org.omnifaces.ai.helper.FileHelper.requireWritableFile;
 import static org.omnifaces.ai.helper.TextHelper.requireNonBlank;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 import java.io.Serializable;
 import java.io.UncheckedIOException;
@@ -107,7 +110,7 @@ public class VideoGeneration implements Serializable {
      * @param id The job id.
      * @param status The job status.
      * @param pollPath The path to poll the job status at, or {@code null} to derive it from the job id.
-     * @param contentPath The path to download the video from, or {@code null} to derive it from the job id.
+     * @param contentPath The path to download the video from, a {@code data:} URI carrying the video inline, or {@code null} to derive it from the job id.
      * @param failureReason The reason of a {@link Status#FAILED} job, or {@code null} if the AI provider states none.
      */
     public record Job(String id, Status status, String pollPath, String contentPath, String failureReason) implements Serializable {
@@ -118,7 +121,7 @@ public class VideoGeneration implements Serializable {
          * @param id The job id.
          * @param status The job status.
          * @param pollPath The path to poll the job status at, or {@code null} to derive it from the job id.
-         * @param contentPath The path to download the video from, or {@code null} to derive it from the job id.
+         * @param contentPath The path to download the video from, a {@code data:} URI carrying the video inline, or {@code null} to derive it from the job id.
          * @param failureReason The reason of a {@link Status#FAILED} job, or {@code null} if the AI provider states none.
          * @throws IllegalArgumentException when id is null or blank.
          * @throws NullPointerException when status is null.
@@ -137,6 +140,16 @@ public class VideoGeneration implements Serializable {
          */
         public static Job pending(String id, String pollPath) {
             return new Job(id, Status.PENDING, pollPath, null, null);
+        }
+
+        /**
+         * Returns the record components, with a {@code data:} content path cut off before its data, as it carries the whole video.
+         */
+        @Override
+        public String toString() {
+            return "Job[id=" + id + ", status=" + status + ", pollPath=" + pollPath + ", contentPath=" + redactDataUri(contentPath) + ", failureReason="
+                + failureReason
+                + "]";
         }
 
     }
@@ -370,6 +383,22 @@ public class VideoGeneration implements Serializable {
             case EXPIRED -> throw new AIException("Video generation job " + current.id() + " expired and is no longer hosted by the AI provider");
             default -> throw new IllegalStateException("Video generation job " + current.id() + " is still " + current.status() + ", await completion() first");
         };
+    }
+
+    /**
+     * Writes the job without an inline video, as a deserialized handle cannot download it and the video may weigh megabytes.
+     *
+     * @param output The stream to write to.
+     * @throws IOException If writing fails.
+     */
+    private void writeObject(ObjectOutputStream output) throws IOException {
+        var current = job;
+        var fields = output.putFields();
+        fields.put(
+            "job", isDataUri(current.contentPath()) ? new Job(current.id(), current.status(), current.pollPath(), null, current.failureReason()) : current
+        );
+        fields.put("options", options);
+        output.writeFields();
     }
 
     private Source requireSource() {

@@ -36,6 +36,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.omnifaces.ai.helper.DataUriHelper;
 import org.omnifaces.ai.helper.ImageHelper;
 import org.omnifaces.ai.mime.MimeType;
 
@@ -336,7 +337,7 @@ public class ChatInput implements Serializable {
          * @throws IllegalStateException if this attachment is backed by a {@link #source() Path}.
          */
         public String toDataUri() {
-            return "data:" + mimeType.value() + ";base64," + toBase64();
+            return DataUriHelper.toDataUri(mimeType.value(), toBase64());
         }
 
         /**

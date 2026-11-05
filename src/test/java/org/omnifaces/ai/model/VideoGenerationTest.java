@@ -56,6 +56,20 @@ class VideoGenerationTest {
     private static final GenerateVideoOptions OPTIONS = GenerateVideoOptions.newBuilder().pollInterval(Duration.ofMillis(1)).build();
 
     @Test
+    void jobToString_cutsOffInlineVideoData() {
+        var job = new Job("job-1", Status.COMPLETED, null, "data:video/mp4;base64,AAAAIGZ0eXBpc29t", null);
+
+        assertEquals("Job[id=job-1, status=COMPLETED, pollPath=null, contentPath=data:video/mp4;base64,..., failureReason=null]", job.toString());
+    }
+
+    @Test
+    void jobToString_printsAPathInFull() {
+        var job = new Job("job-1", Status.COMPLETED, "videos/job-1", "videos/job-1/content", null);
+
+        assertEquals("Job[id=job-1, status=COMPLETED, pollPath=videos/job-1, contentPath=videos/job-1/content, failureReason=null]", job.toString());
+    }
+
+    @Test
     void status_performsNoRequest() {
         var source = new RecordingSource();
         var video = new VideoGeneration(Job.pending("job-1", null), OPTIONS, source);
@@ -292,6 +306,18 @@ class VideoGenerationTest {
     }
 
     @Test
+    void deserialized_completedJobWithInlineVideo_leavesTheVideoBehind() throws Exception {
+        var inlineData = "AAAAIGZ0eXBpc29tAAACAGlzb21pc28y";
+        var job = new Job("job-1", Status.COMPLETED, null, "data:video/mp4;base64," + inlineData, null);
+        var serialized = serialize(new VideoGeneration(job, OPTIONS, new RecordingSource()));
+        var revived = deserialize(serialized);
+
+        assertFalse(new String(serialized, UTF_8).contains(inlineData), "a deserialized handle cannot download the video, so it must not carry it");
+        assertEquals("job-1", revived.jobId());
+        assertEquals(Status.COMPLETED, revived.status());
+    }
+
+    @Test
     void job_requiresIdAndStatus() {
         assertThrows(IllegalArgumentException.class, () -> new Job("", Status.PENDING, null, null, null));
         assertThrows(IllegalArgumentException.class, () -> new Job(null, Status.PENDING, null, null, null));
@@ -304,13 +330,21 @@ class VideoGenerationTest {
     }
 
     private static VideoGeneration roundTrip(Serializable object) throws IOException, ClassNotFoundException {
+        return deserialize(serialize(object));
+    }
+
+    private static byte[] serialize(Serializable object) throws IOException {
         var bytes = new ByteArrayOutputStream();
 
         try (var output = new ObjectOutputStream(bytes)) {
             output.writeObject(object);
         }
 
-        try (var input = new ObjectInputStream(new ByteArrayInputStream(bytes.toByteArray()))) {
+        return bytes.toByteArray();
+    }
+
+    private static VideoGeneration deserialize(byte[] serialized) throws IOException, ClassNotFoundException {
+        try (var input = new ObjectInputStream(new ByteArrayInputStream(serialized))) {
             return (VideoGeneration) input.readObject();
         }
     }

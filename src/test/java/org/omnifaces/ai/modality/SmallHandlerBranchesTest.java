@@ -218,6 +218,13 @@ class SmallHandlerBranchesTest {
         assertEquals(Status.RUNNING, DefaultAIVideoHandler.parseVideoStatus("in_progress", EMPTY));
         assertEquals(Status.COMPLETED, DefaultAIVideoHandler.parseVideoStatus("succeeded", EMPTY));
         assertEquals(Status.FAILED, DefaultAIVideoHandler.parseVideoStatus("cancelled", EMPTY));
+        assertEquals(Status.FAILED, DefaultAIVideoHandler.parseVideoStatus("incomplete", EMPTY), "a video with incomplete results is no video");
+    }
+
+    @Test
+    void parseVideoStatus_ofResponse_readsTheStatusWord() {
+        assertEquals(Status.RUNNING, DefaultAIVideoHandler.parseVideoStatus(parseJson("{\"status\":\"in_progress\"}")));
+        assertThrows(AIResponseException.class, () -> DefaultAIVideoHandler.parseVideoStatus(EMPTY));
     }
 
     @Test

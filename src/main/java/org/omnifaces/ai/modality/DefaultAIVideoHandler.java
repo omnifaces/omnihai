@@ -12,6 +12,8 @@
  */
 package org.omnifaces.ai.modality;
 
+import static org.omnifaces.ai.helper.JsonHelper.findFirstNonBlankByPath;
+
 import java.util.Locale;
 
 import jakarta.json.JsonObject;
@@ -55,6 +57,20 @@ public class DefaultAIVideoHandler implements AIVideoHandler {
     }
 
     /**
+     * Maps the job status word at {@code status} of the given API response JSON onto the library's own status.
+     *
+     * @param responseJson The API response JSON stating the status word.
+     * @return The matching status.
+     * @throws AIResponseException If the status word is absent or not recognized.
+     * @since 1.7.4
+     */
+    protected static Status parseVideoStatus(JsonObject responseJson) throws AIResponseException {
+        var status = findFirstNonBlankByPath(responseJson, "status")
+            .orElseThrow(() -> new AIResponseException("No video generation job status found", responseJson));
+        return parseVideoStatus(status, responseJson);
+    }
+
+    /**
      * Maps the job status word of a video generation API onto the library's own status. The recognized words span every supported AI provider, as none of them
      * uses a word for a status another one means differently.
      *
@@ -69,7 +85,7 @@ public class DefaultAIVideoHandler implements AIVideoHandler {
             case "queued", "pending", "preprocessing", "not_started" -> Status.PENDING;
             case "in_progress", "running", "processing" -> Status.RUNNING;
             case "completed", "succeeded", "success", "done" -> Status.COMPLETED;
-            case "failed", "cancelled", "canceled" -> Status.FAILED;
+            case "failed", "cancelled", "canceled", "incomplete" -> Status.FAILED;
             case "expired" -> Status.EXPIRED;
             default -> throw new AIResponseException("Unknown video generation job status " + status, responseJson);
         };
