@@ -29,6 +29,7 @@ import java.nio.file.Path;
 import java.util.Set;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.ResourceLock;
 import org.omnifaces.ai.AIConfig;
 import org.omnifaces.ai.exception.AIException;
 import org.omnifaces.ai.helper.JsonHelper;
@@ -90,6 +91,7 @@ class MetaAIServiceTest {
     }
 
     @Test
+    @ResourceLock(MetaAIServiceLoopbackTest.ASR_TEMP_FILES)
     void transcribeAsync_unreadablePath_namesTheFileItCouldNotRead() {
         var service = newService(TRANSCRIBE_MODEL);
         var audio = Path.of("does-not-exist.wav");

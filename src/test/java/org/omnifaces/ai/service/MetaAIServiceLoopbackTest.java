@@ -34,6 +34,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.parallel.ResourceLock;
 import org.omnifaces.ai.AIConfig;
 import org.omnifaces.ai.AIStrategy;
 import org.omnifaces.ai.OmniHai;
@@ -47,7 +48,14 @@ import org.omnifaces.ai.service.LoopbackHttpServer.Answer;
  * Meta AI serves transcription on an ASR endpoint of its own, which accepts one audio format alone, so the audio is converted before it travels. The provider
  * is an HTTP server on the loopback interface.
  */
+@ResourceLock(MetaAIServiceLoopbackTest.ASR_TEMP_FILES)
 class MetaAIServiceLoopbackTest {
+
+    /**
+     * Names the temporary files of the ASR conversion, for {@code @ResourceLock}. The tests here count those files in the temporary directory of the JVM, so a
+     * test in another class which converts audio from a path has to hold this.
+     */
+    static final String ASR_TEMP_FILES = "omnihai-meta-asr-temp-files";
 
     /** A WAV at a sample rate the ASR endpoint does not accept, so that the conversion is what makes it acceptable. */
     private static final byte[] WAV = newWav(44100);
